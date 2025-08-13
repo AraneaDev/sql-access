@@ -1,0 +1,205 @@
+version: '3.8'
+
+services:
+  # Prometheus - Metrics Collection and Storage
+  prometheus:
+    image: prom/prometheus:v2.40.0
+    container_name: sql-mcp-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Grafana - Visualization and Dashboards
+  grafana:
+    image: grafana/grafana:9.5.0
+    container_name: sql-mcp-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboard-configs:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin_password_change_me
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - monitoring
+
+  # AlertManager - Alert Management and Routing
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: sql-mcp-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alerts/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./alerts/notification-templates:/etc/alertmanager/templates
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Node Exporter - System Metrics
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: sql-mcp-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Elasticsearch - Log Storage and Search
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: sql-mcp-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Kibana - Log Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: sql-mcp-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - XPACK_SECURITY_ENABLED=false
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Logstash - Log Processing Pipeline
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.8.0
+    container_name: sql-mcp-logstash
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    volumes:
+      - ./logging/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logging/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+    environment:
+      - LS_JAVA_OPTS=-Xms1g -Xmx1g
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # Redis - Caching and Session Storage
+  redis:
+    image: redis:7-alpine
+    container_name: sql-mcp-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # PostgreSQL - Metrics Storage
+  postgres-monitoring:
+    image: postgres:15-alpine
+    container_name: sql-mcp-postgres-monitoring
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=monitoring
+      - POSTGRES_USER=monitoring_user
+      - POSTGRES_PASSWORD=monitoring_password
+    volumes:
+      - postgres_monitoring_data:/var/lib/postgresql/data
+      - ./monitoring-db-init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
+  elasticsearch_data:
+  redis_data:
+  postgres_monitoring_data:
+
+networks:
+  monitoring:
+    driver: bridge
+
+# SETUP INSTRUCTIONS:
+#
+# 1. CREATE REQUIRED DIRECTORIES:
+#    mkdir -p prometheus grafana/dashboards grafana/datasources alerts/notification-templates
+#    mkdir -p logging/logstash/pipeline logging/logstash/config
+#
+# 2. COPY CONFIGURATION FILES:
+#    Copy configuration files from the respective directories in this examples folder
+#
+# 3. START THE STACK:
+#    docker-compose -f docker-compose-monitoring.yml up -d
+#
+# 4. ACCESS SERVICES:
+#    - Grafana: http://localhost:3000 (admin/admin_password_change_me)
+#    - Prometheus: http://localhost:9090
+#    - AlertManager: http://localhost:9093
+#    - Kibana: http://localhost:5601
+#    - Elasticsearch: http://localhost:9200
+#
+# 5. CONFIGURE SQL MCP SERVER:
+#    Add to your config.ini or environment:
+#    - Enable metrics endpoint on port 3001
+#    - Configure structured logging output
+#    - Set up log forwarding to Logstash
+#
+# SECURITY REMINDERS:
+# - Change default passwords in production
+# - Use proper network segmentation
+# - Enable authentication and authorization
+# - Configure SSL/TLS for external access
+# - Regularly update container images

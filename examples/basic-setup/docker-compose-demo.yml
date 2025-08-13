@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Demo Database
+  postgres-demo:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: demo_db
+      POSTGRES_USER: demo_user
+      POSTGRES_PASSWORD: demo_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo_user -d demo_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MySQL Demo Database
+  mysql-demo:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: demo_db
+      MYSQL_USER: demo_user
+      MYSQL_PASSWORD: demo_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts/mysql-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "demo_user", "-pdemo_password"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Adminer (Database Management Interface)
+  adminer:
+    image: adminer:4.8.1
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres-demo
+      - mysql-demo
+
+volumes:
+  postgres_data:
+  mysql_data:
+
+# Instructions:
+# 1. Create init-scripts directory with sample data:
+#    mkdir -p examples/basic-setup/init-scripts
+#
+# 2. Start the demo environment:
+#    docker-compose -f examples/basic-setup/docker-compose-demo.yml up -d
+#
+# 3. Wait for databases to be ready:
+#    docker-compose -f examples/basic-setup/docker-compose-demo.yml logs -f
+#
+# 4. Use the docker-demo-config.ini configuration:
+#    cp examples/basic-setup/docker-demo-config.ini config.ini
+#
+# 5. Start the SQL MCP Server:
+#    npm start
+#
+# 6. Access Adminer for database management:
+#    http://localhost:8080
+#    - Server: postgres-demo or mysql-demo
+#    - Username: demo_user
+#    - Password: demo_password
+#    - Database: demo_db
+#
+# 7. Test queries in Claude:
+#    "Show me the tables in both demo databases"
+#    "What's the difference between the users in postgres vs mysql?"
+#
+# To stop the demo environment:
+#    docker-compose -f examples/basic-setup/docker-compose-demo.yml down
+#
+# To remove all data:
+#    docker-compose -f examples/basic-setup/docker-compose-demo.yml down -v

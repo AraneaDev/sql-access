@@ -1,0 +1,288 @@
+/**
+ * Abstract base class for database adapters
+ */
+
+import type { 
+  DatabaseConnection, 
+  DatabaseConfig, 
+  QueryResult, 
+  DatabaseSchema,
+  DatabaseTypeString 
+} from '../../types/index.js';
+
+// ============================================================================
+// Abstract Database Adapter
+// ============================================================================
+
+export abstract class DatabaseAdapter {
+  protected config: DatabaseConfig;
+  protected connectionTimeout: number;
+
+  constructor(config: DatabaseConfig) {
+    this.config = config;
+    this.connectionTimeout = typeof config.timeout === 'number' 
+      ? config.timeout 
+      : typeof config.timeout === 'string' 
+        ? parseInt(config.timeout, 10) || 30000
+        : 30000;
+  }
+
+  // ============================================================================
+  // Abstract Methods (must be implemented by subclasses)
+  // ============================================================================
+
+  /**
+   * Create a connection to the database
+   */
+  abstract connect(): Promise<DatabaseConnection>;
+
+  /**
+   * Execute a query against the database
+   */
+  abstract executeQuery(
+    connection: DatabaseConnection,
+    query: string,
+    params?: unknown[]
+  ): Promise<QueryResult>;
+
+  /**
+   * Disconnect from the database
+   */
+  abstract disconnect(connection: DatabaseConnection): Promise<void>;
+
+  /**
+   * Capture schema information from the database
+   */
+  abstract captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema>;
+
+  /**
+   * Test if the connection is still alive
+   */
+  abstract isConnected(connection: DatabaseConnection): boolean;
+
+  /**
+   * Begin a transaction
+   */
+  abstract beginTransaction(connection: DatabaseConnection): Promise<void>;
+
+  /**
+   * Commit a transaction
+   */
+  abstract commitTransaction(connection: DatabaseConnection): Promise<void>;
+
+  /**
+   * Rollback a transaction
+   */
+  abstract rollbackTransaction(connection: DatabaseConnection): Promise<void>;
+
+  /**
+   * Build an EXPLAIN query for performance analysis
+   */
+  abstract buildExplainQuery(query: string): string;
+
+  // ============================================================================
+  // Common Implementation Methods
+  // ============================================================================
+
+  /**
+   * Get the database type
+   */
+  public getType(): DatabaseTypeString {
+    return this.config.type;
+  }
+
+  /**
+   * Get the connection configuration
+   */
+  public getConfig(): DatabaseConfig {
+    return { ...this.config };
+  }
+
+  /**
+   * Sanitize connection config for logging (remove sensitive data)
+   */
+  public getSafeConfig(): Partial<DatabaseConfig> {
+    const { password, ssh_password, ssh_private_key, ssh_passphrase, ...safe } = this.config;
+    return {
+      ...safe,
+      password: password ? '[REDACTED]' : undefined,
+      ssh_password: ssh_password ? '[REDACTED]' : undefined,
+      ssh_private_key: ssh_private_key ? '[REDACTED]' : undefined,
+      ssh_passphrase: ssh_passphrase ? '[REDACTED]' : undefined
+    };
+  }
+
+  /**
+   * Validate that required configuration fields are present
+   */
+  protected validateConfig(requiredFields: string[]): void {
+    const missing: string[] = [];
+
+    for (const field of requiredFields) {
+      const value = this.config[field as keyof DatabaseConfig];
+      if (value === undefined || value === null || value === '') {
+        missing.push(field);
+      }
+    }
+
+    if (missing.length > 0) {
+      throw new Error(`Missing required configuration fields: ${missing.join(', ')}`);
+    }
+  }
+
+  /**
+   * Parse string values to appropriate types
+   */
+  protected parseConfigValue<T>(
+    value: string | number | boolean | T, 
+    type: 'string' | 'number' | 'boolean',
+    defaultValue: T
+  ): T {
+    if (value === undefined || value === null) {
+      return defaultValue;
+    }
+
+    switch (type) {
+      case 'string':
+        return String(value) as T;
+      case 'number': {
+        if (typeof value === 'number') return value as T;
+        const parsed = parseInt(String(value), 10);
+        return (isNaN(parsed) ? defaultValue : parsed) as T;
+      }
+      case 'boolean':
+        if (typeof value === 'boolean') return value as T;
+        return (String(value).toLowerCase() === 'true') as T;
+      default:
+        return value as T;
+    }
+  }
+
+  /**
+   * Create a standardized error with context
+   */
+  protected createError(message: string, originalError?: Error): Error {
+    const errorMessage = `${this.getType()} adapter error: ${message}`;
+    
+    if (originalError) {
+      const error = new Error(`${errorMessage} - ${originalError.message}`);
+      error.stack = originalError.stack;
+      return error;
+    }
+    
+    return new Error(errorMessage);
+  }
+
+  /**
+   * Truncate rows if they exceed the limit
+   */
+  protected truncateResults(rows: unknown[], maxRows: number): { rows: unknown[]; truncated: boolean } {
+    if (rows.length <= maxRows) {
+      return { rows, truncated: false };
+    }
+
+    return {
+      rows: rows.slice(0, maxRows),
+      truncated: true
+    };
+  }
+
+  /**
+   * Extract field names from query results (implementation varies by adapter)
+   */
+  protected abstract extractFieldNames(result: unknown): string[];
+
+  /**
+   * Normalize query result to standard format
+   */
+  protected normalizeQueryResult(
+    rawResult: unknown,
+    startTime: number,
+    maxRows = 1000
+  ): QueryResult {
+    const executionTime = Date.now() - startTime;
+    
+    // Extract rows - implementation varies by adapter
+    const rawRows = this.extractRawRows(rawResult);
+    const { rows, truncated } = this.truncateResults(rawRows, maxRows);
+    
+    // Extract field names
+    const fields = this.extractFieldNames(rawResult);
+    
+    return {
+      rows: rows as Record<string, unknown>[],
+      rowCount: rawRows.length,
+      fields,
+      truncated,
+      execution_time_ms: executionTime
+    };
+  }
+
+  /**
+   * Extract raw rows from database-specific result (implementation varies by adapter)
+   */
+  protected abstract extractRawRows(result: unknown): unknown[];
+
+  // ============================================================================
+  // Helper Methods for Schema Capture
+  // ============================================================================
+
+  /**
+   * Create a base schema object
+   */
+  protected createBaseSchema(databaseName: string): DatabaseSchema {
+    return {
+      database: databaseName,
+      type: this.getType(),
+      captured_at: new Date().toISOString(),
+      tables: {},
+      views: {},
+      summary: {
+        table_count: 0,
+        view_count: 0,
+        total_columns: 0
+      }
+    };
+  }
+
+  /**
+   * Update schema summary statistics
+   */
+  protected updateSchemaSummary(schema: DatabaseSchema): void {
+    schema.summary.table_count = Object.keys(schema.tables).length;
+    schema.summary.view_count = Object.keys(schema.views).length;
+    schema.summary.total_columns = [
+      ...Object.values(schema.tables),
+      ...Object.values(schema.views)
+    ].reduce((total, table) => total + table.columns.length, 0);
+  }
+
+  /**
+   * Safely get a string value from a query result row
+   */
+  protected getSafeString(row: Record<string, unknown>, field: string): string {
+    const value = row[field];
+    return value !== null && value !== undefined ? String(value) : '';
+  }
+
+  /**
+   * Safely get a number value from a query result row
+   */
+  protected getSafeNumber(row: Record<string, unknown>, field: string): number | null {
+    const value = row[field];
+    if (value === null || value === undefined) return null;
+    
+    const num = typeof value === 'number' ? value : parseInt(String(value), 10);
+    return isNaN(num) ? null : num;
+  }
+
+  /**
+   * Safely get a boolean value from a query result row
+   */
+  protected getSafeBoolean(row: Record<string, unknown>, field: string): boolean {
+    const value = row[field];
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string') return value.toLowerCase() === 'yes';
+    return false;
+  }
+}

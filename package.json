@@ -1,0 +1,117 @@
+{
+  "name": "sql-access",
+  "version": "2.0.0",
+  "description": "MCP server for accessing SQL databases, with support for PostgreSQL, MySQL, SQLite, MSSQL, and SSH tunnels",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "sql-server": "./dist/index.js",
+    "sql-setup": "./dist/setup.js"
+  },
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "build:fast": "npm run clean && npm run build:esbuild",
+    "build:esbuild": "esbuild src/index.ts src/setup.ts --bundle --platform=node --outdir=dist --external:mssql --external:mysql2 --external:pg --external:sqlite3 --external:ssh2 --external:ini --format=esm --sourcemap --minify",
+    "build:production": "npm run clean && npm run lint && npm run test && npm run build",
+    "build:watch": "tsc --watch",
+    "dev": "npm run build:watch",
+    "start": "node dist/index.js",
+    "setup": "node dist/setup.js",
+    "test": "jest --passWithNoTests",
+    "test:unit": "jest tests/unit --passWithNoTests",
+    "test:integration": "jest tests/integration --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests",
+    "test:coverage": "jest --coverage --passWithNoTests",
+    "lint": "eslint src/**/*.ts --fix",
+    "lint:check": "eslint src/**/*.ts",
+    "type-check": "tsc --noEmit",
+    "clean": "node -e \"const fs = require('fs'); if (fs.existsSync('dist')) fs.rmSync('dist', {recursive: true, force: true});\"",
+    "prebuild": "npm run type-check",
+    "postbuild": "node -e \"const fs = require('fs'); const output = fs.readdirSync('dist').join(', '); fs.writeFileSync('.build-output.txt', 'Build completed: ' + output);\"",
+    "validate": "npm run lint:check && npm run type-check && npm run test",
+    "prepack": "npm run build:production",
+    "generate-template": "node dist/setup.js --template",
+    "docker:build": "docker build -t sql-access .",
+    "docker:run": "docker run --rm -p 3000:3000 sql-access"
+  },
+  "keywords": [
+    "claude",
+    "mcp",
+    "sql",
+    "database",
+    "postgresql",
+    "mysql",
+    "sqlite",
+    "mssql",
+    "typescript",
+    "ai"
+  ],
+  "dependencies": {
+    "ini": "^4.1.1",
+    "mssql": "^10.0.1",
+    "mysql2": "^3.6.0",
+    "pg": "^8.11.0",
+    "sqlite3": "^5.1.6",
+    "ssh2": "^1.16.0"
+  },
+  "devDependencies": {
+    "@types/ini": "^4.0.0",
+    "@types/jest": "^29.0.0",
+    "@types/mssql": "^9.1.7",
+    "@types/node": "^18.0.0",
+    "@types/pg": "^8.0.0",
+    "@types/sqlite3": "^3.0.0",
+    "@types/ssh2": "^1.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "esbuild": "^0.19.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "supertest": "^6.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "node": ">=16.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
+  "eslintConfig": {
+    "parser": "@typescript-eslint/parser",
+    "plugins": ["@typescript-eslint"],
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2022,
+      "sourceType": "module"
+    },
+    "env": {
+      "node": true,
+      "es2022": true
+    },
+    "globals": {
+      "process": "readonly",
+      "console": "readonly",
+      "Buffer": "readonly",
+      "setTimeout": "readonly",
+      "__dirname": "readonly",
+      "__filename": "readonly"
+    },
+    "rules": {
+      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+      "prefer-const": "error",
+      "no-console": ["warn", { "allow": ["error"] }],
+      "no-useless-escape": "warn"
+    },
+    "ignorePatterns": ["dist/", "node_modules/", "coverage/"]
+  }
+}

@@ -1,0 +1,475 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sql-mcp-server
+  labels:
+    name: sql-mcp-server
+    environment: production
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sql-mcp-config
+  namespace: sql-mcp-server
+data:
+  config.ini: |
+    [server]
+    host=0.0.0.0
+    port=3000
+    enable_tls=true
+    cert_path=/etc/certs/tls.crt
+    key_path=/etc/certs/tls.key
+    
+    [database.primary]
+    type=postgresql
+    host=postgres-primary.database.svc.cluster.local
+    port=5432
+    database=production_db
+    username=mcp_user
+    readonly=true
+    pool_min=5
+    pool_max=20
+    
+    [database.replica1]
+    type=postgresql
+    host=postgres-replica1.database.svc.cluster.local
+    port=5432
+    database=production_db
+    username=mcp_readonly
+    readonly=true
+    pool_min=3
+    pool_max=15
+    
+    [database.replica2]
+    type=postgresql
+    host=postgres-replica2.database.svc.cluster.local
+    port=5432
+    database=production_db
+    username=mcp_readonly
+    readonly=true
+    pool_min=3
+    pool_max=15
+    
+    [security]
+    enable_readonly_mode=true
+    max_query_complexity=100
+    rate_limit_window_ms=60000
+    rate_limit_max_requests=1000
+    enable_audit_logging=true
+    
+    [logging]
+    level=info
+    format=json
+    audit_file=/var/log/mcp/audit.log
+    
+    [monitoring]
+    enable_metrics=true
+    metrics_port=9090
+    health_check_path=/health
+    
+    [caching]
+    enable_query_cache=true
+    cache_ttl=300
+    redis_url=redis://redis.sql-mcp-server.svc.cluster.local:6379
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sql-mcp-secrets
+  namespace: sql-mcp-server
+type: Opaque
+data:
+  # Base64 encoded database passwords
+  primary_db_password: cG9zdGdyZXNfcGFzc3dvcmQ=
+  replica_db_password: cmVhZG9ubHlfcGFzc3dvcmQ=
+  redis_password: cmVkaXNfcGFzc3dvcmQ=
+  jwt_secret: and0X3NlY3JldF9rZXlfZm9yX3Byb2R1Y3Rpb24=
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sql-mcp-tls
+  namespace: sql-mcp-server
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTi... # TLS certificate (base64)
+  tls.key: LS0tLS1CRUdJTi... # TLS private key (base64)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sql-mcp-server
+  namespace: sql-mcp-server
+  labels:
+    app: sql-mcp-server
+    version: v1.0.0
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: sql-mcp-server
+  template:
+    metadata:
+      labels:
+        app: sql-mcp-server
+        version: v1.0.0
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: sql-mcp-server
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+      - name: sql-mcp-server
+        image: sql-mcp-server:1.0.0
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 3000
+          protocol: TCP
+        - name: metrics
+          containerPort: 9090
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: CONFIG_PATH
+          value: "/app/config/config.ini"
+        - name: PRIMARY_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sql-mcp-secrets
+              key: primary_db_password
+        - name: REPLICA_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sql-mcp-secrets
+              key: replica_db_password
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sql-mcp-secrets
+              key: redis_password
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: sql-mcp-secrets
+              key: jwt_secret
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: tls-certs
+          mountPath: /etc/certs
+          readOnly: true
+        - name: logs
+          mountPath: /var/log/mcp
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+            ephemeral-storage: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+            ephemeral-storage: 5Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: sql-mcp-config
+          defaultMode: 0444
+      - name: tls-certs
+        secret:
+          secretName: sql-mcp-tls
+          defaultMode: 0400
+      - name: logs
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - sql-mcp-server
+              topologyKey: kubernetes.io/hostname
+      tolerations:
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 30
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-mcp-server
+  namespace: sql-mcp-server
+  labels:
+    app: sql-mcp-server
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/cert-id"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+  - 10.0.0.0/8    # Internal network only
+  - 172.16.0.0/12 # Internal network only
+  - 192.168.0.0/16 # Internal network only
+  ports:
+  - name: https
+    port: 443
+    targetPort: http
+    protocol: TCP
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: sql-mcp-server
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql-mcp-server-headless
+  namespace: sql-mcp-server
+  labels:
+    app: sql-mcp-server
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: http
+    port: 3000
+    targetPort: http
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: sql-mcp-server
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sql-mcp-server
+  namespace: sql-mcp-server
+  labels:
+    app: sql-mcp-server
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sql-mcp-server
+  namespace: sql-mcp-server
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sql-mcp-server
+  namespace: sql-mcp-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sql-mcp-server
+subjects:
+- kind: ServiceAccount
+  name: sql-mcp-server
+  namespace: sql-mcp-server
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sql-mcp-server-hpa
+  namespace: sql-mcp-server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sql-mcp-server
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: sql_queries_per_second
+      target:
+        type: AverageValue
+        averageValue: "100"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+      selectPolicy: Max
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sql-mcp-server-pdb
+  namespace: sql-mcp-server
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: sql-mcp-server
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sql-mcp-server-netpol
+  namespace: sql-mcp-server
+spec:
+  podSelector:
+    matchLabels:
+      app: sql-mcp-server
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

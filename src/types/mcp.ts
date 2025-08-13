@@ -1,0 +1,253 @@
+/**
+ * MCP Protocol Types for SQL Database Server
+ * Based on MCP Protocol 2025-06-18
+ */
+
+// ============================================================================
+// MCP Core Protocol Types
+// ============================================================================
+
+export interface MCPMessage {
+  jsonrpc: '2.0';
+  id?: string | number | null;
+  method?: string;
+  params?: unknown;
+  result?: unknown;
+  error?: MCPError;
+}
+
+export interface MCPError {
+  code: number;
+  message: string;
+  data?: unknown;
+}
+
+export interface MCPRequest extends MCPMessage {
+  id: string | number;
+  method: string;
+  params?: unknown;
+}
+
+export interface MCPResponse extends MCPMessage {
+  id: string | number | null;
+  result?: unknown;
+  error?: MCPError;
+}
+
+export interface MCPNotification extends MCPMessage {
+  method: string;
+  params?: unknown;
+}
+
+// ============================================================================
+// MCP Capabilities and Server Info
+// ============================================================================
+
+export interface MCPCapabilities {
+  tools?: object;
+  logging?: object;
+}
+
+export interface MCPServerInfo {
+  name: string;
+  version: string;
+}
+
+export interface MCPInitializeResult {
+  protocolVersion: string;
+  capabilities: MCPCapabilities;
+  serverInfo: MCPServerInfo;
+}
+
+// ============================================================================
+// MCP Tool Types
+// ============================================================================
+
+export interface MCPToolParameter {
+  type: string;
+  description?: string;
+  items?: MCPToolParameter;
+  properties?: Record<string, MCPToolParameter>;
+  required?: string[];
+  enum?: string[];
+  default?: unknown;
+  additionalProperties?: boolean;
+}
+
+export interface MCPToolInputSchema {
+  type: 'object';
+  properties: Record<string, MCPToolParameter>;
+  required?: string[];
+  additionalProperties?: boolean;
+}
+
+export interface MCPTool {
+  name: string;
+  description: string;
+  inputSchema: MCPToolInputSchema;
+}
+
+export interface MCPToolsListResult {
+  tools: MCPTool[];
+}
+
+export interface MCPToolCallParams {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface MCPToolCallRequest extends MCPRequest {
+  method: 'tools/call';
+  params: MCPToolCallParams;
+}
+
+export interface MCPToolContent {
+  type: 'text';
+  text: string;
+}
+
+export interface MCPToolResponse {
+  content: MCPToolContent[];
+  isError?: boolean;
+  _meta: {
+    progressToken: null;
+  };
+}
+
+// ============================================================================
+// SQL-specific MCP Tool Argument Types
+// ============================================================================
+
+export interface SQLQueryArgs {
+  database: string;
+  query: string;
+  params?: string[];
+}
+
+export interface SQLBatchQueryArgs {
+  database: string;
+  queries: Array<{
+    query: string;
+    params?: string[];
+    label?: string;
+  }>;
+  transaction?: boolean;
+}
+
+export interface SQLAnalyzePerformanceArgs {
+  database: string;
+  query: string;
+}
+
+export interface SQLGetSchemaArgs {
+  database: string;
+  table?: string;
+}
+
+export interface SQLTestConnectionArgs {
+  database: string;
+}
+
+export interface SQLRefreshSchemaArgs {
+  database: string;
+}
+
+// Empty interface for list_databases (no arguments required)
+export interface SQLListDatabasesArgs {
+  // No properties - this tool takes no arguments
+}
+
+// ============================================================================
+// MCP Tool Validation Types
+// ============================================================================
+
+export interface MCPToolValidationError {
+  message: string;
+  field?: string;
+  value?: unknown;
+  expectedType?: string;
+}
+
+// ============================================================================
+// MCP Message Handlers Type
+// ============================================================================
+
+export type MCPMessageHandler = (message: MCPRequest) => Promise<void> | void;
+
+export interface MCPMessageHandlers {
+  initialize: MCPMessageHandler;
+  'tools/list': MCPMessageHandler;
+  'tools/call': MCPMessageHandler;
+  'notifications/initialized': MCPMessageHandler;
+}
+
+// ============================================================================
+// Type Guards for MCP Messages
+// ============================================================================
+
+export function isMCPRequest(message: MCPMessage): message is MCPRequest {
+  return 'id' in message && 'method' in message && message.id !== undefined;
+}
+
+export function isMCPResponse(message: MCPMessage): message is MCPResponse {
+  return 'id' in message && ('result' in message || 'error' in message);
+}
+
+export function isMCPNotification(message: MCPMessage): message is MCPNotification {
+  return 'method' in message && !('id' in message);
+}
+
+export function isMCPToolCallRequest(message: MCPMessage): message is MCPToolCallRequest {
+  return (
+    isMCPRequest(message) && 
+    message.method === 'tools/call' &&
+    typeof message.params === 'object' &&
+    message.params !== null &&
+    'name' in message.params &&
+    'arguments' in message.params
+  );
+}
+
+// ============================================================================
+// Tool-specific Type Guards
+// ============================================================================
+
+export function isSQLQueryArgs(args: unknown): args is SQLQueryArgs {
+  return (
+    typeof args === 'object' &&
+    args !== null &&
+    'database' in args &&
+    'query' in args &&
+    typeof (args as SQLQueryArgs).database === 'string' &&
+    typeof (args as SQLQueryArgs).query === 'string'
+  );
+}
+
+export function isSQLBatchQueryArgs(args: unknown): args is SQLBatchQueryArgs {
+  return (
+    typeof args === 'object' &&
+    args !== null &&
+    'database' in args &&
+    'queries' in args &&
+    typeof (args as SQLBatchQueryArgs).database === 'string' &&
+    Array.isArray((args as SQLBatchQueryArgs).queries)
+  );
+}
+
+export function isSQLGetSchemaArgs(args: unknown): args is SQLGetSchemaArgs {
+  return (
+    typeof args === 'object' &&
+    args !== null &&
+    'database' in args &&
+    typeof (args as SQLGetSchemaArgs).database === 'string'
+  );
+}
+
+export function isSQLTestConnectionArgs(args: unknown): args is SQLTestConnectionArgs {
+  return (
+    typeof args === 'object' &&
+    args !== null &&
+    'database' in args &&
+    typeof (args as SQLTestConnectionArgs).database === 'string'
+  );
+}

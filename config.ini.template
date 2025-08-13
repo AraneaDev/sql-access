@@ -1,0 +1,50 @@
+# Claude SQL MCP Server Configuration Template
+# Copy this file to config.ini and update with your database settings
+
+[database.example]
+type=mysql
+host=localhost
+port=3306
+database=your_database_name
+username=your_username
+password=your_password
+ssl=false
+select_only=true
+timeout=30000
+
+# Example SQLite configuration
+[database.local]
+type=sqlite
+file=./data/local.db
+select_only=false
+timeout=10000
+
+# Example PostgreSQL configuration with SSH tunnel
+[database.production]
+type=postgresql
+host=your-db-server.com
+port=5432
+database=production_db
+username=readonly_user
+password=secure_password
+ssl=true
+select_only=true
+timeout=30000
+ssh_host=bastion.company.com
+ssh_port=22
+ssh_username=deploy_user
+ssh_private_key=/path/to/private/key
+
+[security]
+max_joins=10
+max_subqueries=5
+max_unions=3
+max_group_bys=5
+max_complexity_score=100
+max_query_length=10000
+
+[extension]
+max_rows=1000
+query_timeout=30000
+max_batch_size=10
+debug=false

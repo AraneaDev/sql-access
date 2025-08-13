@@ -1,0 +1,236 @@
+# SQL MCP Server Alerting Rules
+# These rules define alerts for various conditions that require attention
+
+groups:
+  # Critical System Alerts
+  - name: sql_mcp_server_critical
+    rules:
+      # Server Down Alert
+      - alert: SQLMCPServerDown
+        expr: up{job="sql-mcp-server"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: sql-mcp-server
+        annotations:
+          summary: "SQL MCP Server is down"
+          description: "SQL MCP Server has been down for more than 1 minute. Last seen {{ $value }} seconds ago."
+          runbook_url: "https://your-runbook-url.com/sql-mcp-server-down"
+
+      # High Error Rate Alert
+      - alert: SQLMCPHighErrorRate
+        expr: (rate(sql_mcp_queries_total{status="error"}[5m]) / rate(sql_mcp_queries_total[5m])) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          service: sql-mcp-server
+        annotations:
+          summary: "High error rate in SQL MCP Server"
+          description: "Error rate is {{ $value }}% over the last 5 minutes, which is above the 5% threshold."
+          runbook_url: "https://your-runbook-url.com/high-error-rate"
+
+      # Database Connection Failure
+      - alert: DatabaseConnectionFailure
+        expr: sql_mcp_database_connection_errors_total > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: sql-mcp-server
+        annotations:
+          summary: "Database connection failures detected"
+          description: "{{ $value }} database connection failures detected in the last 2 minutes for database {{ $labels.database }}."
+          runbook_url: "https://your-runbook-url.com/database-connection-failure"
+
+  # Warning Level Alerts
+  - name: sql_mcp_server_warning
+    rules:
+      # High Query Response Time
+      - alert: SQLMCPHighQueryLatency
+        expr: histogram_quantile(0.95, rate(sql_mcp_query_duration_seconds_bucket[5m])) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+        annotations:
+          summary: "High query latency in SQL MCP Server"
+          description: "95th percentile query latency is {{ $value }}s, which is above the 1.0s threshold."
+          runbook_url: "https://your-runbook-url.com/high-query-latency"
+
+      # Connection Pool Exhaustion Warning
+      - alert: SQLMCPConnectionPoolHigh
+        expr: (sql_mcp_connections_active / sql_mcp_connections_max) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+        annotations:
+          summary: "Connection pool utilization is high"
+          description: "Connection pool utilization is {{ $value }}% for database {{ $labels.database }}, above 80% threshold."
+          runbook_url: "https://your-runbook-url.com/connection-pool-high"
+
+      # Memory Usage High
+      - alert: SQLMCPHighMemoryUsage
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+        annotations:
+          summary: "High memory usage detected"
+          description: "Available memory is {{ $value }}%, which is below 20% threshold."
+          runbook_url: "https://your-runbook-url.com/high-memory-usage"
+
+      # CPU Usage High
+      - alert: SQLMCPHighCPUUsage
+        expr: (100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)) > 80
+        for: 10m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value }}%, which is above 80% threshold."
+          runbook_url: "https://your-runbook-url.com/high-cpu-usage"
+
+  # Security Alerts
+  - name: sql_mcp_server_security
+    rules:
+      # Failed Authentication Attempts
+      - alert: SQLMCPFailedAuthAttempts
+        expr: increase(sql_mcp_authentication_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+          category: security
+        annotations:
+          summary: "Multiple failed authentication attempts"
+          description: "{{ $value }} failed authentication attempts in the last 5 minutes."
+          runbook_url: "https://your-runbook-url.com/failed-auth-attempts"
+
+      # Blocked Queries Due to Security Policy
+      - alert: SQLMCPSecurityPolicyViolations
+        expr: increase(sql_mcp_security_violations_total[5m]) > 3
+        for: 2m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+          category: security
+        annotations:
+          summary: "Security policy violations detected"
+          description: "{{ $value }} queries blocked due to security policy violations in the last 5 minutes."
+          runbook_url: "https://your-runbook-url.com/security-violations"
+
+  # Performance Alerts
+  - name: sql_mcp_server_performance
+    rules:
+      # Query Volume Spike
+      - alert: SQLMCPQueryVolumeSpike
+        expr: rate(sql_mcp_queries_total[5m]) > (rate(sql_mcp_queries_total[1h]) * 3)
+        for: 5m
+        labels:
+          severity: info
+          service: sql-mcp-server
+        annotations:
+          summary: "Query volume spike detected"
+          description: "Current query rate {{ $value }} is 3x higher than the hourly average."
+          runbook_url: "https://your-runbook-url.com/query-volume-spike"
+
+      # Large Result Set Warning
+      - alert: SQLMCPLargeResultSets
+        expr: sql_mcp_query_result_size_bytes > 10485760  # 10MB
+        for: 1m
+        labels:
+          severity: info
+          service: sql-mcp-server
+        annotations:
+          summary: "Large result sets detected"
+          description: "Query returned result set larger than 10MB: {{ $value }} bytes."
+          runbook_url: "https://your-runbook-url.com/large-result-sets"
+
+      # Slow Queries
+      - alert: SQLMCPSlowQueries
+        expr: sql_mcp_query_duration_seconds > 30
+        for: 1m
+        labels:
+          severity: info
+          service: sql-mcp-server
+        annotations:
+          summary: "Slow query detected"
+          description: "Query took {{ $value }} seconds to complete, above 30s threshold."
+          runbook_url: "https://your-runbook-url.com/slow-queries"
+
+  # Database-Specific Alerts
+  - name: sql_mcp_database_health
+    rules:
+      # Database Unavailable
+      - alert: DatabaseUnavailable
+        expr: sql_mcp_database_available{database!=""} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: sql-mcp-server
+        annotations:
+          summary: "Database {{ $labels.database }} is unavailable"
+          description: "Database {{ $labels.database }} has been unavailable for more than 2 minutes."
+          runbook_url: "https://your-runbook-url.com/database-unavailable"
+
+      # Schema Changes Detected
+      - alert: DatabaseSchemaChange
+        expr: increase(sql_mcp_schema_changes_total[1h]) > 0
+        for: 1m
+        labels:
+          severity: info
+          service: sql-mcp-server
+        annotations:
+          summary: "Database schema changes detected"
+          description: "{{ $value }} schema changes detected in database {{ $labels.database }} in the last hour."
+          runbook_url: "https://your-runbook-url.com/schema-changes"
+
+  # Capacity Planning Alerts
+  - name: sql_mcp_capacity
+    rules:
+      # Disk Space Low
+      - alert: SQLMCPLowDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value }}% available on {{ $labels.device }}, below 10% threshold."
+          runbook_url: "https://your-runbook-url.com/low-disk-space"
+
+      # High Query Concurrency
+      - alert: SQLMCPHighConcurrency
+        expr: sql_mcp_concurrent_queries > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: sql-mcp-server
+        annotations:
+          summary: "High query concurrency"
+          description: "{{ $value }} concurrent queries detected, above recommended limit of 50."
+          runbook_url: "https://your-runbook-url.com/high-concurrency"
+
+# ALERT SEVERITY LEVELS:
+# - critical: Immediate action required, service impaired
+# - warning: Action required soon, performance degraded
+# - info: Informational, monitoring purposes
+#
+# RUNBOOK URLS:
+# Update all runbook_url values to point to your actual documentation
+# These should contain step-by-step troubleshooting procedures
+#
+# NOTIFICATION ROUTING:
+# Configure alertmanager.yml to route these alerts to appropriate channels:
+# - Critical: PagerDuty, phone calls, SMS
+# - Warning: Email, Slack
+# - Info: Email, Slack (optional)
+#
+# TESTING ALERTS:
+# Test alerts using Prometheus console:
+# - Go to http://localhost:9090/alerts
+# - Verify rules are loaded and expressions evaluate correctly
+# - Use amtool to test AlertManager routing
