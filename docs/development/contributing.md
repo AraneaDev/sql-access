@@ -27,7 +27,7 @@ There are many ways to contribute to this project:
 1. **Clone the Repository**
    ```bash
    git clone <repository-url>
-   cd sql-mcp-server
+   cd sql-ts
    ```
 
 2. **Install Dependencies**

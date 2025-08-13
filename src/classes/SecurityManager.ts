@@ -328,7 +328,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
   }
 
   /**
-   * Validate a single SELECT-only query
+   * Validate a single SELECT-only query with enhanced feedback
    */
   validateSelectOnlyQuery(query: string, dbType = 'mysql'): SecurityValidation {
     if (!query || typeof query !== 'string') {
@@ -343,7 +343,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     if (query.length > this.complexityLimits.maxQueryLength) {
       return {
         allowed: false,
-        reason: `Query exceeds maximum length of ${this.complexityLimits.maxQueryLength} characters`,
+        reason: `Query exceeds maximum length of ${this.complexityLimits.maxQueryLength} characters (current: ${query.length})`,
         confidence: 1.0
       };
     }
@@ -381,7 +381,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     if (this.blockedKeywords.has(command)) {
       return {
         allowed: false,
-        reason: `Command '${command}' is not allowed in SELECT-only mode`,
+        reason: `Command '${command}' is not allowed in SELECT-only mode. Allowed commands: SELECT, WITH, SHOW, EXPLAIN, DESCRIBE`,
         blockedCommand: command,
         confidence: 1.0
       };
@@ -412,7 +412,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     if (dangerousPatterns.length > 0) {
       return {
         allowed: false,
-        reason: `Query contains potentially dangerous patterns: ${dangerousPatterns.join(', ')}`,
+        reason: `Query contains potentially dangerous patterns: ${dangerousPatterns.join(', ')}. This may indicate an attempt to bypass security restrictions.`,
         confidence: 0.95
       };
     }
@@ -427,7 +427,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
 
     return {
       allowed: false,
-      reason: `Command '${command}' is not recognized as safe for SELECT-only mode`,
+      reason: `Command '${command}' is not recognized as safe for SELECT-only mode. Allowed commands include: SELECT, WITH, SHOW, EXPLAIN, DESCRIBE, and database-specific metadata commands.`,
       confidence: 0.9
     };
   }

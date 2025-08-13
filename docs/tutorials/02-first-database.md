@@ -525,4 +525,4 @@ Once you have a working database connection:
 
 ---
 
-**Need help?** Check the [troubleshooting guide](../guides/troubleshooting-guide.md) or ask in [GitHub Discussions](https://github.com/your-org/claude-sql-mcp-server/discussions).
+**Need help?** Check the [troubleshooting guide](../guides/troubleshooting-guide.md) or ask in [GitHub Discussions](<repository-discussions-url>).

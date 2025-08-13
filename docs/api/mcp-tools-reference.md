@@ -134,16 +134,16 @@ ORDER BY p.created_at DESC
 ```
 
 #### Response Format
-- ⏱️ **Execution Times**: Query execution and explain analysis timing
-- 📊 **Query Results**: Row count, column count from actual execution
-- 🛠️ **Execution Plan**: Formatted database execution plan
-- 💡 **Performance Recommendations**: Automated optimization suggestions
+- ⏱️ **Execution Times**: Query execution time and explain analysis time (in milliseconds)
+- 📊 **Query Results**: Row count and column count from actual execution
+- 🛠️ **Execution Plan**: Raw database execution plan output
+- 💡 **Performance Recommendations**: Basic optimization suggestions (generic recommendations)
 
-#### Recommendations Include
-- Index suggestions for slow queries
-- Query optimization techniques
-- Result set size warnings
-- JOIN optimization opportunities
+#### Current Recommendations Include
+- Basic query performance notes
+- Large result set warnings  
+- Generic optimization suggestions
+- Note: Advanced index suggestions and detailed analysis planned for future release
 
 ---
 

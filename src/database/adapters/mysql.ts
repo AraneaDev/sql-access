@@ -154,7 +154,8 @@ export class MySQLAdapter extends DatabaseAdapter {
   // ============================================================================
 
   buildExplainQuery(query: string): string {
-    return `EXPLAIN ${query}`;
+    // Use JSON format for structured analysis (MySQL 5.7+)
+    return `EXPLAIN FORMAT=JSON ${query}`;
   }
 
   // ============================================================================

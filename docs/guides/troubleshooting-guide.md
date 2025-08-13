@@ -17,10 +17,10 @@ This comprehensive guide helps you diagnose and resolve common issues with the S
 SQL_DEBUG=true npm start
 
 # View recent log entries (if using file logging)
-tail -f sql-mcp-server.log
+tail -f sql-ts.log
 
 # Check for specific error patterns
-grep -i error sql-mcp-server.log
+grep -i error sql-ts.log
 ```
 
 ## 🚨 Server Startup Issues
@@ -541,7 +541,7 @@ Server consuming excessive memory
 2. **Monitor query patterns**:
    ```bash
    # Check for queries returning large datasets
-   grep "rows returned" sql-mcp-server.log
+   grep "rows returned" sql-ts.log
    ```
 
 ## 🔐 Security Issues
@@ -640,13 +640,13 @@ When reporting issues, include:
 4. **Steps to reproduce** the issue
 
 ### Common Log Locations
-- **Current directory**: `./sql-mcp-server.log`
+- **Current directory**: `./sql-ts.log`
 - **Debug output**: Console when running with `SQL_DEBUG=true`
 - **System logs**: `/var/log/` (Linux) or Console app (macOS)
 
 ### Community Support
-- **GitHub Issues**: [Report bugs and issues](https://github.com/your-org/claude-sql-mcp-server/issues)
-- **GitHub Discussions**: [Ask questions and get help](https://github.com/your-org/claude-sql-mcp-server/discussions)
+- **GitHub Issues**: [Report bugs and issues](https://github.com/your-org/claude-sql-ts/issues)
+- **GitHub Discussions**: [Ask questions and get help](https://github.com/your-org/claude-sql-ts/discussions)
 - **Documentation**: [Browse all documentation](../README.md)
 
 ---

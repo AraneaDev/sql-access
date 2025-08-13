@@ -2,6 +2,18 @@
 
 This document provides comprehensive TypeScript API documentation for the SQL MCP Server. It covers all interfaces, types, classes, and functions available for developers working with or extending the server.
 
+## 📍 Implementation Status Guide
+
+This documentation reflects the **actual implementation** as of v2.0.0. Status indicators show the current state:
+
+- ✅ **Fully Implemented** - Complete and ready for use
+- ⚠️ **Partially Implemented** - Basic functionality available, advanced features planned
+- 📋 **Planned** - Interface defined, implementation in future versions
+- ❌ **Not Available** - Documented but not implemented
+
+**Last Updated:** 2025-01-13  
+**Implementation Review:** All method signatures and types have been verified against actual codebase
+
 ## 📋 Table of Contents
 
 - [Core Classes](#core-classes)
@@ -19,7 +31,7 @@ This document provides comprehensive TypeScript API documentation for the SQL MC
 
 ## 🏗️ Core Classes
 
-### SQLMCPServer
+### SQLMCPServer ✅
 Main server class that orchestrates all operations.
 
 ```typescript
@@ -44,7 +56,7 @@ export class SQLMCPServer extends EventEmitter {
 }
 ```
 
-### ConnectionManager
+### ConnectionManager ✅
 Manages database connections and connection pooling.
 
 ```typescript
@@ -58,9 +70,16 @@ export class ConnectionManager extends EventEmitter {
   closeAllConnections(): Promise<void>;
   
   // Query execution
-  executeQuery(database: string, query: string, params?: string[]): Promise<QueryResult>;
-  executeBatch(database: string, queries: QueryObject[], transaction?: boolean): Promise<BatchResult>;
-  analyzePerformance(database: string, query: string): Promise<PerformanceAnalysis>;
+  executeQuery(database: string, query: string, params?: unknown[]): Promise<QueryResult>;
+  executeBatch(database: string, queries: Array<{query: string; params?: unknown[]; label?: string}>, transaction?: boolean): Promise<BatchResult>;
+  analyzePerformance(database: string, query: string): Promise<{
+    executionTime: number;
+    explainTime: number;
+    rowCount: number;
+    columnCount: number;
+    executionPlan: string;
+    recommendations: string;
+  }>;
   
   // Events emitted
   on(event: 'connected', listener: (database: string) => void): this;
@@ -69,32 +88,47 @@ export class ConnectionManager extends EventEmitter {
 }
 ```
 
-### SecurityManager
+### SecurityManager ✅
 Handles query validation and security enforcement.
 
 ```typescript
 export class SecurityManager extends EventEmitter {
-  constructor();
+  constructor(config?: SecurityManagerConfig, selectOnlyMode?: boolean);
   
   // Initialization
   initialize(config: ParsedServerConfig): void;
   
-  // Query validation
-  validateSelectOnlyQuery(query: string, dbType: string): SecurityValidation;
+  // Main validation methods
+  validateQuery(query: string, dbType?: string): Promise<SecurityValidation>;
+  validateAnyQuery(query: string, dbType?: string): SecurityValidation;
+  analyzeQuery(query: string): Promise<QueryComplexityAnalysis>;
   analyzeQueryComplexity(query: string): QueryComplexityAnalysis;
-  validateBatchQueries(queries: QueryObject[], dbType: string): BatchValidationResult;
   
-  // Pattern detection
-  detectDangerousPatterns(query: string): DangerousPattern[];
-  detectSQLInjection(query: string): boolean;
+  // Batch validation  
+  validateBatchSelectOnlyQueries(
+    queries: Array<{query: string; params?: unknown[]; label?: string}>, 
+    dbType?: string
+  ): BatchValidationResult;
+  
+  // Configuration management
+  updateConfig(config: SecurityManagerConfig): void;
+  getConfig(): SecurityManagerConfig;
+  setSelectOnlyMode(enabled: boolean): void;
+  isSelectOnlyMode(): boolean;
+  
+  // Audit and utilities
+  createAuditLog(database: string, query: string | string[], allowed: boolean, reason?: string, metadata?: Record<string, unknown>): AuditLogEntry;
+  sanitizeErrorMessage(errorMessage: string): string;
+  getStatistics(): { queriesValidated: number; queriesBlocked: number; queriesAllowed: number; totalComplexity: number; avgComplexity: number; };
   
   // Events emitted
   on(event: 'query-blocked', listener: (database: string, reason: string) => void): this;
   on(event: 'query-approved', listener: (database: string) => void): this;
+  on(event: 'initialized', listener: (config: ParsedServerConfig) => void): this;
 }
 ```
 
-### SchemaManager
+### SchemaManager ✅
 Manages database schema caching and retrieval.
 
 ```typescript
@@ -117,7 +151,7 @@ export class SchemaManager extends EventEmitter {
 }
 ```
 
-### SSHTunnelManager
+### SSHTunnelManager ✅
 Manages SSH tunnels for secure database connections.
 
 ```typescript
@@ -404,62 +438,31 @@ Result of query security validation.
 export interface SecurityValidation {
   allowed: boolean;
   reason?: string;
-  blockedOperation?: string;
-  dangerousPatterns?: DangerousPattern[];
+  confidence: number;
+  blockedCommand?: string;
 }
 ```
 
 ### QueryComplexityAnalysis
-Analysis of query complexity and resource usage.
+Analysis of query complexity and performance characteristics.
 
 ```typescript
 export interface QueryComplexityAnalysis {
   score: number;
-  riskLevel: ComplexityRiskLevel;
-  factors: ComplexityFactor[];
-  recommendations: string[];
-  limits: ComplexityLimits;
-}
-
-export interface ComplexityFactor {
-  type: 'JOIN' | 'SUBQUERY' | 'UNION' | 'GROUP_BY' | 'ORDER_BY' | 'DISTINCT';
-  count: number;
-  weight: number;
-  contribution: number;
-}
-
-export interface ComplexityLimits {
-  maxJoins: number;
-  maxSubqueries: number;
-  maxUnions: number;
-  maxGroupBys: number;
-  maxComplexityScore: number;
-  maxQueryLength: number;
+  factors: string[];
+  joinCount: number;
+  subqueryCount: number;
+  unionCount: number;
+  groupByCount: number;
+  windowFuncCount: number;
+  risk_level: ComplexityRiskLevel;
 }
 
 export type ComplexityRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 ```
-
-### DangerousPattern
-Detected dangerous SQL pattern.
-
-```typescript
-export interface DangerousPattern {
-  type: DangerousPatternCategory;
-  pattern: string;
-  position: number;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  description: string;
-}
-
-export type DangerousPatternCategory = 
-  | 'FILE_SYSTEM_ACCESS'
-  | 'COMMAND_EXECUTION' 
-  | 'PRIVILEGE_ESCALATION'
-  | 'DATA_EXFILTRATION'
-  | 'SQL_INJECTION'
-  | 'SUSPICIOUS_FUNCTION';
 ```
+
+
 
 ### SecurityConfig
 Security configuration settings.
@@ -711,7 +714,7 @@ Server and protocol version constants.
 ```typescript
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
 export const SERVER_VERSION = '2.0.0';
-export const SERVER_NAME = 'enhanced-sql-database-server';
+export const SERVER_NAME = 'mcp-sql-access-server';
 ```
 
 ### Enum Arrays
@@ -732,7 +735,7 @@ export const SSH_TUNNEL_STATUSES = ['connecting', 'connected', 'error', 'disconn
 
 ### Creating and Using SQLMCPServer
 ```typescript
-import { SQLMCPServer, DatabaseConfig } from 'sql-mcp-server';
+import { SQLMCPServer, DatabaseConfig } from 'sql-access';
 
 const server = new SQLMCPServer();
 
@@ -760,7 +763,7 @@ startServer();
 
 ### Custom Security Validation
 ```typescript
-import { SecurityManager, SecurityValidation } from 'sql-mcp-server';
+import { SecurityManager, SecurityValidation } from 'sql-access';
 
 class CustomSecurityManager extends SecurityManager {
   validateCustomRule(query: string): SecurityValidation {
@@ -782,7 +785,7 @@ class CustomSecurityManager extends SecurityManager {
 
 ### Type-Safe Configuration
 ```typescript
-import { DatabaseConfig, isDatabaseType, validateRequiredFields } from 'sql-mcp-server';
+import { DatabaseConfig, isDatabaseType, validateRequiredFields } from 'sql-access';
 
 function createDatabaseConfig(rawConfig: any): DatabaseConfig {
   // Validate database type
@@ -812,7 +815,7 @@ function createDatabaseConfig(rawConfig: any): DatabaseConfig {
 
 ### Custom Database Adapter
 ```typescript
-import { DatabaseConnection, QueryResult } from 'sql-mcp-server';
+import { DatabaseConnection, QueryResult } from 'sql-access';
 
 class CustomDatabaseAdapter implements DatabaseConnection {
   async connect(config: DatabaseConfig): Promise<void> {
@@ -854,7 +857,7 @@ import {
   SecurityViolationError, 
   ConnectionError,
   isSecurityViolationError 
-} from 'sql-mcp-server';
+} from 'sql-access';
 
 async function handleDatabaseOperation() {
   try {

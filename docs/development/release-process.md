@@ -310,7 +310,7 @@ sha256sum dist/index.js > dist/checksums.txt
 sha256sum sql-access-2.1.0.tgz >> dist/checksums.txt
 
 # Create source archive
-git archive --format=tar.gz --prefix=sql-mcp-server-2.1.0/ v2.1.0 > sql-mcp-server-2.1.0-src.tar.gz
+git archive --format=tar.gz --prefix=sql-access-2.1.0/ v2.1.0 > sql-access-2.1.0-src.tar.gz
 ```
 
 ### 6. Release Deployment
@@ -377,7 +377,7 @@ git push origin release/2.1.0
    ## 📦 Installation
    
    ```bash
-   npm install -g sql-mcp-server@2.1.0
+   npm install -g sql-access@2.1.0
    ```
    
    ## 🔄 Upgrade from v2.0.x
@@ -385,7 +385,7 @@ git push origin release/2.1.0
    This release is fully backward compatible. No configuration changes required.
    
    ```bash
-   npm update -g sql-mcp-server
+   npm update -g sql-access
    ```
    
    ## 📋 Full Changelog
@@ -399,7 +399,7 @@ git push origin release/2.1.0
 
 4. **Attach Release Assets**
    - `sql-access-2.1.0.tgz` (npm package)
-   - `sql-mcp-server-2.1.0-src.tar.gz` (source code)
+   - `sql-access-2.1.0-src.tar.gz` (source code)
    - `checksums.txt` (file integrity verification)
 
 #### NPM Publishing
@@ -802,7 +802,7 @@ Version 2.1.0 contains a critical security vulnerability that could allow SQL in
 Upgrade to v2.1.1 immediately:
 
 ```bash
-npm update -g sql-mcp-server
+npm update -g sql-access
 ```
 
 ## Timeline

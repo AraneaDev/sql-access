@@ -334,4 +334,4 @@ Once you have the basic setup working:
 
 ---
 
-**Need help?** Check the [troubleshooting guide](troubleshooting-guide.md) or [join our discussions](https://github.com/your-org/claude-sql-mcp-server/discussions).
+**Need help?** Check the [troubleshooting guide](troubleshooting-guide.md) or [join our discussions](<repository-discussions-url>).

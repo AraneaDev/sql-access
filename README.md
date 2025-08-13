@@ -217,7 +217,7 @@ query_timeout=30000
 ### Development Setup
 ```bash
 git clone <repository-url>
-cd sql-access
+cd sql-ts
 npm install
 npm run dev
 npm test
@@ -227,7 +227,7 @@ npm test
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License**.
 
 ### Open Source Commitment
 - ✅ **Always free** for individual developers and small teams

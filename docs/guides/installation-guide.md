@@ -42,8 +42,8 @@ sql-setup
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/claude-sql-mcp-server.git
-cd claude-sql-mcp-server
+git clone <repository-url>
+cd sql-ts
 
 # Install dependencies
 npm install
@@ -310,8 +310,8 @@ docker run -it --rm \
 ### Build from Source
 ```bash
 # Clone repository
-git clone https://github.com/your-org/claude-sql-mcp-server.git
-cd claude-sql-mcp-server
+git clone <repository-url>
+cd sql-ts
 
 # Build Docker image
 docker build -t sql-mcp-server .
@@ -399,8 +399,8 @@ server {
 ### Development Setup
 ```bash
 # Clone repository
-git clone https://github.com/your-org/claude-sql-mcp-server.git
-cd claude-sql-mcp-server
+git clone <repository-url>
+cd sql-ts
 
 # Install dependencies
 npm install
@@ -509,7 +509,7 @@ source ~/.profile
 npm cache clean --force
 
 # Reinstall with verbose output
-npm install -g sql-mcp-server --verbose
+npm install -g sql-access --verbose
 ```
 
 #### Database Driver Issues
@@ -586,4 +586,4 @@ For production deployments:
 
 ---
 
-**Need help?** Check the [troubleshooting guide](troubleshooting-guide.md) or ask in [GitHub Discussions](https://github.com/your-org/claude-sql-mcp-server/discussions).
+**Need help?** Check the [troubleshooting guide](troubleshooting-guide.md) or ask in [GitHub Discussions](<repository-discussions-url>).

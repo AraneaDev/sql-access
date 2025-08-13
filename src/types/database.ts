@@ -209,6 +209,21 @@ export interface ServerConfig {
 // Error Types
 // ============================================================================
 
+export interface StandardErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    troubleshooting?: string[];
+  };
+  context: {
+    database?: string;
+    query?: string;
+    timestamp: string;
+  };
+}
+
 export class SQLMCPError extends Error {
   public code: string;
   public details?: Record<string, unknown>;

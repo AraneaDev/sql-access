@@ -23,7 +23,8 @@ export type {
   ExtensionConfig,
   ServerConfig,
   DatabaseListItem,
-  TestConnectionResult
+  TestConnectionResult,
+  StandardErrorResponse
 } from './database.js';
 
 // MCP protocol types
@@ -105,6 +106,76 @@ export type {
   IConfigLoader
 } from './config.js';
 
+// Performance types
+export type {
+  PerformanceAnalysisResult,
+  QueryMetrics,
+  DetailedQueryMetrics,
+  ExecutionStage,
+  ExecutionPlan,
+  ResourceUsage,
+  LockInfo,
+  PerformanceRecommendation,
+  RecommendationType,
+  PostgreSQLPerformanceData,
+  MySQLPerformanceData,
+  SQLitePerformanceData,
+  PerformanceAnalysisOptions,
+  PerformanceThresholds,
+  PerformanceHistoryEntry,
+  PerformanceHistorySummary
+} from './performance.js';
+
+// Enhanced Schema types
+export type {
+  EnhancedTableInfo,
+  EnhancedColumnInfo,
+  BasicForeignKeyInfo,
+  DetailedForeignKeyInfo,
+  ForeignKeyAction,
+  BasicIndexInfo,
+  DetailedIndexInfo,
+  IndexType,
+  ConstraintInfo,
+  ConstraintType,
+  TableStatistics,
+  ColumnStatistics,
+  IndexStatistics,
+  HistogramBucket,
+  EnhancedViewInfo,
+  ViewSecurity,
+  SchemaRelationships,
+  TableRelationship,
+  ViewRelationship,
+  CircularReference,
+  SchemaAnalysis,
+  SchemaOverview,
+  SchemaIssue,
+  SchemaIssueType,
+  SchemaRecommendation,
+  SchemaComplexity,
+  ComplexityFactor,
+  PostgreSQLSchemaExtensions,
+  ExtensionInfo,
+  EnumTypeInfo,
+  DomainTypeInfo,
+  AggregateInfo,
+  SchemaChangeTracking,
+  SchemaChange
+} from './schema.js';
+
+// Import specific types for aliases to avoid scoping issues
+import type { 
+  EnhancedViewInfo, 
+  BasicForeignKeyInfo, 
+  BasicIndexInfo 
+} from './schema.js';
+
+// Type aliases for documentation compatibility
+export type ViewInfo = EnhancedViewInfo;
+export type ForeignKeyInfo = BasicForeignKeyInfo;
+export type IndexInfo = BasicIndexInfo;
+
 // Error classes
 export {
   SQLMCPError,
@@ -154,6 +225,23 @@ export {
   validateRequiredFields
 } from './config.js';
 
+export {
+  isPerformanceAnalysisResult,
+  isRecommendationType,
+  isPerformancePriority,
+  generateBasicRecommendations
+} from './performance.js';
+
+export {
+  isEnhancedTableInfo,
+  isForeignKeyInfo,
+  isIndexInfo,
+  isConstraintType,
+  isIndexType,
+  calculateTableComplexity,
+  findMissingIndexes
+} from './schema.js';
+
 // Constants
 export {
   DEFAULT_SECURITY_CONFIG,
@@ -169,7 +257,7 @@ export {
 
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
 export const SERVER_VERSION = '2.0.0';
-export const SERVER_NAME = 'enhanced-sql-database-server';
+export const SERVER_NAME = 'mcp-sql-access-server';
 
 // ============================================================================
 // Common Enums (as const assertions for better type safety)

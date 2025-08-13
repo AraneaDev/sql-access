@@ -136,7 +136,8 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
   // ============================================================================
 
   buildExplainQuery(query: string): string {
-    return `EXPLAIN (ANALYZE, BUFFERS) ${query}`;
+    // Use JSON format for better parsing and analysis
+    return `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
   }
 
   // ============================================================================

@@ -600,19 +600,21 @@ This document provides comprehensive JSON schema definitions for all request and
     },
     "rowCount": {
       "type": "number",
-      "minimum": 0
+      "minimum": 0,
+      "description": "Number of rows returned by the query"
     },
     "columnCount": {
       "type": "number",
-      "minimum": 0
+      "minimum": 0,
+      "description": "Number of columns in the result set"
     },
     "executionPlan": {
       "type": "string",
-      "description": "Database execution plan"
+      "description": "Raw database execution plan output"
     },
     "recommendations": {
       "type": "string",
-      "description": "Performance optimization recommendations"
+      "description": "Basic performance optimization recommendations"
     }
   },
   "required": [

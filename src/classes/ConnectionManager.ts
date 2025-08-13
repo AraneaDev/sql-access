@@ -696,7 +696,7 @@ export class ConnectionManager extends EventEmitter {
   }
 
   /**
-   * Analyze query performance
+   * Analyze query performance with database-specific recommendations
    */
   async analyzePerformance(dbName: string, query: string): Promise<{
     executionTime: number;
@@ -725,22 +725,17 @@ export class ConnectionManager extends EventEmitter {
       const explainResult = await adapter.executeQuery(connectionInfo.connection, explainQuery);
       const explainTime = Date.now() - explainStartTime;
 
-      // Format execution plan
-      const executionPlan = explainResult.rows
-        .map(row => Object.values(row).join(' | '))
-        .join('\n');
+      // Format execution plan based on database type
+      const executionPlan = this.formatExecutionPlan(explainResult, connectionInfo.type);
 
-      // Generate basic recommendations
-      let recommendations = '• Query executed successfully\n';
-      if (result.rowCount > 1000) {
-        recommendations += '• Consider adding LIMIT clause for large result sets\n';
-      }
-      if (executionTime > 1000) {
-        recommendations += '• Query took over 1 second - consider adding indexes\n';
-      }
-      if (query.toUpperCase().includes('SELECT *')) {
-        recommendations += '• Consider selecting only needed columns instead of SELECT *\n';
-      }
+      // Generate database-specific recommendations
+      const recommendations = this.generatePerformanceRecommendations({
+        query,
+        result,
+        explainResult,
+        executionTime,
+        databaseType: connectionInfo.type
+      });
 
       return {
         executionTime,
@@ -755,5 +750,162 @@ export class ConnectionManager extends EventEmitter {
       this.emit('error', error, dbName);
       throw error;
     }
+  }
+
+  /**
+   * Format execution plan based on database type
+   */
+  private formatExecutionPlan(explainResult: QueryResult, dbType: string): string {
+    switch (dbType) {
+      case 'postgresql':
+        return explainResult.rows
+          .map(row => Object.values(row).join(' '))
+          .join('\n');
+      
+      case 'mysql':
+        return explainResult.rows
+          .map(row => {
+            const vals = Object.values(row);
+            return `${vals[0]} | ${vals[1]} | ${vals[2]} | ${vals[3]}`;
+          })
+          .join('\n');
+      
+      case 'sqlite':
+        return explainResult.rows
+          .map(row => Object.values(row).join(' | '))
+          .join('\n');
+      
+      default:
+        return explainResult.rows
+          .map(row => Object.values(row).join(' | '))
+          .join('\n');
+    }
+  }
+
+  /**
+   * Generate database-specific performance recommendations
+   */
+  private generatePerformanceRecommendations(options: {
+    query: string;
+    result: QueryResult;
+    explainResult: QueryResult;
+    executionTime: number;
+    databaseType: string;
+  }): string {
+    const { query, result, explainResult, executionTime, databaseType } = options;
+    const recommendations: string[] = ['Performance Analysis Results:'];
+    
+    // Basic execution metrics
+    recommendations.push(`• Query executed successfully in ${executionTime}ms`);
+    recommendations.push(`• Returned ${result.rowCount} rows with ${result.fields.length} columns`);
+    
+    // Performance warnings based on execution time
+    if (executionTime > 5000) {
+      recommendations.push('⚠️ CRITICAL: Query took over 5 seconds - requires immediate optimization');
+    } else if (executionTime > 1000) {
+      recommendations.push('⚠️ WARNING: Slow query detected (>1s) - consider optimization');
+    } else if (executionTime > 500) {
+      recommendations.push('ℹ️ INFO: Moderate execution time - monitor for performance');
+    } else {
+      recommendations.push('✅ GOOD: Query performance is acceptable');
+    }
+
+    // Large result set warnings
+    if (result.rowCount > 10000) {
+      recommendations.push('⚠️ LARGE DATASET: Consider adding LIMIT clause or pagination');
+    } else if (result.rowCount > 1000) {
+      recommendations.push('ℹ️ INFO: Large result set - verify if all rows are needed');
+    }
+
+    // Query analysis recommendations
+    const upperQuery = query.toUpperCase();
+    
+    if (upperQuery.includes('SELECT *')) {
+      recommendations.push('💡 TIP: Use specific column names instead of SELECT * for better performance');
+    }
+    
+    if (!upperQuery.includes('LIMIT') && !upperQuery.includes('TOP')) {
+      recommendations.push('💡 TIP: Consider adding LIMIT clause to prevent unexpected large results');
+    }
+
+    // Database-specific recommendations
+    switch (databaseType) {
+      case 'postgresql':
+        this.addPostgreSQLRecommendations(recommendations, explainResult, query);
+        break;
+      case 'mysql':
+        this.addMySQLRecommendations(recommendations, explainResult, query);
+        break;
+      case 'sqlite':
+        this.addSQLiteRecommendations(recommendations, explainResult, query);
+        break;
+    }
+
+    // Join analysis
+    const joinCount = (upperQuery.match(/\bJOIN\b/g) || []).length;
+    if (joinCount > 3) {
+      recommendations.push('⚠️ COMPLEX: Multiple JOINs detected - ensure proper indexing on join columns');
+    } else if (joinCount > 0) {
+      recommendations.push('ℹ️ INFO: JOINs detected - verify indexes exist on join columns');
+    }
+
+    return recommendations.join('\n');
+  }
+
+  /**
+   * Add PostgreSQL-specific recommendations
+   */
+  private addPostgreSQLRecommendations(recommendations: string[], explainResult: QueryResult, query: string): void {
+    const planText = explainResult.rows.map(row => Object.values(row).join(' ')).join(' ').toLowerCase();
+    
+    if (planText.includes('seq scan')) {
+      recommendations.push('🔍 POSTGRESQL: Sequential scan detected - consider adding indexes');
+    }
+    
+    if (planText.includes('nested loop') && planText.includes('buffers')) {
+      recommendations.push('🔍 POSTGRESQL: Nested loops with buffer usage - check join conditions');
+    }
+    
+    if (query.toUpperCase().includes('LIKE') && query.includes('%')) {
+      recommendations.push('🔍 POSTGRESQL: LIKE with wildcards - consider full-text search (GIN indexes)');
+    }
+  }
+
+  /**
+   * Add MySQL-specific recommendations  
+   */
+  private addMySQLRecommendations(recommendations: string[], explainResult: QueryResult, query: string): void {
+    for (const row of explainResult.rows) {
+      const rowData = row as Record<string, unknown>;
+      
+      if (rowData.type === 'ALL') {
+        recommendations.push('🔍 MYSQL: Full table scan detected - add appropriate indexes');
+      }
+      
+      if (rowData.Extra && String(rowData.Extra).includes('Using filesort')) {
+        recommendations.push('🔍 MYSQL: Filesort operation - consider adding index on ORDER BY columns');
+      }
+      
+      if (rowData.Extra && String(rowData.Extra).includes('Using temporary')) {
+        recommendations.push('🔍 MYSQL: Temporary table created - optimize GROUP BY or DISTINCT operations');
+      }
+    }
+  }
+
+  /**
+   * Add SQLite-specific recommendations
+   */
+  private addSQLiteRecommendations(recommendations: string[], explainResult: QueryResult, query: string): void {
+    const planText = explainResult.rows.map(row => Object.values(row).join(' ')).join(' ').toLowerCase();
+    
+    if (planText.includes('scan table')) {
+      recommendations.push('🔍 SQLITE: Table scan detected - consider adding indexes');
+    }
+    
+    if (planText.includes('temp b-tree')) {
+      recommendations.push('🔍 SQLITE: Temporary B-tree created - optimize sorting operations');
+    }
+    
+    recommendations.push('ℹ️ SQLITE: Run ANALYZE command periodically to update query planner statistics');
   }
 }
