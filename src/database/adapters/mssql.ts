@@ -67,7 +67,7 @@ export class MSSQLAdapter extends DatabaseAdapter {
   isConnected(connection: DatabaseConnection): boolean {
     try {
       const mssqlPool = connection as MSSQLConnectionPool;
-      return mssqlPool && mssqlPool.connected;
+      return !!(mssqlPool && mssqlPool.connected);
     } catch {
       return false;
     }

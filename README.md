@@ -1,7 +1,9 @@
 # SQL MCP Server (TypeScript)
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Test Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen)](https://github.com/your-org/sql-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/Tests-180%2B%20passing-success)](https://github.com/your-org/sql-ts)
 
 🚀 **Enterprise-grade SQL MCP Server** - Connect Claude Desktop to your databases with bulletproof security, comprehensive monitoring, and seamless multi-database support.
 

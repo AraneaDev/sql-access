@@ -120,9 +120,11 @@ There are many ways to contribute to this project:
 ### Before Submitting Changes
 
 - ✅ **Tests pass**: All existing and new tests must pass
-- ✅ **Linting passes**: Code follows our style guidelines
+- ✅ **Coverage requirements met**: 90%+ line coverage, 95%+ for new code
+- ✅ **Linting passes**: Code follows our style guidelines  
 - ✅ **TypeScript compiles**: No type errors
 - ✅ **Documentation updated**: If you changed functionality
+- ✅ **Performance testing**: For core components and database operations
 
 ### Code Guidelines
 
@@ -135,7 +137,14 @@ There are many ways to contribute to this project:
 
 2. **Small, Focused Changes**: Keep changes focused on a single feature/fix
 
-3. **Update Tests**: Include tests for new functionality
+3. **Update Tests**: Include tests for new functionality and ensure 90%+ coverage
+
+4. **Test Coverage Requirements**:
+   - **New functions**: 100% line and branch coverage
+   - **New classes**: 95%+ overall coverage
+   - **Modified functions**: Cannot decrease existing coverage
+   - **Bug fixes**: Must include regression tests
+   - **Database operations**: Performance and error handling tests required
 
 ## 🏗️ Project Structure
 
@@ -284,49 +293,80 @@ docs/                     # Documentation
 
 ### Testing Standards
 
-1. **Comprehensive Test Coverage**
+1. **Comprehensive Test Coverage (90%+ Required)**
    ```typescript
    describe('SecurityManager', () => {
      let securityManager: SecurityManager;
      
      beforeEach(() => {
-       securityManager = new SecurityManager();
+       securityManager = new SecurityManager(testConfig);
      });
      
-     describe('validateQuery', () => {
-       it('should allow safe SELECT queries', () => {
-         const result = securityManager.validateQuery('SELECT * FROM users');
+     afterEach(async () => {
+       await securityManager.cleanup();
+     });
+     
+     describe('query validation', () => {
+       test('should allow safe SELECT queries', async () => {
+         const result = await securityManager.validateQuery('SELECT * FROM users');
          expect(result.allowed).toBe(true);
+         expect(result.confidence).toBeGreaterThan(0.8);
        });
        
-       it('should block dangerous operations', () => {
-         const result = securityManager.validateQuery('DROP TABLE users');
+       test('should block dangerous operations', async () => {
+         const result = await securityManager.validateQuery('DROP TABLE users');
          expect(result.allowed).toBe(false);
          expect(result.reason).toContain('DROP');
        });
        
-       it('should handle edge cases', () => {
-         const result = securityManager.validateQuery('');
-         expect(result.allowed).toBe(false);
+       test('should handle edge cases and errors', async () => {
+         await expect(
+           securityManager.validateQuery('')
+         ).rejects.toThrow('Empty query');
+         
+         const malformedResult = await securityManager.validateQuery('SELCT * FROM');
+         expect(malformedResult.allowed).toBe(false);
        });
      });
    });
    ```
 
-2. **Test Categories**
+2. **Test Categories Required**
    - **Unit Tests**: Test individual functions/classes in isolation
-   - **Integration Tests**: Test component interactions
-   - **End-to-End Tests**: Test complete user workflows
+   - **Integration Tests**: Test component interactions  
+   - **Performance Tests**: For database operations and core functionality
+   - **Error Handling Tests**: All failure scenarios must be tested
+   - **Edge Case Tests**: Boundary conditions and unusual inputs
 
-3. **Mock External Dependencies**
+3. **Database Adapter Testing Requirements**
    ```typescript
-   jest.mock('../database/adapters/postgresql', () => ({
-     PostgreSQLAdapter: jest.fn().mockImplementation(() => ({
-       connect: jest.fn().mockResolvedValue(mockConnection),
-       executeQuery: jest.fn().mockResolvedValue(mockResult)
-     }))
-   }));
+   describe('DatabaseAdapter Tests', () => {
+     // Must test all these scenarios:
+     test('connection management lifecycle');
+     test('query execution success and failure');
+     test('schema introspection accuracy');
+     test('performance analysis features');
+     test('error recovery and cleanup');
+     test('database-specific feature support');
+     test('concurrent operation handling');
+   });
    ```
+
+4. **Mock External Dependencies**
+   ```typescript
+   // Use provided mock factories
+   import { MockDatabaseFactory } from '../../tests/fixtures/mock-databases.js';
+   import { MockSSHFactory } from '../../tests/fixtures/mock-ssh.js';
+   
+   const mockAdapter = MockDatabaseFactory.createMockAdapter('postgresql');
+   const mockTunnel = MockSSHFactory.createTunnelConfig();
+   ```
+
+5. **Test Documentation Requirements**
+   - Describe what the test validates
+   - Include error scenarios  
+   - Explain any complex setup
+   - Document performance expectations
 
 ## 🐛 Bug Reports
 

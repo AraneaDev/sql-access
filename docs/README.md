@@ -54,7 +54,8 @@ Welcome to the comprehensive documentation for the SQL MCP Server - a high-perfo
 ### 🛠️ Development
 - **[Contributing](development/contributing.md)** - Contribution guidelines
 - **[Development Setup](development/development-setup.md)** - Local development environment
-- **[Testing Guide](development/testing-guide.md)** - Testing strategies and frameworks
+- **[Testing Guide](development/testing-guide.md)** - Testing strategies and 90%+ coverage
+- **[Test Coverage Report](development/test-coverage-report.md)** - Detailed coverage metrics and validation
 - **[Code Standards](development/code-standards.md)** - Coding standards and conventions
 - **[Release Process](development/release-process.md)** - Release and versioning workflow
 

@@ -55,7 +55,7 @@ export class SQLiteAdapter extends DatabaseAdapter {
     try {
       const sqliteDb = connection as SQLiteDatabase;
       // SQLite database is considered connected if it's not null and open property is true
-      return sqliteDb && (sqliteDb as any).open === true;
+      return !!(sqliteDb && (sqliteDb as any).open === true);
     } catch {
       return false;
     }

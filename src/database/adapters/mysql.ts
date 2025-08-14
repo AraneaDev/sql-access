@@ -78,6 +78,9 @@ export class MySQLAdapter extends DatabaseAdapter {
 
   isConnected(connection: DatabaseConnection): boolean {
     try {
+      if (!connection) {
+        return false;
+      }
       const mysqlConn = connection as MySQLConnection;
       // MySQL connection doesn't have a direct isConnected method
       // We'll use a simple approach - if the connection exists and hasn't been destroyed

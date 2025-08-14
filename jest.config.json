@@ -15,9 +15,30 @@
   "coverageDirectory": "coverage",
   "coverageReporters": [
     "text",
+    "text-summary",
     "lcov",
     "html"
   ],
+  "coverageThreshold": {
+    "global": {
+      "branches": 85,
+      "functions": 95,
+      "lines": 90,
+      "statements": 90
+    },
+    "src/classes/": {
+      "branches": 90,
+      "functions": 100,
+      "lines": 95,
+      "statements": 95
+    },
+    "src/database/adapters/": {
+      "branches": 88,
+      "functions": 95,
+      "lines": 92,
+      "statements": 92
+    }
+  },
   "setupFilesAfterEnv": [
     "<rootDir>/tests/setup.ts"
   ],
@@ -31,5 +52,7 @@
         "useESM": true
       }
     ]
-  }
+  },
+  "testTimeout": 10000,
+  "maxWorkers": 1
 }
