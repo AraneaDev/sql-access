@@ -7,7 +7,7 @@
 
 🚀 **Enterprise-grade MCP SQL Access Server v2.1.0** - Connect Claude Desktop to your databases with bulletproof security, comprehensive monitoring, and seamless multi-database support.
 
-## ✨ Why Choose MCP SQL Access Server v2.1.0?
+## ✨ Why Choose MCP SQL Access Server v2.0.0?
 
 ### 🛡️ **Security First**
 - **SELECT-Only Mode** - Production-safe read-only database access
