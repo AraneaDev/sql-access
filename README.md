@@ -47,12 +47,20 @@ sql-setup
 The interactive wizard guides you through database setup, security configuration, and SSH tunneling.
 
 ### 3. Connect Claude Desktop
-```bash
-sql-server
+Add to your Claude Desktop configuration:
+
+**Windows:**
+```json
+{
+  "mcpServers": {
+    "sql-database": {
+      "command": "d:\\path\\to\\sql-access\\start.bat"
+    }
+  }
+}
 ```
 
-### 4. Connect Claude Desktop
-Add to your Claude Desktop configuration:
+**macOS/Linux:**
 ```json
 {
   "mcpServers": {
@@ -64,7 +72,7 @@ Add to your Claude Desktop configuration:
 }
 ```
 
-**That's it!** 🎉 Claude now has secure access to your databases.
+**That's it!** 🎉 Claude Desktop will automatically start the MCP server when needed and connect to your databases.
 
 ## 🎯 Use Cases
 
