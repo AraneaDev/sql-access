@@ -46,7 +46,7 @@ sql-setup
 ```
 The interactive wizard guides you through database setup, security configuration, and SSH tunneling.
 
-### 3. Start
+### 3. Connect Claude Desktop
 ```bash
 sql-server
 ```
