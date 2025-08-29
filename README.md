@@ -218,8 +218,8 @@ query_timeout=30000
 
 ### Development Setup
 ```bash
-git clone <repository-url>
-cd sql-ts
+git clone https://forgejo.aranea.dev/ContextForge/sql-access.git
+cd sql-access
 npm install
 npm run dev
 npm test
