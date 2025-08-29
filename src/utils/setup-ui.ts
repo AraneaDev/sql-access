@@ -14,7 +14,9 @@ export class SetupUI {
   private readonly logger = getLogger({ 
     component: 'setup',
     enableFile: true,
-    logFile: './setup.log'
+    enableConsole: false, // Don't duplicate console output in logger
+    logFile: './setup.log',
+    logLevel: 'WARNING' // Only log warnings and errors by default
   });
 
   private constructor() {
@@ -35,7 +37,7 @@ export class SetupUI {
   public print(message: string): void {
     // eslint-disable-next-line no-console
     console.log(message);
-    this.logger.info(`UI: ${message}`);
+    // Don't log routine UI output to avoid noise
   }
 
   public printHeader(title: string): void {
@@ -44,31 +46,31 @@ export class SetupUI {
     console.log(`\n${title}`);
     // eslint-disable-next-line no-console
     console.log(separator);
-    this.logger.info(`UI Header: ${title}`);
+    // Don't log routine UI output
   }
 
   public printSection(title: string): void {
     // eslint-disable-next-line no-console
     console.log(`\n${title}`);
-    this.logger.info(`UI Section: ${title}`);
+    // Don't log routine UI output
   }
 
   public printSubsection(title: string): void {
     // eslint-disable-next-line no-console
     console.log(`\n🗄️ ${title}:`);
-    this.logger.info(`UI Subsection: ${title}`);
+    // Don't log routine UI output
   }
 
   public printInfo(message: string): void {
     // eslint-disable-next-line no-console
     console.log(`📋 ${message}`);
-    this.logger.info(`UI Info: ${message}`);
+    // Don't log routine UI output
   }
 
   public printSuccess(message: string): void {
     // eslint-disable-next-line no-console
     console.log(`✅ ${message}`);
-    this.logger.info(`UI Success: ${message}`);
+    // Don't log routine UI output
   }
 
   public printWarning(message: string): void {
@@ -86,7 +88,7 @@ export class SetupUI {
   public printOption(number: number | string, description: string): void {
     // eslint-disable-next-line no-console
     console.log(`${number}. ${description}`);
-    this.logger.info(`UI Option: ${number}. ${description}`);
+    // Don't log routine UI output
   }
 
   public printDetail(label: string, value: string | number | boolean): void {
@@ -95,7 +97,7 @@ export class SetupUI {
       : value;
     // eslint-disable-next-line no-console
     console.log(`   ${label}: ${displayValue}`);
-    this.logger.debug(`UI Detail: ${label}: ${value}`);
+    // Don't log routine UI output
   }
 
   public printDetailWithStatus(label: string, value: string | number | boolean, enabled: boolean): void {
@@ -105,14 +107,14 @@ export class SetupUI {
       : `${status} (${value})`;
     // eslint-disable-next-line no-console
     console.log(`   ${label}: ${displayValue}`);
-    this.logger.debug(`UI Detail with Status: ${label}: ${value} (${enabled})`);
+    // Don't log routine UI output
   }
 
   public printSeparator(): void {
     const separator = '='.repeat(50);
     // eslint-disable-next-line no-console
     console.log(separator);
-    this.logger.debug('UI Separator');
+    // Don't log routine UI output
   }
 
   public printEmptyLine(): void {
@@ -165,14 +167,20 @@ export class SetupUI {
   // ============================================================================
 
   public printDebug(message: string, data?: any): void {
-    if (data) {
-      // eslint-disable-next-line no-console
-      console.log(`🔍 Debug - ${message}:`, JSON.stringify(data, null, 2));
-      this.logger.debug(`UI Debug: ${message}`, { data });
+    // Only show debug output if explicitly enabled via environment variable
+    if (process.env.DEBUG_SETUP === 'true') {
+      if (data) {
+        // eslint-disable-next-line no-console
+        console.log(`🔍 Debug - ${message}:`, JSON.stringify(data, null, 2));
+        this.logger.debug(`UI Debug: ${message}`, { data });
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(`🔍 Debug - ${message}`);
+        this.logger.debug(`UI Debug: ${message}`);
+      }
     } else {
-      // eslint-disable-next-line no-console
-      console.log(`🔍 Debug - ${message}`);
-      this.logger.debug(`UI Debug: ${message}`);
+      // Always log to file for debugging later, just don't show in console
+      this.logger.debug(`UI Debug: ${message}`, data ? { data } : undefined);
     }
   }
 

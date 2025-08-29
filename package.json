@@ -28,6 +28,7 @@
     "clean": "node -e \"const fs = require('fs'); if (fs.existsSync('dist')) fs.rmSync('dist', {recursive: true, force: true});\"",
     "prebuild": "npm run type-check",
     "validate": "npm run lint:check && npm run type-check && npm run test",
+    "validate-docs": "node scripts/validate-documentation.js",
     "prepack": "npm run build:production",
     "generate-template": "node dist/setup.js --template"
   },

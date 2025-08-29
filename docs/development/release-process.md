@@ -44,7 +44,7 @@ class SecurityManager {
   validateQuery(query: string): boolean { }
 }
 
-// v2.0.0
+// v2.1.0
 class SecurityManager {
   validateQuery(query: string): Promise<SecurityValidation> { } // Changed return type
 }

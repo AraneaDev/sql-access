@@ -56,7 +56,10 @@ export class SetupWizard {
           this.config[`database.${name}`] = dbConfig;
         }
         
-        ui.printDebug('Parsed config structure', this.config);
+        // Only show debug if explicitly requested
+        if (process.env.DEBUG_SETUP === 'true') {
+          ui.printDebug('Parsed config structure', this.config);
+        }
 
         // Extract database names
         this.existingDatabases = Object.keys(this.config)
@@ -482,11 +485,13 @@ export class SetupWizard {
       // Show security summary
       this.showSecuritySummary();
 
-      // Show debug info
-      ui.printSection('🔍 Debug - Config file contents:');
-      ui.print('-----------------------------------');
-      ui.print(fs.readFileSync(this.configPath, 'utf-8'));
-      ui.print('-----------------------------------');
+      // Show debug info only if requested
+      if (process.env.DEBUG_SETUP === 'true') {
+        ui.printSection('🔍 Debug - Config file contents:');
+        ui.print('-----------------------------------');
+        ui.print(fs.readFileSync(this.configPath, 'utf-8'));
+        ui.print('-----------------------------------');
+      }
     } catch (error) {
       ui.logError(error as Error, 'Failed to save configuration');
       throw error;

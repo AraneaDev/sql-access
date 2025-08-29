@@ -508,125 +508,16 @@ services:
 
 ---
 
-## 🔧 Advanced Configuration
+## 🔧 Advanced Configuration (Planned Features)
 
-### Configuration Templates
+The following advanced configuration features are planned for future releases:
 
-#### Template System
-Create reusable configuration templates:
+- **Configuration Templates**: Reusable configuration templates for common setups
+- **Dynamic Configuration**: Runtime configuration updates without restart  
+- **Configuration Encryption**: Encrypted storage for sensitive configuration values
+- **Profile-Based Configuration**: Environment-specific configuration profiles
 
-```ini
-# templates/base.ini
-[security]
-max_joins=10
-max_complexity_score=100
-
-[extension] 
-max_rows=1000
-query_timeout=30000
-
-# templates/production.ini  
-[security]
-max_joins=5
-max_complexity_score=50
-
-[extension]
-max_rows=500
-query_timeout=15000
-```
-
-#### Configuration Inheritance
-```bash
-# Merge template with specific configuration
-sql-mcp-server --config-template=templates/production.ini --config=config/prod.ini
-```
-
-### Dynamic Configuration
-
-#### Configuration Reload
-```bash
-# Send SIGHUP to reload configuration
-kill -HUP <server_pid>
-
-# Or use management API (if enabled)
-curl -X POST http://localhost:3000/admin/reload-config
-```
-
-#### Hot Configuration Updates
-```typescript
-// Update security limits at runtime
-await server.updateSecurityConfig({
-  max_joins: 15,
-  max_complexity_score: 150
-});
-```
-
-### Configuration Encryption
-
-#### Encrypt Sensitive Values
-```bash
-# Encrypt password using server key
-sql-mcp-encrypt --value="sensitive_password" --key-file=/secure/master.key
-
-# Use encrypted value in configuration
-password=encrypted:AES256:AbCd1234...
-```
-
-#### Key Management
-```ini
-[encryption]
-key_file=/secure/encryption.key
-key_rotation_days=90
-```
-
-### Configuration Profiles
-
-#### Profile-Based Configuration
-```ini
-# Default profile
-[database.main]
-type=postgresql
-host=localhost
-
-# Development profile override
-[profile.development.database.main]
-host=dev-db.company.com
-select_only=false
-
-# Production profile override  
-[profile.production.database.main]
-host=prod-db.company.com
-select_only=true
-ssl=true
-```
-
-```bash
-# Run with specific profile
-sql-mcp-server --profile=production
-```
-
-### Monitoring Configuration
-
-#### Configuration Metrics
-```ini
-[monitoring]
-config_validation_metrics=true
-connection_pool_metrics=true
-query_performance_metrics=true
-
-[monitoring.export]
-prometheus_endpoint=true
-statsd_host=localhost:8125
-log_metrics=true
-```
-
-#### Configuration Auditing
-```ini
-[audit]
-log_config_changes=true
-config_change_webhook=https://audit.company.com/webhook
-retain_config_history=30
-```
+For the current release, use environment variables for sensitive values and configuration file for static settings.
 
 ---
 
