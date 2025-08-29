@@ -2,7 +2,8 @@
  * Configuration-related types and validation
  */
 
-import type { DatabaseType, SecurityConfig, ExtensionConfig, DatabaseTypeString } from './database.js';
+// import type { DatabaseType } from './database.js';
+import type { SecurityConfig, ExtensionConfig, DatabaseTypeString } from './database.js';
 
 // Re-export types that should be available from config module
 export type { DatabaseType, DatabaseTypeString, SecurityConfig, ExtensionConfig, DatabaseConfig } from './database.js';
@@ -143,10 +144,10 @@ export interface ConfigValidationResult {
 // ============================================================================
 
 export interface IConfigLoader {
-  loadConfig(configPath?: string): Promise<ParsedServerConfig>;
-  validateConfig(rawConfig: RawConfigFile): ConfigValidationResult;
+  loadConfig(_configPath?: string): Promise<ParsedServerConfig>;
+  validateConfig(_rawConfig: RawConfigFile): ConfigValidationResult;
   getDefaultConfig(): ParsedServerConfig;
-  parseDatabaseConfig(raw: DatabaseSectionConfig, dbName: string): ParsedDatabaseConfig;
+  parseDatabaseConfig(_raw: DatabaseSectionConfig, _dbName: string): ParsedDatabaseConfig;
 }
 
 // ============================================================================
@@ -243,7 +244,7 @@ export function getRequiredFields(type: DatabaseTypeString): string[] {
 
 export function validateRequiredFields(
   config: DatabaseSectionConfig,
-  dbName: string,
+  _dbName: string,
   type: DatabaseTypeString
 ): ConfigValidationError[] {
   const errors: ConfigValidationError[] = [];
@@ -253,7 +254,7 @@ export function validateRequiredFields(
     const value = config[field as keyof DatabaseSectionConfig];
     if (!value || (typeof value === 'string' && value.trim() === '')) {
       errors.push({
-        section: `database.${dbName}`,
+        section: `database.${_dbName}`,
         field,
         value,
         message: `Required field '${field}' is missing or empty for ${type} database`,

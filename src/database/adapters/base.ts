@@ -40,45 +40,45 @@ export abstract class DatabaseAdapter {
    * Execute a query against the database
    */
   abstract executeQuery(
-    connection: DatabaseConnection,
-    query: string,
-    params?: unknown[]
+    _connection: DatabaseConnection,
+    _query: string,
+    _params?: unknown[]
   ): Promise<QueryResult>;
 
   /**
    * Disconnect from the database
    */
-  abstract disconnect(connection: DatabaseConnection): Promise<void>;
+  abstract disconnect(_connection: DatabaseConnection): Promise<void>;
 
   /**
    * Capture schema information from the database
    */
-  abstract captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema>;
+  abstract captureSchema(_connection: DatabaseConnection): Promise<DatabaseSchema>;
 
   /**
    * Test if the connection is still alive
    */
-  abstract isConnected(connection: DatabaseConnection): boolean;
+  abstract isConnected(_connection: DatabaseConnection): boolean;
 
   /**
    * Begin a transaction
    */
-  abstract beginTransaction(connection: DatabaseConnection): Promise<void>;
+  abstract beginTransaction(_connection: DatabaseConnection): Promise<void>;
 
   /**
    * Commit a transaction
    */
-  abstract commitTransaction(connection: DatabaseConnection): Promise<void>;
+  abstract commitTransaction(_connection: DatabaseConnection): Promise<void>;
 
   /**
    * Rollback a transaction
    */
-  abstract rollbackTransaction(connection: DatabaseConnection): Promise<void>;
+  abstract rollbackTransaction(_connection: DatabaseConnection): Promise<void>;
 
   /**
    * Build an EXPLAIN query for performance analysis
    */
-  abstract buildExplainQuery(query: string): string;
+  abstract buildExplainQuery(_query: string): string;
 
   // ============================================================================
   // Common Implementation Methods
@@ -190,7 +190,7 @@ export abstract class DatabaseAdapter {
   /**
    * Extract field names from query results (implementation varies by adapter)
    */
-  protected abstract extractFieldNames(result: unknown): string[];
+  protected abstract extractFieldNames(_result: unknown): string[];
 
   /**
    * Normalize query result to standard format
@@ -221,7 +221,7 @@ export abstract class DatabaseAdapter {
   /**
    * Extract raw rows from database-specific result (implementation varies by adapter)
    */
-  protected abstract extractRawRows(result: unknown): unknown[];
+  protected abstract extractRawRows(_result: unknown): unknown[];
 
   // ============================================================================
   // Helper Methods for Schema Capture

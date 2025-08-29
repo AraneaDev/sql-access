@@ -51,7 +51,9 @@ function parseArgs(args: string[]): CliOptions {
       if (['production', 'development', 'minimal', 'sample'].includes(template)) {
         options.generateTemplate = template;
       } else {
+        // eslint-disable-next-line no-console
         console.error(`❌ Invalid template type: ${template}`);
+        // eslint-disable-next-line no-console
         console.error('Valid templates: production, development, minimal, sample');
         process.exit(1);
       }
@@ -60,7 +62,9 @@ function parseArgs(args: string[]): CliOptions {
       if (['production', 'development', 'minimal', 'sample'].includes(template)) {
         options.generateTemplate = template;
       } else {
+        // eslint-disable-next-line no-console
         console.error(`❌ Invalid template type: ${template}`);
+        // eslint-disable-next-line no-console
         console.error('Valid templates: production, development, minimal, sample');
         process.exit(1);
       }
@@ -71,6 +75,7 @@ function parseArgs(args: string[]): CliOptions {
 }
 
 function showHelp(): void {
+  // eslint-disable-next-line no-console
   console.log(`
 🔧 Claude SQL MCP Server Setup
 
@@ -112,14 +117,17 @@ function showVersion(): void {
   try {
     const packagePath = path.join(__dirname, '..', 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
+    // eslint-disable-next-line no-console
     console.log(`Claude SQL MCP Server v${packageJson.version}`);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.log('Claude SQL MCP Server v2.0.0');
   }
 }
 
 async function generateTemplate(templateType: 'production' | 'development' | 'minimal' | 'sample'): Promise<void> {
   try {
+    // eslint-disable-next-line no-console
     console.log(`📝 Generating ${templateType} configuration template...`);
     
     let configFile;
@@ -132,20 +140,32 @@ async function generateTemplate(templateType: 'production' | 'development' | 'mi
     const filename = `config.${templateType}.ini`;
     fs.writeFileSync(filename, configFile.content);
     
+    // eslint-disable-next-line no-console
     console.log(`✅ Template saved to: ${filename}`);
+    // eslint-disable-next-line no-console
     console.log('\n📋 Template Information:');
+    // eslint-disable-next-line no-console
     console.log(`   Description: ${configFile.metadata.description}`);
+    // eslint-disable-next-line no-console
     console.log(`   Databases: ${configFile.metadata.database_count}`);
+    // eslint-disable-next-line no-console
     console.log(`   SSH Enabled: ${configFile.metadata.ssh_enabled ? '✅' : '❌'}`);
+    // eslint-disable-next-line no-console
     console.log(`   Security Settings: ${configFile.metadata.security_enabled ? '✅' : '❌'}`);
     
+    // eslint-disable-next-line no-console
     console.log('\n💡 Next Steps:');
+    // eslint-disable-next-line no-console
     console.log(`   1. Review and customize ${filename}`);
+    // eslint-disable-next-line no-console
     console.log(`   2. Rename to config.ini or use --config=${filename}`);
+    // eslint-disable-next-line no-console
     console.log(`   3. Update connection details (passwords, hosts, etc.)`);
+    // eslint-disable-next-line no-console
     console.log(`   4. Run 'npm start' to start the server`);
     
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ Failed to generate template:', (error as Error).message);
     process.exit(1);
   }
@@ -160,8 +180,10 @@ async function runInteractiveSetup(options: CliOptions): Promise<void> {
   try {
     await wizard.run();
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('❌ Setup failed:', (error as Error).message);
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.error('Stack trace:', (error as Error).stack);
     }
     process.exit(1);
@@ -173,21 +195,26 @@ async function runInteractiveSetup(options: CliOptions): Promise<void> {
 async function main(): Promise<void> {
   // Handle uncaught exceptions gracefully
   process.on('uncaughtException', (error) => {
+    // eslint-disable-next-line no-console
     console.error('❌ Uncaught Exception:', error.message);
     if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
       console.error(error.stack);
     }
     process.exit(1);
   });
   
   process.on('unhandledRejection', (reason, promise) => {
+    // eslint-disable-next-line no-console
     console.error('❌ Unhandled Rejection at:', promise);
+    // eslint-disable-next-line no-console
     console.error('Reason:', reason);
     process.exit(1);
   });
   
   // Handle Ctrl+C gracefully
   process.on('SIGINT', () => {
+    // eslint-disable-next-line no-console
     console.log('\n👋 Setup cancelled by user');
     process.exit(0);
   });
@@ -219,8 +246,10 @@ async function main(): Promise<void> {
 
 // Execute main function
 main().catch((error) => {
+  // eslint-disable-next-line no-console
   console.error('❌ Setup process failed:', error.message);
   if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
     console.error('Stack trace:', error.stack);
   }
   process.exit(1);

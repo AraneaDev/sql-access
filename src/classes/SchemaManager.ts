@@ -8,8 +8,7 @@ import { EventEmitter } from 'events';
 import type {
   DatabaseSchema,
   DatabaseListItem,
-  DatabaseConfig,
-  ConnectionInfo
+  DatabaseConfig
 } from '../types/index.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { getLogger } from '../utils/logger.js';
@@ -79,12 +78,12 @@ export class SchemaManager extends EventEmitter {
   /**
    * Capture and cache schema for a database
    */
-  async captureSchema(dbName: string, config: DatabaseConfig): Promise<DatabaseSchema> {
+  async captureSchema(dbName: string, _config: DatabaseConfig): Promise<DatabaseSchema> {
     try {
       this.logger.info(`Capturing schema for database '${dbName}'`);
 
       // Get or create connection
-      let connectionInfo = await this.connectionManager.getConnection(dbName);
+      const connectionInfo = await this.connectionManager.getConnection(dbName);
       
       // Get the adapter for this database
       const adapter = this.connectionManager.getAdapter(dbName);

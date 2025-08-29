@@ -14,12 +14,10 @@ import type {
   SQLToken,
   TokenType,
   AuditLogEntry,
-  LogSeverity,
   SecurityManagerConfig,
   ISecurityManager,
   ParsedServerConfig
 } from '../types/index.js';
-import { SecurityViolationError } from '../types/index.js';
 import { getLogger } from '../utils/logger.js';
 
 // ============================================================================
@@ -137,7 +135,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
   /**
    * Validate any query (not just SELECT-only) 
    */
-  validateAnyQuery(query: string, dbType = 'mysql'): SecurityValidation {
+  validateAnyQuery(query: string, _dbType = 'mysql'): SecurityValidation {
     if (!query || typeof query !== 'string') {
       return {
         allowed: false,
@@ -239,7 +237,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
   /**
    * Analyze performance impact of query
    */
-  analyzePerformance(query: string): Promise<{
+  analyzePerformance(_query: string): Promise<{
     executionTime: number;
     explainTime: number;
     rowCount: number;
@@ -330,7 +328,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
   /**
    * Validate a single SELECT-only query with enhanced feedback
    */
-  validateSelectOnlyQuery(query: string, dbType = 'mysql'): SecurityValidation {
+  validateSelectOnlyQuery(query: string, _dbType = 'mysql'): SecurityValidation {
     if (!query || typeof query !== 'string') {
       return {
         allowed: false,
@@ -399,7 +397,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     }
 
     // Check database-specific allowed commands
-    const dbAllowed = this.dbSpecificAllowed[dbType] || [];
+    const dbAllowed = this.dbSpecificAllowed[_dbType] || [];
     if (dbAllowed.some(cmd => command.includes(cmd))) {
       return { 
         allowed: true, 
@@ -500,7 +498,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     
     // Count GROUP BY fields more accurately
     let groupByCount = 0;
-    const groupByMatch = upperQuery.match(/GROUP\s+BY\s+([\w\s,\(\)\.]+?)(?:\s+HAVING|\s+ORDER|\s+LIMIT|$)/);
+    const groupByMatch = upperQuery.match(/GROUP\s+BY\s+([\w\s,().]+?)(?:\s+HAVING|\s+ORDER|\s+LIMIT|$)/);
     if (groupByMatch) {
       // Count commas in the GROUP BY clause to estimate number of grouped fields
       const groupByClause = groupByMatch[1];
@@ -591,7 +589,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
   // Private Implementation Methods
   // ============================================================================
 
-  private performDeepValidation(query: string, tokens: SQLToken[]): SecurityValidation {
+  private performDeepValidation(query: string, _tokens: SQLToken[]): SecurityValidation {
     const upperQuery = query.toUpperCase();
 
     // Check for nested dangerous commands
@@ -749,8 +747,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     const upperQuery = query.toUpperCase();
     
     // Simple regex to find table names after FROM and JOIN
-    const fromPattern = /\bFROM\s+([^\s\(,]+)/gi;
-    const joinPattern = /\bJOIN\s+([^\s\(,]+)/gi;
+    const fromPattern = /\bFROM\s+([^\s(,]+)/gi;
+    const joinPattern = /\bJOIN\s+([^\s(,]+)/gi;
     
     let match;
     while ((match = fromPattern.exec(upperQuery)) !== null) {
@@ -835,7 +833,7 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
 
   private checkDangerousPatterns(query: string): string[] {
     const dangerous: string[] = [];
-    const upperQuery = query.toUpperCase();
+    // Remove unused upperQuery variable - use query directly in patterns
 
     // Enhanced dangerous function patterns
     const dangerousFunctions = [

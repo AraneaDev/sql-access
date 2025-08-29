@@ -1,5 +1,5 @@
 import { ConnectionManager } from '../../src/classes/ConnectionManager.js';
-import { SSHTunnelManager } from '../../src/classes/SSHTunnelManager.js';
+import { EnhancedSSHTunnelManager } from '../../src/classes/EnhancedSSHTunnelManager.js';
 import { MockDatabaseFactory } from '../fixtures/mock-databases.js';
 import { TestConfigFixtures } from '../fixtures/test-configs.js';
 import { DatabaseType } from '../../src/types/database.js';
@@ -7,7 +7,7 @@ import type { DatabaseConfig } from '../../src/types/database.js';
 
 describe('ConnectionManager', () => {
   let connectionManager: ConnectionManager;
-  let mockSSHTunnelManager: jest.Mocked<SSHTunnelManager>;
+  let mockSSHTunnelManager: jest.Mocked<EnhancedSSHTunnelManager>;
 
   beforeEach(() => {
     // Create mock SSH tunnel manager
@@ -21,10 +21,42 @@ describe('ConnectionManager', () => {
       closeTunnel: jest.fn().mockResolvedValue(undefined),
       closeAllTunnels: jest.fn().mockResolvedValue(undefined),
       isConnected: jest.fn().mockReturnValue(false),
+      hasTunnel: jest.fn().mockReturnValue(false),
       initialize: jest.fn().mockReturnValue(undefined),
+      // Enhanced methods
+      portManager: {
+        findAvailablePort: jest.fn().mockResolvedValue({ assignedPort: 12345, wasPreferredPort: false }),
+        isPortAvailable: jest.fn().mockResolvedValue({ port: 12345, isAvailable: true }),
+        reservePort: jest.fn(),
+        releasePort: jest.fn(),
+        getReservedPorts: jest.fn().mockReturnValue([])
+      } as any,
+      createEnhancedTunnel: jest.fn().mockResolvedValue({
+        localHost: '127.0.0.1',
+        localPort: 12345,
+        remoteHost: 'test-host',
+        remotePort: 5432,
+        portAssignment: { assignedPort: 12345, wasPreferredPort: false }
+      }),
+      getEnhancedTunnel: jest.fn().mockReturnValue(null),
+      getPortRecommendations: jest.fn().mockResolvedValue({ available: [12346, 12347], used: [], suggestions: [] }),
+      getAllTunnelInfo: jest.fn().mockReturnValue({}),
+      getConnectionStatistics: jest.fn().mockReturnValue({ total: 0, active: 0, portRange: { min: 30000, max: 40000 } }),
+      // EventEmitter methods
       on: jest.fn(),
       off: jest.fn(),
-      emit: jest.fn()
+      emit: jest.fn(),
+      once: jest.fn(),
+      removeListener: jest.fn(),
+      removeAllListeners: jest.fn(),
+      setMaxListeners: jest.fn(),
+      getMaxListeners: jest.fn(),
+      listeners: jest.fn(),
+      rawListeners: jest.fn(),
+      listenerCount: jest.fn(),
+      prependListener: jest.fn(),
+      prependOnceListener: jest.fn(),
+      eventNames: jest.fn()
     } as any;
 
     connectionManager = new ConnectionManager(mockSSHTunnelManager);

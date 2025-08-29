@@ -27,10 +27,34 @@ afterEach(() => {
 // Global test timeout
 jest.setTimeout(30000);
 
+// Increase max listeners to prevent warnings during parallel test execution
+process.setMaxListeners(20);
+
 // Handle unhandled promise rejections in tests
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't crash the test suite, but log the error
+// Use a global flag to ensure we only register once across all test files
+declare global {
+  var __testUnhandledRejectionHandlerRegistered: boolean;
+}
+
+let unhandledRejectionHandler: ((reason: any, promise: Promise<any>) => void) | null = null;
+
+// Only add the listener once globally
+if (!global.__testUnhandledRejectionHandlerRegistered) {
+  unhandledRejectionHandler = (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't crash the test suite, but log the error
+  };
+  process.on('unhandledRejection', unhandledRejectionHandler);
+  global.__testUnhandledRejectionHandlerRegistered = true;
+}
+
+// Clean up the listener when all tests are done
+afterAll(() => {
+  if (unhandledRejectionHandler && global.__testUnhandledRejectionHandlerRegistered) {
+    process.removeListener('unhandledRejection', unhandledRejectionHandler);
+    unhandledRejectionHandler = null;
+    global.__testUnhandledRejectionHandlerRegistered = false;
+  }
 });
 
 // Set up test environment variables

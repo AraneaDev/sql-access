@@ -1,0 +1,125 @@
+# Claude SQL MCP Server Configuration Template
+# Copy this file to config.ini and update with your database settings
+# Enhanced with intelligent SSH tunnel port management
+
+[database.example]
+type=mysql
+host=localhost
+port=3306
+database=your_database_name
+username=your_username
+password=your_password
+ssl=false
+select_only=true
+timeout=30000
+
+# Example SQLite configuration
+[database.local]
+type=sqlite
+file=./data/local.db
+select_only=false
+timeout=10000
+
+# Example PostgreSQL configuration with SSH tunnel and smart port management
+[database.production]
+type=postgresql
+host=your-db-server.com
+port=5432
+database=production_db
+username=readonly_user
+password=secure_password
+ssl=true
+select_only=true
+timeout=30000
+
+# SSH Configuration with enhanced port management
+ssh_host=bastion.company.com
+ssh_port=22
+ssh_username=deploy_user
+ssh_private_key=/path/to/private/key
+
+# LOCAL PORT MANAGEMENT OPTIONS:
+# Option 1: Let the system automatically find an available port (recommended)
+# local_port=0    # or omit this line entirely
+
+# Option 2: Request a specific port (system will find alternative if not available)
+# local_port=3307
+
+# Option 3: Force a specific port (will fail if not available) 
+# local_port=3307
+# local_port_strict=true
+
+# Example MySQL with SSH tunnel and preferred local port
+[database.staging]
+type=mysql
+host=staging-db-server.com
+port=3306
+database=staging_db
+username=staging_user
+password=staging_password
+ssl=true
+select_only=true
+timeout=30000
+
+# SSH tunnel configuration
+ssh_host=staging-bastion.com
+ssh_port=22
+ssh_username=deploy_user
+ssh_password=ssh_password
+
+# Request port 3307 first, but allow alternatives if not available
+local_port=3307
+
+# Example SQL Server with SSH tunnel  
+[database.analytics]
+type=mssql
+host=analytics-server.internal
+port=1433
+database=analytics_warehouse
+username=readonly_analytics
+password=analytics_password
+ssl=true
+select_only=true
+timeout=30000
+
+# SSH tunnel through jump host
+ssh_host=jump.company.com
+ssh_port=2222
+ssh_username=analytics_user
+ssh_private_key=/home/user/.ssh/analytics_key
+ssh_passphrase=key_passphrase
+
+# Let system choose port automatically (will prefer SQL Server alternatives like 1434, 1435, etc.)
+local_port=0
+
+[security]
+max_joins=10
+max_subqueries=5
+max_unions=3
+max_group_bys=5
+max_complexity_score=100
+max_query_length=10000
+
+[extension]
+max_rows=1000
+query_timeout=30000
+max_batch_size=10
+debug=false
+
+# Enhanced SSH tunnel configuration (optional global settings)
+[ssh_tunnel]
+# Port range for automatic assignment (default: 30000-40000)
+port_range_min=30000
+port_range_max=40000
+
+# Maximum attempts to find available port (default: 50)
+max_port_attempts=50
+
+# Whether to prefer database-specific port alternatives (default: true)
+prefer_db_alternatives=true
+
+# Ports to exclude from automatic assignment
+exclude_ports=3000,8080,8443,9200
+
+# Enable detailed port management logging (default: false)
+debug_port_assignment=false

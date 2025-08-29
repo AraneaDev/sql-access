@@ -27,8 +27,7 @@ import type {
   QueryResult,
   TestConnectionResult,
   DatabaseListItem,
-  DatabaseSchema,
-  SSHTunnelCreateOptions
+  DatabaseSchema
 } from '../types/index.js';
 
 import {
@@ -47,7 +46,7 @@ import {
 import { ConnectionManager } from './ConnectionManager.js';
 import { SecurityManager } from './SecurityManager.js';
 import { SchemaManager } from './SchemaManager.js';
-import { SSHTunnelManager } from './SSHTunnelManager.js';
+import { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { Logger } from '../utils/logger.js';
 
 /**
@@ -57,7 +56,7 @@ export class SQLMCPServer extends EventEmitter {
   private readonly connectionManager: ConnectionManager;
   private readonly securityManager: SecurityManager;
   private readonly schemaManager: SchemaManager;
-  private readonly sshTunnelManager: SSHTunnelManager;
+  private readonly sshTunnelManager: EnhancedSSHTunnelManager;
   private readonly logger: Logger;
   
   private config: ParsedServerConfig | null = null;
@@ -81,7 +80,7 @@ export class SQLMCPServer extends EventEmitter {
     });
     
     // Initialize managers with proper dependencies
-    this.sshTunnelManager = new SSHTunnelManager();
+    this.sshTunnelManager = new EnhancedSSHTunnelManager();
     this.securityManager = new SecurityManager();
     this.connectionManager = new ConnectionManager(this.sshTunnelManager);
     this.schemaManager = new SchemaManager(this.connectionManager);
@@ -780,26 +779,8 @@ export class SQLMCPServer extends EventEmitter {
 
       // Create SSH tunnel if needed
       if (dbConfig.ssh_host) {
-        const tunnelOptions: SSHTunnelCreateOptions = {
-          sshConfig: {
-            host: dbConfig.ssh_host,
-            port: dbConfig.ssh_port || 22,
-            username: dbConfig.ssh_username!,
-            password: dbConfig.ssh_password,
-            privateKey: dbConfig.ssh_private_key,
-            passphrase: dbConfig.ssh_passphrase
-          },
-          forwardConfig: {
-            sourceHost: '127.0.0.1',
-            sourcePort: 0,
-            destinationHost: dbConfig.host!,
-            destinationPort: dbConfig.port!
-          }
-        };
-        const dbName: string = database;
-        const options: SSHTunnelCreateOptions = tunnelOptions;
-        const tunnelManager: SSHTunnelManager = this.sshTunnelManager;
-        await tunnelManager.createTunnel(dbName, options);
+        // ConnectionManager will handle tunnel creation/reuse
+        this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
       }
 
       // Execute query
@@ -895,26 +876,8 @@ export class SQLMCPServer extends EventEmitter {
 
       // Create SSH tunnel if needed
       if (dbConfig.ssh_host) {
-        const tunnelOptions: SSHTunnelCreateOptions = {
-          sshConfig: {
-            host: dbConfig.ssh_host,
-            port: dbConfig.ssh_port || 22,
-            username: dbConfig.ssh_username!,
-            password: dbConfig.ssh_password,
-            privateKey: dbConfig.ssh_private_key,
-            passphrase: dbConfig.ssh_passphrase
-          },
-          forwardConfig: {
-            sourceHost: '127.0.0.1',
-            sourcePort: 0,
-            destinationHost: dbConfig.host!,
-            destinationPort: dbConfig.port!
-          }
-        };
-        const dbName: string = database;
-        const options: SSHTunnelCreateOptions = tunnelOptions;
-        const tunnelManager: SSHTunnelManager = this.sshTunnelManager;
-        await tunnelManager.createTunnel(dbName, options);
+        // ConnectionManager will handle tunnel creation/reuse
+        this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
       }
 
       // Execute batch
@@ -1007,26 +970,8 @@ export class SQLMCPServer extends EventEmitter {
 
       // Create SSH tunnel if needed
       if (dbConfig.ssh_host) {
-        const tunnelOptions: SSHTunnelCreateOptions = {
-          sshConfig: {
-            host: dbConfig.ssh_host,
-            port: dbConfig.ssh_port || 22,
-            username: dbConfig.ssh_username!,
-            password: dbConfig.ssh_password,
-            privateKey: dbConfig.ssh_private_key,
-            passphrase: dbConfig.ssh_passphrase
-          },
-          forwardConfig: {
-            sourceHost: '127.0.0.1',
-            sourcePort: 0,
-            destinationHost: dbConfig.host!,
-            destinationPort: dbConfig.port!
-          }
-        };
-        const dbName: string = database;
-        const options: SSHTunnelCreateOptions = tunnelOptions;
-        const tunnelManager: SSHTunnelManager = this.sshTunnelManager;
-        await tunnelManager.createTunnel(dbName, options);
+        // ConnectionManager will handle tunnel creation/reuse
+        this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
       }
 
       const analysis = await this.connectionManager.analyzePerformance(database, query);
@@ -1280,26 +1225,8 @@ export class SQLMCPServer extends EventEmitter {
 
       // Create SSH tunnel if needed
       if (dbConfig.ssh_host) {
-        const tunnelOptions: SSHTunnelCreateOptions = {
-          sshConfig: {
-            host: dbConfig.ssh_host,
-            port: dbConfig.ssh_port || 22,
-            username: dbConfig.ssh_username!,
-            password: dbConfig.ssh_password,
-            privateKey: dbConfig.ssh_private_key,
-            passphrase: dbConfig.ssh_passphrase
-          },
-          forwardConfig: {
-            sourceHost: '127.0.0.1',
-            sourcePort: 0,
-            destinationHost: dbConfig.host!,
-            destinationPort: dbConfig.port!
-          }
-        };
-        const dbName: string = database;
-        const options: SSHTunnelCreateOptions = tunnelOptions;
-        const tunnelManager: SSHTunnelManager = this.sshTunnelManager;
-        await tunnelManager.createTunnel(dbName, options);
+        // ConnectionManager will handle tunnel creation/reuse
+        this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
       }
       
       // Capture schema if not cached
@@ -1357,26 +1284,8 @@ export class SQLMCPServer extends EventEmitter {
       if (!connection) {
       // Create SSH tunnel if needed
       if (dbConfig.ssh_host) {
-        const tunnelOptions: SSHTunnelCreateOptions = {
-          sshConfig: {
-            host: dbConfig.ssh_host,
-            port: dbConfig.ssh_port || 22,
-            username: dbConfig.ssh_username!,
-            password: dbConfig.ssh_password,
-            privateKey: dbConfig.ssh_private_key,
-            passphrase: dbConfig.ssh_passphrase
-          },
-          forwardConfig: {
-            sourceHost: '127.0.0.1',
-            sourcePort: 0,
-            destinationHost: dbConfig.host!,
-            destinationPort: dbConfig.port!
-          }
-        };
-        const dbName: string = database;
-        const options: SSHTunnelCreateOptions = tunnelOptions;
-        const tunnelManager: SSHTunnelManager = this.sshTunnelManager;
-        await tunnelManager.createTunnel(dbName, options);
+        // ConnectionManager will handle tunnel creation/reuse
+        this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
       }
       
       // This will create the connection

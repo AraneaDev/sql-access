@@ -11,8 +11,8 @@ import type { Logger } from './logger.js';
 export class SQLMCPError extends Error {
   constructor(
     message: string,
-    public code: string,
-    public details?: Record<string, unknown>
+    public _code: string,
+    public _details?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'SQLMCPError';
@@ -26,8 +26,8 @@ export class SQLMCPError extends Error {
     return {
       name: this.name,
       message: this.message,
-      code: this.code,
-      details: this.details,
+      code: this._code,
+      details: this._details,
       stack: this.stack
     };
   }
@@ -116,6 +116,7 @@ export class TimeoutError extends SQLMCPError {
 /**
  * Error categories for classification
  */
+/* eslint-disable no-unused-vars */
 export enum ErrorCategory {
   SECURITY = 'security',
   CONNECTION = 'connection',
@@ -127,16 +128,19 @@ export enum ErrorCategory {
   TIMEOUT = 'timeout',
   UNKNOWN = 'unknown'
 }
+/* eslint-enable no-unused-vars */
 
 /**
  * Error severity levels
  */
+/* eslint-disable no-unused-vars */
 export enum ErrorSeverity {
   LOW = 'low',
   MEDIUM = 'medium',
   HIGH = 'high',
   CRITICAL = 'critical'
 }
+/* eslint-enable no-unused-vars */
 
 /**
  * Enhanced error information
@@ -529,7 +533,7 @@ export function sanitizeError(error: unknown): string {
 /**
  * Wrap async functions with error handling
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
+export function withErrorHandling<T extends (..._args: any[]) => Promise<any>>(
   fn: T,
   errorHandler: ErrorHandler,
   context: string

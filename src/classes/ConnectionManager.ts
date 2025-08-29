@@ -15,7 +15,7 @@ import type {
 } from '../types/index.js';
 import { ConnectionError } from '../types/index.js';
 import { AdapterFactory, DatabaseAdapter } from '../database/adapters/index.js';
-import { SSHTunnelManager } from './SSHTunnelManager.js';
+import { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { getLogger } from '../utils/logger.js';
 
 // ============================================================================
@@ -26,10 +26,10 @@ export class ConnectionManager extends EventEmitter {
   private connections = new Map<string, ConnectionInfo>();
   private adapters = new Map<string, DatabaseAdapter>();
   private databases: Record<string, DatabaseConfig> = {};
-  private sshTunnelManager: SSHTunnelManager;
+  private sshTunnelManager: EnhancedSSHTunnelManager;
   private logger = getLogger();
 
-  constructor(sshTunnelManager: SSHTunnelManager) {
+  constructor(sshTunnelManager: EnhancedSSHTunnelManager) {
     super();
     this.sshTunnelManager = sshTunnelManager;
   }
@@ -166,23 +166,46 @@ export class ConnectionManager extends EventEmitter {
       // Set up SSH tunnel if needed
       if (config.ssh_host && config.type !== 'sqlite') {
         try {
-          const tunnelInfo = await this.sshTunnelManager.createTunnel(dbName, {
-            sshConfig: {
-              host: config.ssh_host,
-              port: typeof config.ssh_port === 'number' ? config.ssh_port : parseInt(String(config.ssh_port || 22), 10),
-              username: config.ssh_username!,
-              password: config.ssh_password,
-              privateKey: config.ssh_private_key,
-              passphrase: config.ssh_passphrase
-            },
-            forwardConfig: {
-              sourceHost: '127.0.0.1',
-              sourcePort: 0, // Auto-assign
-              destinationHost: config.host!,
-              destinationPort: typeof config.port === 'number' ? config.port : parseInt(String(config.port!), 10)
-            },
-            localPort: typeof config.local_port === 'number' ? config.local_port : parseInt(String(config.local_port || 0), 10)
-          });
+          let tunnelInfo: SSHTunnelInfo;
+
+          // Check if tunnel already exists and is healthy
+          if (this.sshTunnelManager.isConnected(dbName)) {
+            this.logger.info(`Using existing healthy tunnel for '${dbName}'`);
+            tunnelInfo = this.sshTunnelManager.getTunnel(dbName)!;
+          } else {
+            // Check if tunnel exists but unhealthy
+            if (this.sshTunnelManager.hasTunnel(dbName)) {
+              this.logger.warning(`Existing tunnel for '${dbName}' is unhealthy, recreating...`);
+              await this.sshTunnelManager.closeTunnel(dbName);
+            }
+
+            // Create new tunnel only if none exists or previous was unhealthy
+            this.logger.info(`Creating new SSH tunnel for '${dbName}'`);
+            tunnelInfo = await this.sshTunnelManager.createTunnel(dbName, {
+              sshConfig: {
+                host: config.ssh_host,
+                port: typeof config.ssh_port === 'number' ? config.ssh_port : parseInt(String(config.ssh_port || 22), 10),
+                username: config.ssh_username!,
+                password: config.ssh_password,
+                privateKey: config.ssh_private_key,
+                passphrase: config.ssh_passphrase
+              },
+              forwardConfig: {
+                sourceHost: '127.0.0.1',
+                sourcePort: 0, // Auto-assign
+                destinationHost: config.host!,
+                destinationPort: typeof config.port === 'number' ? config.port : parseInt(String(config.port!), 10)
+              },
+              localPort: typeof config.local_port === 'number' ? config.local_port : parseInt(String(config.local_port || 0), 10)
+            });
+
+            this.logger.info(`New SSH tunnel established for '${dbName}'`, {
+              remoteHost: config.host,
+              remotePort: config.port,
+              localHost: tunnelInfo.localHost,
+              localPort: tunnelInfo.localPort
+            });
+          }
 
           // Update config to use tunnel
           actualConfig = {
@@ -190,13 +213,6 @@ export class ConnectionManager extends EventEmitter {
             host: tunnelInfo.localHost,
             port: tunnelInfo.localPort
           };
-
-          this.logger.info(`SSH tunnel established for '${dbName}'`, {
-            remoteHost: config.host,
-            remotePort: config.port,
-            localHost: tunnelInfo.localHost,
-            localPort: tunnelInfo.localPort
-          });
 
           // Create new adapter with tunnel config
           adapter = this.createAdapter(actualConfig);
@@ -522,7 +538,6 @@ export class ConnectionManager extends EventEmitter {
     withSSH: number;
   } {
     const totalRegistered = Object.keys(this.databases).length;
-    const totalConnections = this.connections.size;
     const active = this.getActiveConnections().length;
     const withSSH = Array.from(this.connections.keys())
       .filter(dbName => this.sshTunnelManager.isConnected(dbName)).length;
@@ -572,12 +587,12 @@ export class ConnectionManager extends EventEmitter {
    * Execute a single query on a database
    */
   async executeQuery(dbName: string, query: string, params: unknown[] = []): Promise<QueryResult> {
-    const connectionInfo = this.connections.get(dbName);
+    // Get connection (will create if doesn't exist)
+    const connectionInfo = await this.getConnection(dbName);
     const adapter = this.adapters.get(dbName);
 
-    if (!connectionInfo || !adapter) {
-      // Try to find database config and create connection
-      throw new ConnectionError(`No active connection found for database '${dbName}'`);
+    if (!adapter) {
+      throw new ConnectionError(`No adapter found for database '${dbName}'`);
     }
 
     try {
@@ -597,11 +612,12 @@ export class ConnectionManager extends EventEmitter {
     queries: Array<{ query: string; params?: unknown[]; label?: string }>,
     useTransaction = false
   ): Promise<BatchResult> {
-    const connectionInfo = this.connections.get(dbName);
+    // Get connection (will create if doesn't exist)
+    const connectionInfo = await this.getConnection(dbName);
     const adapter = this.adapters.get(dbName);
 
-    if (!connectionInfo || !adapter) {
-      throw new ConnectionError(`No active connection found for database '${dbName}'`);
+    if (!adapter) {
+      throw new ConnectionError(`No adapter found for database '${dbName}'`);
     }
 
     const startTime = Date.now();
@@ -706,11 +722,12 @@ export class ConnectionManager extends EventEmitter {
     executionPlan: string;
     recommendations: string;
   }> {
-    const connectionInfo = this.connections.get(dbName);
+    // Get connection (will create if doesn't exist)
+    const connectionInfo = await this.getConnection(dbName);
     const adapter = this.adapters.get(dbName);
 
-    if (!connectionInfo || !adapter) {
-      throw new ConnectionError(`No active connection found for database '${dbName}'`);
+    if (!adapter) {
+      throw new ConnectionError(`No adapter found for database '${dbName}'`);
     }
 
     try {
@@ -874,7 +891,7 @@ export class ConnectionManager extends EventEmitter {
   /**
    * Add MySQL-specific recommendations  
    */
-  private addMySQLRecommendations(recommendations: string[], explainResult: QueryResult, query: string): void {
+  private addMySQLRecommendations(recommendations: string[], explainResult: QueryResult, _query: string): void {
     for (const row of explainResult.rows) {
       const rowData = row as Record<string, unknown>;
       
@@ -895,7 +912,7 @@ export class ConnectionManager extends EventEmitter {
   /**
    * Add SQLite-specific recommendations
    */
-  private addSQLiteRecommendations(recommendations: string[], explainResult: QueryResult, query: string): void {
+  private addSQLiteRecommendations(recommendations: string[], explainResult: QueryResult, _query: string): void {
     const planText = explainResult.rows.map(row => Object.values(row).join(' ')).join(' ').toLowerCase();
     
     if (planText.includes('scan table')) {

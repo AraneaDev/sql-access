@@ -1,8 +1,6 @@
 import readline from 'readline';
 import fs from 'fs';
-import ini from 'ini';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { DatabaseType } from '../types/database.js';
 import { validateConfig, loadConfig, saveConfigFile } from '../utils/config.js';
 import { ui } from '../utils/setup-ui.js';
@@ -15,8 +13,8 @@ import type {
   ParsedServerConfig
 } from '../types/config.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
 export interface SetupWizardOptions {
   configPath?: string;

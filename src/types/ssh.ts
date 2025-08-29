@@ -46,11 +46,11 @@ export interface SSHTunnelCreateOptions {
 // ============================================================================
 
 export interface ISSHTunnelManager {
-  createTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo>;
-  getTunnel(dbName: string): SSHTunnelInfo | undefined;
-  closeTunnel(dbName: string): Promise<void>;
+  createTunnel(_dbName: string, _options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo>;
+  getTunnel(_dbName: string): SSHTunnelInfo | undefined;
+  closeTunnel(_dbName: string): Promise<void>;
   closeAllTunnels(): Promise<void>;
-  isConnected(dbName: string): boolean;
+  isConnected(_dbName: string): boolean;
 }
 
 // ============================================================================

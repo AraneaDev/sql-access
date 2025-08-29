@@ -13,7 +13,11 @@ import type { Server as NetServer } from 'net';
 // Database Types
 // ============================================================================
 
+// Database type enum - exported for external use  
+// Note: Some values kept for backward compatibility but may be unused internally
+/* eslint-disable no-unused-vars */
 export enum DatabaseType {
+  // Commonly used values
   MYSQL = 'mysql',
   POSTGRESQL = 'postgresql', 
   POSTGRES = 'postgres',
@@ -21,6 +25,7 @@ export enum DatabaseType {
   MSSQL = 'mssql',
   SQLSERVER = 'sqlserver'
 }
+/* eslint-enable no-unused-vars */
 
 // For backward compatibility, also export as type
 export type DatabaseTypeString = 'mysql' | 'postgresql' | 'postgres' | 'sqlite' | 'mssql' | 'sqlserver';

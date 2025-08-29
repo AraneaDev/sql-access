@@ -5,22 +5,20 @@
 
 import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { parse as parseIni, stringify as stringifyIni } from 'ini';
+import { parse as parseIni } from 'ini';
 
 import type {
   DatabaseConfig,
   ParsedServerConfig,
   ParsedSecurityConfig,
-  ParsedExtensionConfig,
-  SecurityConfig,
-  ExtensionConfig
+  ParsedExtensionConfig
 } from '../types/index.js';
 
 /**
  * Configuration validation error
  */
 export class ConfigValidationError extends Error {
-  constructor(message: string, public field: string, public database?: string) {
+  constructor(message: string, public _field: string, public _database?: string) {
     super(message);
     this.name = 'ConfigValidationError';
   }
@@ -178,6 +176,20 @@ function parseSSHConfig(name: string, config: Record<string, any>, dbConfig: Dat
   dbConfig.ssh_password = config.ssh_password;
   dbConfig.ssh_private_key = config.ssh_private_key;
   dbConfig.ssh_passphrase = config.ssh_passphrase;
+
+  // Parse local_port for SSH tunnel (new feature)
+  if (config.local_port !== undefined && config.local_port !== '') {
+    const localPort = parseInt(config.local_port);
+    if (!isNaN(localPort) && localPort > 0 && localPort < 65536) {
+      dbConfig.local_port = localPort;
+    } else if (config.local_port !== '0') { // 0 means auto-assign
+      throw new ConfigValidationError(
+        `Database '${name}' has invalid local_port '${config.local_port}'. Port must be between 1 and 65535, or 0 for auto-assignment`,
+        'local_port',
+        name
+      );
+    }
+  }
 
   // Validate SSH authentication method
   if (!dbConfig.ssh_password && !dbConfig.ssh_private_key) {

@@ -172,7 +172,7 @@ export interface MCPToolValidationError {
 // MCP Message Handlers Type
 // ============================================================================
 
-export type MCPMessageHandler = (message: MCPRequest) => Promise<void> | void;
+export type MCPMessageHandler = (_message: MCPRequest) => Promise<void> | void;
 
 export interface MCPMessageHandlers {
   initialize: MCPMessageHandler;

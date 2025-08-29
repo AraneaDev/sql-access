@@ -152,11 +152,11 @@ export type DangerousPatternCategory =
 // ============================================================================
 
 export interface ISecurityManager {
-  validateSelectOnlyQuery(query: string, dbType?: string): SecurityValidation;
-  validateBatchSelectOnlyQueries(queries: Array<{query: string; params?: unknown[]; label?: string}>, dbType?: string): BatchValidationResult;
-  analyzeQueryComplexity(query: string): QueryComplexityAnalysis;
-  createAuditLog(database: string, query: string | string[], allowed: boolean, reason?: string, metadata?: Record<string, unknown>): AuditLogEntry;
-  sanitizeErrorMessage(errorMessage: string): string;
+  validateSelectOnlyQuery(_query: string, _dbType?: string): SecurityValidation;
+  validateBatchSelectOnlyQueries(_queries: Array<{query: string; params?: unknown[]; label?: string}>, _dbType?: string): BatchValidationResult;
+  analyzeQueryComplexity(_query: string): QueryComplexityAnalysis;
+  createAuditLog(_database: string, _query: string | string[], _allowed: boolean, _reason?: string, _metadata?: Record<string, unknown>): AuditLogEntry;
+  sanitizeErrorMessage(_errorMessage: string): string;
 }
 
 // ============================================================================

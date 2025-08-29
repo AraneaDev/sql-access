@@ -2,6 +2,7 @@
  * Enhanced logging utilities for SQL MCP Server
  */
 import { createWriteStream, existsSync, unlinkSync } from 'fs';
+import { WriteStream } from 'fs';
 
 /**
  * Logger configuration interface
@@ -33,7 +34,7 @@ interface LogEntry {
 
 export class Logger {
   private config: Required<LoggerConfig>;
-  private logStream?: NodeJS.WritableStream;
+  private logStream?: WriteStream;
   private initialized = false;
 
   constructor(config: LoggerConfig = {}) {
@@ -233,7 +234,7 @@ export class Logger {
     }
   }
 
-  private getConsoleMethod(level: LogEntry['level']): (...args: any[]) => void {
+  private getConsoleMethod(level: LogEntry['level']): (..._args: any[]) => void {
     switch (level) {
       case 'INFO':
         // eslint-disable-next-line no-console
