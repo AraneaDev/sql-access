@@ -2,6 +2,12 @@
 
 This document provides comprehensive documentation for all MCP tools exposed by the SQL MCP Server. These tools enable Claude Desktop to interact with your configured databases securely and efficiently.
 
+## 🔧 Feature Status
+
+- ✅ **Implemented**: Core query execution, SSH tunneling, SELECT-only security, batch operations, database listing, schema management, connection testing
+- 🚧 **Basic Implementation**: Performance analysis (basic recommendations only)
+- 📋 **Planned**: Advanced performance analysis with detailed index recommendations, configuration templates, enhanced schema relationship mapping
+
 ## 🗄️ Available Tools
 
 ### `sql_query`
@@ -140,10 +146,13 @@ ORDER BY p.created_at DESC
 - 💡 **Performance Recommendations**: Basic optimization suggestions (generic recommendations)
 
 #### Current Recommendations Include
-- Basic query performance notes
-- Large result set warnings  
-- Generic optimization suggestions
-- Note: Advanced index suggestions and detailed analysis planned for future release
+- Query execution time analysis
+- Result set size warnings
+- Basic JOIN optimization suggestions
+- Database-specific execution plan analysis (PostgreSQL, MySQL, SQLite)
+- Generic performance tips (LIMIT usage, SELECT * warnings)
+
+**Note:** Advanced index recommendations and detailed query optimization analysis are planned for future releases.
 
 ---
 

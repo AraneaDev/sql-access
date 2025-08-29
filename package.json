@@ -27,12 +27,9 @@
     "type-check": "tsc --noEmit",
     "clean": "node -e \"const fs = require('fs'); if (fs.existsSync('dist')) fs.rmSync('dist', {recursive: true, force: true});\"",
     "prebuild": "npm run type-check",
-    "postbuild": "node -e \"const fs = require('fs'); const output = fs.readdirSync('dist').join(', '); fs.writeFileSync('.build-output.txt', 'Build completed: ' + output);\"",
     "validate": "npm run lint:check && npm run type-check && npm run test",
     "prepack": "npm run build:production",
-    "generate-template": "node dist/setup.js --template",
-    "docker:build": "docker build -t sql-access .",
-    "docker:run": "docker run --rm -p 3000:3000 sql-access"
+    "generate-template": "node dist/setup.js --template"
   },
   "keywords": [
     "claude",
