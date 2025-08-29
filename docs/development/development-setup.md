@@ -18,8 +18,8 @@ This guide provides a comprehensive development environment setup for contributi
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/sql-mcp-server.git
-cd sql-mcp-server
+https://forgejo.aranea.dev/ContextForge/sql-access.git
+cd sql-access
 
 # Install dependencies
 npm install
