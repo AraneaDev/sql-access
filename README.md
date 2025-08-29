@@ -37,12 +37,15 @@
 
 ### 1. Install
 ```bash
-npm install -g sql-access
+git clone https://forgejo.aranea.dev/ContextForge/sql-access.git
+cd sql-access
+npm install
+rpm run build
 ```
 
 ### 2. Configure
 ```bash
-sql-setup
+npm run setup
 ```
 The interactive wizard guides you through database setup, security configuration, and SSH tunneling.
 
