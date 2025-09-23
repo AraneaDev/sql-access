@@ -121,4 +121,4 @@ Can't find what you're looking for? Here are some options:
 
 ---
 
-**Last updated:** August 2025 • **Version:** 2.0.0
+**Last updated:** September 2025 • **Version:** 2.2.0

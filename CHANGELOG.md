@@ -5,6 +5,54 @@ All notable changes to the SQL MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2024-09-23
+
+### ✨ Added
+- **Field Redaction Implementation** - Automatic masking/replacement of sensitive data in query results
+- **Configurable Redaction Rules** - Support for exact match, wildcard, and regex patterns for field matching
+- **Multiple Redaction Patterns** - Full masking, partial masking, and custom replacement text options
+- **Security-Enhanced Query Results** - Automatic protection of sensitive fields without application changes
+- **RedactionManager Class** - Dedicated redaction engine with flexible pattern support
+- **Enhanced Configuration Schema** - New redaction configuration options in database settings
+- **Audit Logging for Redacted Fields** - Optional logging when redacted fields are accessed
+- **Email & Phone Redaction Patterns** - Built-in support for common sensitive data types
+- **Preserve Format Options** - Maintain original data structure while redacting content
+
+### 🔧 Changed
+- **Database Adapter Integration** - Enhanced base adapter to support field redaction processing
+- **Configuration Parser Updates** - Extended configuration parsing to handle redaction rules
+- **Query Result Processing** - Updated result normalization to apply redaction before output
+- **Setup Wizard Enhancement** - Added interactive redaction configuration during setup
+- **Documentation Updates** - Comprehensive redaction feature documentation and examples
+
+### 🐛 Fixed
+- **Memory Management** - Improved resource cleanup in redaction processing
+- **Type Safety** - Enhanced TypeScript type definitions for redaction configuration
+- **Configuration Validation** - Better error handling for malformed redaction rules
+
+### 🔒 Security
+- **Sensitive Data Protection** - Automatic redaction prevents accidental exposure of sensitive information
+- **Configurable Security Policies** - Flexible rules allow customization per security requirements
+- **Data Loss Prevention** - Built-in patterns protect common sensitive data types
+- **Audit Trail** - Optional logging provides compliance-ready access tracking
+
+### 📚 Documentation
+- **Field Redaction Guide** - Complete documentation for redaction feature configuration
+- **Security Best Practices** - Updated security guidance including redaction recommendations
+- **Configuration Examples** - Practical examples for common redaction scenarios
+- **API Documentation Updates** - Updated TypeScript API reference with redaction interfaces
+
+### 🧪 Testing
+- **Redaction Test Suite** - Comprehensive tests for all redaction patterns and configurations
+- **Integration Testing** - End-to-end validation of redaction in query workflows
+- **Performance Testing** - Validation that redaction adds minimal performance overhead
+
+### Breaking Changes
+- **None** - This release is fully backward compatible with v2.1.x
+
+### Migration Guide
+No migration is required for this release. Field redaction is an opt-in feature that can be enabled through configuration. All existing configurations and integrations continue to work without changes.
+
 ## [2.1.0] - 2024-08-29
 
 ### ✨ Added
@@ -104,6 +152,6 @@ This project uses [Semantic Versioning](https://semver.org/):
 
 ## Support Policy
 
-- **Current Release (2.1.x)**: Full support including new features and bug fixes
-- **Previous Release (2.0.x)**: Security fixes and critical bug fixes only
-- **Older Releases**: No longer supported, upgrade recommended
+- **Current Release (2.2.x)**: Full support including new features and bug fixes
+- **Previous Release (2.1.x)**: Security fixes and critical bug fixes only
+- **Previous Release (2.0.x)**: No longer supported, upgrade recommended
