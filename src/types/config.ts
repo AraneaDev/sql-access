@@ -6,7 +6,7 @@
 import type { SecurityConfig, ExtensionConfig, DatabaseTypeString } from './database.js';
 
 // Re-export types that should be available from config module
-export type { DatabaseType, DatabaseTypeString, SecurityConfig, ExtensionConfig, DatabaseConfig } from './database.js';
+export type { DatabaseType, DatabaseTypeString, SecurityConfig, ExtensionConfig, DatabaseConfig, DatabaseRedactionConfig, FieldRedactionRule } from './database.js';
 
 // ============================================================================
 // Setup and Wizard Types (for setup module)
@@ -115,7 +115,7 @@ export interface ParsedExtensionConfig {
 }
 
 export interface ParsedServerConfig {
-  databases: Record<string, ParsedDatabaseConfig>;
+  databases: Record<string, import('./database.js').DatabaseConfig>;
   security?: ParsedSecurityConfig;
   extension?: ParsedExtensionConfig;
 }

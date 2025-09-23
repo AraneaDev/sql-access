@@ -24,7 +24,15 @@ export type {
   ServerConfig,
   DatabaseListItem,
   TestConnectionResult,
-  StandardErrorResponse
+  StandardErrorResponse,
+  // Field Redaction types
+  FieldPatternType,
+  RedactionType,
+  FieldRedactionRule,
+  DatabaseRedactionConfig,
+  RedactionResult,
+  QueryResultWithRedaction,
+  RedactionAuditEntry
 } from './database.js';
 
 // MCP protocol types
@@ -188,7 +196,11 @@ export {
 export {
   isDatabaseType,
   isQueryObject,
-  isSecurityViolationError
+  isSecurityViolationError,
+  isValidRedactionType,
+  isValidFieldPatternType,
+  isFieldRedactionRule,
+  isDatabaseRedactionConfig
 } from './database.js';
 
 export {

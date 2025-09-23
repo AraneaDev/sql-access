@@ -92,6 +92,12 @@ ssh_passphrase=key_passphrase
 # Let system choose port automatically (will prefer SQL Server alternatives like 1434, 1435, etc.)
 local_port=0
 
+# Field Redaction Configuration for Analytics Database
+redaction_enabled=true
+redaction_rules=email:partial_mask,phone:full_mask,customer_id:replace:[CUST_ID],ssn:replace:[SSN]
+redaction_log_access=true
+redaction_case_sensitive=false
+
 [security]
 max_joins=10
 max_subqueries=5

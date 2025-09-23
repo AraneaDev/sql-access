@@ -12,6 +12,13 @@ ssl=false
 select_only=true
 timeout=30000
 
+# Field Redaction Configuration (optional)
+# redaction_enabled=true
+# redaction_rules=email:partial_mask,phone:full_mask,ssn:replace:[PROTECTED],password:replace:[HIDDEN]
+# redaction_replacement_text=[REDACTED]
+# redaction_log_access=false
+# redaction_case_sensitive=false
+
 # Example SQLite configuration
 [database.local]
 type=sqlite
@@ -19,7 +26,7 @@ file=./data/local.db
 select_only=false
 timeout=10000
 
-# Example PostgreSQL configuration with SSH tunnel
+# Example PostgreSQL configuration with SSH tunnel and redaction
 [database.production]
 type=postgresql
 host=your-db-server.com
@@ -34,6 +41,11 @@ ssh_host=bastion.company.com
 ssh_port=22
 ssh_username=deploy_user
 ssh_private_key=/path/to/private/key
+
+# Enable field redaction for sensitive data
+redaction_enabled=true
+redaction_rules=*email*:partial_mask,*phone*:full_mask,*ssn*:replace:[SSN_REDACTED],*password*:replace:[HIDDEN]
+redaction_log_access=true
 
 [security]
 max_joins=10

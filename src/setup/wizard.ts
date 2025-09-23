@@ -10,7 +10,9 @@ import type {
   ExtensionConfig,
   SecurityConfig,
   SetupWizardAction,
-  ParsedServerConfig
+  ParsedServerConfig,
+  DatabaseRedactionConfig,
+  FieldRedactionRule
 } from '../types/config.js';
 
 // const __filename = fileURLToPath(import.meta.url);
@@ -203,7 +205,7 @@ export class SetupWizard {
       const dbTypeInput = await this.askQuestion('Database type (postgresql/mysql/sqlite/mssql): ');
       const dbType = this.parseDbType(dbTypeInput);
 
-      const dbConfig = await this.createDatabaseConfig(dbType);
+      const dbConfig = await this.createDatabaseConfig(dbType, dbName);
 
       this.config[`database.${dbName}`] = dbConfig;
       newDatabases.push(dbName);
@@ -241,7 +243,7 @@ export class SetupWizard {
     }
   }
 
-  private async createDatabaseConfig(dbType: DatabaseType): Promise<DatabaseConfig> {
+  private async createDatabaseConfig(dbType: DatabaseType, dbName?: string): Promise<DatabaseConfig> {
     const dbConfig: Partial<DatabaseConfig> = {
       type: dbType
     };
@@ -290,6 +292,12 @@ export class SetupWizard {
     ui.print('This is recommended for production databases or read-only access scenarios.');
     const selectOnly = await this.askQuestion('Enable SELECT-only mode? (y/n): ');
     dbConfig.select_only = selectOnly.toLowerCase() === 'y';
+
+    // Field Redaction Configuration
+    const redactionConfig = await this.configureRedaction(dbName || 'unknown');
+    if (redactionConfig) {
+      dbConfig.redaction = redactionConfig;
+    }
 
     const timeoutInput = await this.askQuestion('Connection timeout (ms, default: 30000): ');
     dbConfig.timeout = parseInt(timeoutInput) || 30000;
@@ -372,7 +380,7 @@ export class SetupWizard {
       const dbTypeInput = await this.askQuestion('Database type (postgresql/mysql/sqlite/mssql): ');
       const dbType = this.parseDbType(dbTypeInput);
 
-      const dbConfig = await this.createDatabaseConfig(dbType);
+      const dbConfig = await this.createDatabaseConfig(dbType, dbName);
 
       this.config[`database.${dbName}`] = dbConfig;
       databases.push(dbName);
@@ -430,6 +438,192 @@ export class SetupWizard {
     }
 
     return { action: 'save_and_test', databases };
+  }
+
+  private async configureRedaction(dbName: string): Promise<DatabaseRedactionConfig | undefined> {
+    ui.print('\n--- Field Redaction Configuration ---');
+    ui.print('Field redaction automatically masks sensitive data (emails, phone numbers, SSNs, etc.)');
+    ui.print('in query results to protect privacy and ensure compliance with data protection regulations.');
+    ui.printEmptyLine();
+    
+    const enableRedaction = await this.askQuestion('Enable field redaction for sensitive data? (y/n): ');
+    
+    if (enableRedaction.toLowerCase() !== 'y') {
+      return undefined;
+    }
+
+    const rules: FieldRedactionRule[] = [];
+    
+    // Pre-defined common sensitive field patterns
+    const commonFields = [
+      { name: 'email', description: 'Email addresses', pattern: '*email*', example: 'user_email, contact_email' },
+      { name: 'phone', description: 'Phone numbers', pattern: '*phone*', example: 'phone_number, mobile_phone' },
+      { name: 'ssn', description: 'Social Security Numbers', pattern: '*ssn*', example: 'ssn, social_security_number' },
+      { name: 'password', description: 'Password fields', pattern: '*password*', example: 'password, user_password' },
+      { name: 'credit_card', description: 'Credit card numbers', pattern: '*card*', example: 'credit_card, card_number' }
+    ];
+
+    ui.printSubsection('Configure Common Sensitive Fields:');
+    
+    for (const field of commonFields) {
+      ui.print(`\n${field.description} (matches: ${field.example}):`);
+      const shouldRedact = await this.askQuestion(`   Redact ${field.description.toLowerCase()}? (y/n): `);
+      
+      if (shouldRedact.toLowerCase() === 'y') {
+        ui.print('   Redaction options:');
+        ui.print('   1. Partial masking - preserves format (e.g., j***@***.com)');
+        ui.print('   2. Full masking - replaces with asterisks (e.g., ***********)');
+        ui.print('   3. Replace with text - uses fixed replacement (e.g., [REDACTED])');
+        
+        const redactionType = await this.askQuestion('   Choose redaction type (1-3): ');
+        
+        let redactionTypeValue: FieldRedactionRule['redaction_type'] = 'partial_mask';
+        let replacementText: string | undefined;
+        
+        switch (redactionType) {
+          case '1':
+            redactionTypeValue = 'partial_mask';
+            break;
+          case '2':
+            redactionTypeValue = 'full_mask';
+            break;
+          case '3':
+            redactionTypeValue = 'replace';
+            replacementText = await this.askQuestion(`   Enter replacement text (default: [${field.name.toUpperCase()}_REDACTED]): `);
+            if (!replacementText.trim()) {
+              replacementText = `[${field.name.toUpperCase()}_REDACTED]`;
+            }
+            break;
+          default:
+            ui.printWarning('   Invalid choice, using partial masking');
+            redactionTypeValue = 'partial_mask';
+        }
+
+        const rule: FieldRedactionRule = {
+          field_pattern: field.pattern,
+          pattern_type: 'wildcard',
+          redaction_type: redactionTypeValue,
+          preserve_format: redactionTypeValue === 'partial_mask',
+          description: `Redact ${field.description.toLowerCase()}`
+        };
+
+        if (replacementText) {
+          rule.replacement_text = replacementText;
+        }
+
+        rules.push(rule);
+        ui.printSuccess(`   ✓ Added redaction rule for ${field.description.toLowerCase()}`);
+      }
+    }
+
+    // Allow custom rules
+    ui.printSubsection('Custom Redaction Rules:');
+    const addCustom = await this.askQuestion('Add custom redaction rules? (y/n): ');
+    
+    if (addCustom.toLowerCase() === 'y') {
+      let addingCustomRules = true;
+      
+      while (addingCustomRules) {
+        ui.print('\nCustom redaction rule:');
+        const fieldPattern = await this.askQuestion('Field pattern (e.g., customer_id, *secret*, /^user_.+$/): ');
+        
+        if (!fieldPattern.trim()) {
+          ui.printWarning('Empty field pattern, skipping...');
+          continue;
+        }
+
+        // Determine pattern type
+        let patternType: FieldRedactionRule['pattern_type'] = 'exact';
+        if (fieldPattern.includes('*')) {
+          patternType = 'wildcard';
+          ui.printInfo('Detected wildcard pattern');
+        } else if (fieldPattern.startsWith('/') && fieldPattern.endsWith('/')) {
+          patternType = 'regex';
+          ui.printInfo('Detected regex pattern');
+        }
+
+        ui.print('Redaction type:');
+        ui.print('1. Partial masking');
+        ui.print('2. Full masking');
+        ui.print('3. Replace with fixed text');
+        
+        const redactionType = await this.askQuestion('Choose redaction type (1-3): ');
+        
+        let redactionTypeValue: FieldRedactionRule['redaction_type'] = 'partial_mask';
+        let replacementText: string | undefined;
+        
+        switch (redactionType) {
+          case '1':
+            redactionTypeValue = 'partial_mask';
+            break;
+          case '2':
+            redactionTypeValue = 'full_mask';
+            break;
+          case '3':
+            redactionTypeValue = 'replace';
+            replacementText = await this.askQuestion('Enter replacement text (default: [REDACTED]): ');
+            if (!replacementText.trim()) {
+              replacementText = '[REDACTED]';
+            }
+            break;
+          default:
+            ui.printWarning('Invalid choice, using partial masking');
+        }
+
+        const rule: FieldRedactionRule = {
+          field_pattern: fieldPattern,
+          pattern_type: patternType,
+          redaction_type: redactionTypeValue,
+          preserve_format: redactionTypeValue === 'partial_mask'
+        };
+
+        if (replacementText) {
+          rule.replacement_text = replacementText;
+        }
+
+        rules.push(rule);
+        ui.printSuccess(`✓ Added custom redaction rule: ${fieldPattern} → ${redactionTypeValue}`);
+
+        const addAnother = await this.askQuestion('Add another custom rule? (y/n): ');
+        addingCustomRules = addAnother.toLowerCase() === 'y';
+      }
+    }
+
+    if (rules.length === 0) {
+      ui.printInfo('No redaction rules configured, disabling field redaction');
+      return undefined;
+    }
+
+    // Additional settings
+    ui.printSubsection('Redaction Settings:');
+    const logAccess = await this.askQuestion('Log when redacted fields are accessed? (y/n): ');
+    const caseSensitive = await this.askQuestion('Case-sensitive field matching? (y/n, default: n): ');
+
+    const redactionConfig: DatabaseRedactionConfig = {
+      enabled: true,
+      rules,
+      log_redacted_access: logAccess.toLowerCase() === 'y',
+      case_sensitive_matching: caseSensitive.toLowerCase() === 'y'
+    };
+
+    // Summary
+    ui.printSubsection(`Redaction Summary for '${dbName}':`);
+    ui.printDetail('Rules configured', rules.length.toString());
+    ui.printDetail('Log access', redactionConfig.log_redacted_access ? 'Yes' : 'No');
+    ui.printDetail('Case sensitive', redactionConfig.case_sensitive_matching ? 'Yes' : 'No');
+    
+    if (rules.length > 0) {
+      ui.print('   Configured rules:');
+      for (const rule of rules) {
+        const typeDesc = rule.redaction_type === 'partial_mask' ? 'partial mask' : 
+                         rule.redaction_type === 'full_mask' ? 'full mask' : 
+                         rule.redaction_type === 'replace' ? `replace with "${rule.replacement_text}"` : rule.redaction_type;
+        ui.print(`   • ${rule.field_pattern} → ${typeDesc}`);
+      }
+    }
+
+    ui.printSuccess(`Field redaction configured for database '${dbName}'`);
+    return redactionConfig;
   }
 
   private getDefaultPort(dbType: DatabaseType): number {

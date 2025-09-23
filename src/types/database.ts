@@ -51,6 +51,9 @@ export interface DatabaseConfig {
   ssh_private_key?: string;
   ssh_passphrase?: string;
   local_port?: number;
+  
+  // Field Redaction Configuration
+  redaction?: DatabaseRedactionConfig;
 }
 
 export type DatabaseConnection = PgClient | MySQLConnection | SQLiteConnection | MSSQLConnection;
@@ -298,6 +301,76 @@ export interface TestConnectionResult {
 }
 
 // ============================================================================
+// Field Redaction Types
+// ============================================================================
+
+/**
+ * Pattern matching types for field redaction
+ */
+export type FieldPatternType = 'exact' | 'wildcard' | 'regex';
+
+/**
+ * Available redaction strategies
+ */
+export type RedactionType = 'full_mask' | 'partial_mask' | 'replace' | 'custom';
+
+/**
+ * Configuration for a single field redaction rule
+ */
+export interface FieldRedactionRule {
+  field_pattern: string;                    // Field name or pattern to match
+  pattern_type: FieldPatternType;           // How to interpret the pattern
+  redaction_type: RedactionType;            // Type of redaction to apply
+  replacement_text?: string;                // For 'replace' type redaction
+  mask_character?: string;                  // Character to use for masking (default: '*')
+  preserve_format?: boolean;                // Keep original structure (e.g., email format)
+  custom_pattern?: string;                  // For advanced redaction patterns
+  description?: string;                     // Human-readable description of the rule
+}
+
+/**
+ * Database-level redaction configuration
+ */
+export interface DatabaseRedactionConfig {
+  enabled: boolean;                         // Whether redaction is enabled
+  rules: FieldRedactionRule[];              // List of redaction rules
+  default_redaction?: Omit<FieldRedactionRule, 'field_pattern' | 'pattern_type'>;  // Default redaction for unmatched sensitive fields
+  log_redacted_access?: boolean;            // Log when redacted fields are accessed
+  audit_redacted_queries?: boolean;         // Keep audit trail of queries accessing redacted data
+  case_sensitive_matching?: boolean;        // Whether field matching is case sensitive (default: false)
+}
+
+/**
+ * Result of applying redaction to query results
+ */
+export interface RedactionResult {
+  fields_redacted: string[];                // List of fields that were redacted
+  redaction_count: number;                  // Total number of values redacted
+  rules_applied: string[];                  // List of rule patterns that were applied
+  warnings?: string[];                      // Any warnings during redaction
+}
+
+/**
+ * Extended QueryResult with redaction information
+ */
+export interface QueryResultWithRedaction extends QueryResult {
+  redaction?: RedactionResult;              // Information about applied redaction
+}
+
+/**
+ * Audit log entry for redacted field access
+ */
+export interface RedactionAuditEntry {
+  timestamp: string;                        // When the redaction occurred
+  database: string;                         // Database name
+  query_hash: string;                       // Hash of the query
+  fields_redacted: string[];                // Fields that were redacted
+  rules_applied: string[];                  // Rules that were applied
+  redaction_count: number;                  // Number of values redacted
+  user_context?: string;                    // User or session context if available
+}
+
+// ============================================================================
 // Type Guards
 // ============================================================================
 
@@ -316,4 +389,37 @@ export function isQueryObject(value: unknown): value is QueryObject {
 
 export function isSecurityViolationError(error: unknown): error is SecurityViolationError {
   return error instanceof SecurityViolationError;
+}
+
+export function isValidRedactionType(value: string): value is RedactionType {
+  return ['full_mask', 'partial_mask', 'replace', 'custom'].includes(value);
+}
+
+export function isValidFieldPatternType(value: string): value is FieldPatternType {
+  return ['exact', 'wildcard', 'regex'].includes(value);
+}
+
+export function isFieldRedactionRule(value: unknown): value is FieldRedactionRule {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'field_pattern' in value &&
+    'pattern_type' in value &&
+    'redaction_type' in value &&
+    typeof (value as FieldRedactionRule).field_pattern === 'string' &&
+    isValidFieldPatternType((value as FieldRedactionRule).pattern_type) &&
+    isValidRedactionType((value as FieldRedactionRule).redaction_type)
+  );
+}
+
+export function isDatabaseRedactionConfig(value: unknown): value is DatabaseRedactionConfig {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'enabled' in value &&
+    'rules' in value &&
+    typeof (value as DatabaseRedactionConfig).enabled === 'boolean' &&
+    Array.isArray((value as DatabaseRedactionConfig).rules) &&
+    (value as DatabaseRedactionConfig).rules.every(isFieldRedactionRule)
+  );
 }

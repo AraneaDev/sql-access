@@ -11,8 +11,11 @@ import type {
   DatabaseConfig,
   ParsedServerConfig,
   ParsedSecurityConfig,
-  ParsedExtensionConfig
+  ParsedExtensionConfig,
+  DatabaseRedactionConfig,
+  FieldRedactionRule
 } from '../types/index.js';
+import { isValidRedactionType, isValidFieldPatternType } from '../types/index.js';
 
 /**
  * Configuration validation error
@@ -119,6 +122,11 @@ export function parseDatabaseConfig(name: string, config: Record<string, any>): 
     parseSSHConfig(name, config, dbConfig);
   }
 
+  // Parse redaction configuration if present
+  if (config.redaction_enabled === 'true' || config.redaction_enabled === true) {
+    dbConfig.redaction = parseRedactionConfig(name, config);
+  }
+
   return dbConfig;
 }
 
@@ -199,6 +207,111 @@ function parseSSHConfig(name: string, config: Record<string, any>, dbConfig: Dat
       name
     );
   }
+}
+
+/**
+ * Parse redaction configuration from config section
+ */
+function parseRedactionConfig(dbName: string, config: Record<string, any>): DatabaseRedactionConfig {
+  const redactionConfig: DatabaseRedactionConfig = {
+    enabled: true,
+    rules: [],
+    log_redacted_access: config.redaction_log_access === 'true' || config.redaction_log_access === true,
+    audit_redacted_queries: config.redaction_audit_queries === 'true' || config.redaction_audit_queries === true,
+    case_sensitive_matching: config.redaction_case_sensitive === 'true' || config.redaction_case_sensitive === true
+  };
+
+  // Parse redaction rules from configuration
+  if (config.redaction_rules && typeof config.redaction_rules === 'string') {
+    try {
+      redactionConfig.rules = parseRedactionRules(config.redaction_rules);
+    } catch (error) {
+      throw new ConfigValidationError(
+        `Database '${dbName}' has invalid redaction rules: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'redaction_rules',
+        dbName
+      );
+    }
+  }
+
+  // Parse default replacement text
+  if (config.redaction_replacement_text) {
+    redactionConfig.default_redaction = {
+      redaction_type: 'replace',
+      replacement_text: config.redaction_replacement_text
+    };
+  }
+
+  return redactionConfig;
+}
+
+/**
+ * Parse redaction rules from string format
+ * Expected format: "email:partial_mask,phone:full_mask,ssn:replace:[PROTECTED]"
+ */
+function parseRedactionRules(rulesString: string): FieldRedactionRule[] {
+  const rules: FieldRedactionRule[] = [];
+  
+  const ruleDefinitions = rulesString.split(',');
+  
+  for (const ruleDef of ruleDefinitions) {
+    const trimmedRule = ruleDef.trim();
+    if (!trimmedRule) continue;
+
+    const parts = trimmedRule.split(':');
+    if (parts.length < 2) {
+      throw new ConfigValidationError(`Invalid redaction rule format: ${ruleDef}. Expected format: field:type[:options]`, 'redaction_rules');
+    }
+
+    const fieldPattern = parts[0].trim();
+    const redactionTypeStr = parts[1].trim();
+
+    if (!fieldPattern) {
+      throw new ConfigValidationError(`Empty field pattern in redaction rule: ${ruleDef}`, 'redaction_rules');
+    }
+
+    if (!isValidRedactionType(redactionTypeStr)) {
+      throw new ConfigValidationError(
+        `Invalid redaction type '${redactionTypeStr}' in rule: ${ruleDef}. Valid types: full_mask, partial_mask, replace, custom`,
+        'redaction_rules'
+      );
+    }
+
+    // Determine pattern type based on field pattern
+    let patternType: FieldRedactionRule['pattern_type'] = 'exact';
+    if (fieldPattern.includes('*')) {
+      patternType = 'wildcard';
+    } else if (fieldPattern.startsWith('/') && fieldPattern.endsWith('/')) {
+      patternType = 'regex';
+      // Remove regex delimiters
+      fieldPattern.slice(1, -1);
+    }
+
+    const rule: FieldRedactionRule = {
+      field_pattern: fieldPattern,
+      pattern_type: patternType,
+      redaction_type: redactionTypeStr as FieldRedactionRule['redaction_type'],
+      preserve_format: redactionTypeStr === 'partial_mask'
+    };
+
+    // Handle additional options
+    if (parts.length > 2) {
+      const optionsStr = parts.slice(2).join(':');
+      
+      if (redactionTypeStr === 'replace') {
+        rule.replacement_text = optionsStr || '[REDACTED]';
+      } else if (redactionTypeStr === 'custom') {
+        rule.replacement_text = optionsStr || '[REDACTED]';
+        rule.custom_pattern = optionsStr;
+      }
+    } else if (redactionTypeStr === 'replace') {
+      rule.replacement_text = '[REDACTED]';
+    }
+
+    rules.push(rule);
+  }
+
+  return rules;
 }
 
 /**
@@ -374,10 +487,45 @@ export function saveConfigFile(config: ParsedServerConfig, configPath?: string):
     for (const [name, dbConfig] of Object.entries(config.databases)) {
       iniString += `[database.${name}]\n`;
       for (const [key, value] of Object.entries(dbConfig)) {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && key !== 'redaction') {
           iniString += `${key}=${value}\n`;
         }
       }
+      
+      // Handle redaction configuration separately
+      if (dbConfig.redaction?.enabled) {
+        iniString += 'redaction_enabled=true\n';
+        
+        if (dbConfig.redaction.rules.length > 0) {
+          const rulesString = dbConfig.redaction.rules
+            .map((rule: FieldRedactionRule) => {
+              let ruleStr = `${rule.field_pattern}:${rule.redaction_type}`;
+              if (rule.replacement_text && (rule.redaction_type === 'replace' || rule.redaction_type === 'custom')) {
+                ruleStr += `:${rule.replacement_text}`;
+              }
+              return ruleStr;
+            })
+            .join(',');
+          iniString += `redaction_rules=${rulesString}\n`;
+        }
+        
+        if (dbConfig.redaction.default_redaction?.replacement_text) {
+          iniString += `redaction_replacement_text=${dbConfig.redaction.default_redaction.replacement_text}\n`;
+        }
+        
+        if (dbConfig.redaction.log_redacted_access) {
+          iniString += 'redaction_log_access=true\n';
+        }
+        
+        if (dbConfig.redaction.audit_redacted_queries) {
+          iniString += 'redaction_audit_queries=true\n';
+        }
+        
+        if (dbConfig.redaction.case_sensitive_matching) {
+          iniString += 'redaction_case_sensitive=true\n';
+        }
+      }
+      
       iniString += '\n';
     }
   }

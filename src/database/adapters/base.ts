@@ -7,8 +7,10 @@ import type {
   DatabaseConfig, 
   QueryResult, 
   DatabaseSchema,
-  DatabaseTypeString 
+  DatabaseTypeString,
+  QueryResultWithRedaction
 } from '../../types/index.js';
+import { RedactionManager } from '../../classes/RedactionManager.js';
 
 // ============================================================================
 // Abstract Database Adapter
@@ -17,6 +19,7 @@ import type {
 export abstract class DatabaseAdapter {
   protected config: DatabaseConfig;
   protected connectionTimeout: number;
+  protected redactionManager?: RedactionManager;
 
   constructor(config: DatabaseConfig) {
     this.config = config;
@@ -25,6 +28,11 @@ export abstract class DatabaseAdapter {
       : typeof config.timeout === 'string' 
         ? parseInt(config.timeout, 10) || 30000
         : 30000;
+
+    // Initialize redaction manager if configured
+    if (config.redaction?.enabled) {
+      this.redactionManager = new RedactionManager(config.redaction);
+    }
   }
 
   // ============================================================================
@@ -193,7 +201,7 @@ export abstract class DatabaseAdapter {
   protected abstract extractFieldNames(_result: unknown): string[];
 
   /**
-   * Normalize query result to standard format
+   * Normalize query result to standard format with optional redaction
    */
   protected normalizeQueryResult(
     rawResult: unknown,
@@ -209,13 +217,22 @@ export abstract class DatabaseAdapter {
     // Extract field names
     const fields = this.extractFieldNames(rawResult);
     
-    return {
+    // Create base result
+    const baseResult: QueryResult = {
       rows: rows as Record<string, unknown>[],
       rowCount: rawRows.length,
       fields,
       truncated,
       execution_time_ms: executionTime
     };
+
+    // Apply redaction if configured
+    if (this.redactionManager) {
+      const redactedResult = this.redactionManager.redactResults(baseResult);
+      return redactedResult;
+    }
+
+    return baseResult;
   }
 
   /**
@@ -284,5 +301,44 @@ export abstract class DatabaseAdapter {
     if (typeof value === 'boolean') return value;
     if (typeof value === 'string') return value.toLowerCase() === 'yes';
     return false;
+  }
+
+  // ============================================================================
+  // Redaction Management Methods
+  // ============================================================================
+
+  /**
+   * Update redaction configuration at runtime
+   */
+  public updateRedactionConfig(redactionConfig: DatabaseConfig['redaction']): void {
+    if (redactionConfig?.enabled) {
+      this.redactionManager = new RedactionManager(redactionConfig);
+    } else {
+      this.redactionManager = undefined;
+    }
+
+    // Update the config
+    this.config.redaction = redactionConfig;
+  }
+
+  /**
+   * Check if redaction is enabled
+   */
+  public isRedactionEnabled(): boolean {
+    return !!this.redactionManager;
+  }
+
+  /**
+   * Get redaction configuration summary
+   */
+  public getRedactionSummary(): ReturnType<RedactionManager['getConfigurationSummary']> | null {
+    return this.redactionManager?.getConfigurationSummary() || null;
+  }
+
+  /**
+   * Test redaction with sample data
+   */
+  public testRedaction(sampleData: Record<string, unknown>): ReturnType<RedactionManager['testRedaction']> | null {
+    return this.redactionManager?.testRedaction(sampleData) || null;
   }
 }
