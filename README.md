@@ -44,27 +44,18 @@ npm run build
 npm link
 ```
 
-### 2. Automatic Installation (Recommended)
+> **Note:** `npm link` makes the CLI commands (`sql-install`, `sql-server`, `sql-setup`) available globally. Alternatively, you can run them directly with `node dist/install.js`.
+
+### 2. Setup & Connect
 ```bash
 sql-install
 ```
-The `sql-install` command handles database configuration, security setup, and Claude Desktop integration automatically. This is the easiest way to get up and running.
+The `sql-install` wizard handles everything: database configuration, security setup, and Claude Desktop integration in one step.
 
-> **Note:** `sql-install` (and other CLI commands like `sql-server`, `sql-setup`) require `npm link` to be run first. Alternatively, you can run them directly with `node dist/install.js`.
-
-### 3. Configure (Manual)
+For manual database configuration only (without Claude Desktop integration), you can use:
 ```bash
-npm run setup
+sql-setup
 ```
-The interactive wizard guides you through database setup, security configuration, and SSH tunneling.
-
-### 4. Connect Claude Desktop
-Add to your Claude Desktop configuration:
-
-```bash
-sql-install
-```
-This will detect your platform, configure the database, and set up Claude Desktop integration in one step.
 
 ## Use Cases
 
