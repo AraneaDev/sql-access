@@ -32,7 +32,7 @@ The fastest way to get started:
 npm install -g sql-access
 
 # Run the automatic installer
-sql-install
+mcp-sql-install
 
 # The installer automatically:
 # 1. Detects Claude Code and Claude Desktop
@@ -51,7 +51,7 @@ Install globally for system-wide access:
 npm install -g sql-mcp-server
 
 # Verify installation
-sql-server --version
+mcp-sql-server --version
 ```
 
 **Expected Output:**
@@ -75,7 +75,7 @@ npm init -y
 npm install sql-mcp-server
 
 # Verify installation
-npx sql-server --version
+npx mcp-sql-server --version
 ```
 
 ### Method 3: Development Installation
@@ -107,7 +107,7 @@ The easiest way to configure the server is using the interactive setup wizard:
 # Run the setup wizard
 npm run setup
 # or if globally installed:
-sql-setup
+mcp-sql-setup
 ```
 
 The wizard will guide you through:
@@ -206,9 +206,9 @@ EOF
 
 ```bash
 # Start the server
-sql-server
+mcp-sql-server
 # or if installed locally:
-npx sql-server
+npx mcp-sql-server
 ```
 
 **Expected Output:**
@@ -226,7 +226,7 @@ npx sql-server
 # Test connections (if server is running)
 sql-test-connections
 # or via setup:
-sql-setup --test-only
+mcp-sql-setup --test-only
 ```
 
 **Expected Output:**
@@ -242,7 +242,7 @@ Testing primary...
 
 ```bash
 # Test MCP protocol communication
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | sql-server
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | mcp-sql-server
 ```
 
 **Expected Response:**
@@ -487,20 +487,20 @@ password=${DB_PASSWORD}
 
 ```bash
 # Start with debug output
-DEBUG=sql-mcp:* sql-server
+DEBUG=sql-mcp:* mcp-sql-server
 
 # Start with custom config
-sql-server --config=/path/to/custom/config.ini
+mcp-sql-server --config=/path/to/custom/config.ini
 
 # Start with environment override
-NODE_ENV=development sql-server
+NODE_ENV=development mcp-sql-server
 ```
 
 ### Production Mode
 
 ```bash
 # Start as background service
-nohup sql-server > server.log 2>&1 &
+nohup mcp-sql-server > server.log 2>&1 &
 
 # Using systemd (Linux)
 sudo systemctl start sql-mcp-server
@@ -508,7 +508,7 @@ sudo systemctl enable sql-mcp-server
 
 # Using PM2 process manager
 npm install -g pm2
-pm2 start sql-server --name "sql-mcp"
+pm2 start mcp-sql-server --name "sql-mcp"
 pm2 startup
 pm2 save
 ```
@@ -530,7 +530,7 @@ RUN npm install -g sql-mcp-server
 EXPOSE 3000
 
 # Start server
-CMD ["sql-server"]
+CMD ["mcp-sql-server"]
 ```
 
 ```bash
@@ -561,24 +561,24 @@ git clone <repo-url> # Development installation
 
 ### Configuration Commands
 ```bash
-sql-setup # Interactive configuration
-sql-setup --template=production # Generate template
-sql-setup --config=/path/to/config.ini # Custom config path
+mcp-sql-setup # Interactive configuration
+mcp-sql-setup --template=production # Generate template
+mcp-sql-setup --config=/path/to/config.ini # Custom config path
 ```
 
 ### Server Commands
 ```bash
-sql-server # Start server
-sql-server --version # Show version
-sql-server --help # Show help
+mcp-sql-server # Start server
+mcp-sql-server --version # Show version
+mcp-sql-server --help # Show help
 sql-test-connections # Test database connections
 ```
 
 ### Installer Commands
 ```bash
-sql-install # Automatic MCP installer
-sql-install --client=claude-code # Install for Claude Code only
-sql-install --uninstall # Remove from MCP configs
+mcp-sql-install # Automatic MCP installer
+mcp-sql-install --client=claude-code # Install for Claude Code only
+mcp-sql-install --uninstall # Remove from MCP configs
 ```
 
 ### Utility Commands

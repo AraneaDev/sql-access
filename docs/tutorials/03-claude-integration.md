@@ -18,7 +18,7 @@ Before starting this tutorial, ensure you have:
 - **SQL MCP Server installed** - [Installation Tutorial](01-installation.md)
 - **Database configured** - At least one database connection configured
 - **Claude Desktop installed** - Download from [claude.ai](https://claude.ai/desktop)
-- **Server tested** - Verified that `sql-server` starts without errors
+- **Server tested** - Verified that `mcp-sql-server` starts without errors
 
 ## Step 1: Verify SQL MCP Server
 
@@ -31,7 +31,7 @@ First, ensure your SQL MCP Server is properly configured:
 ls -la config.ini
 
 # Test server startup
-sql-server --test
+mcp-sql-server --test
 ```
 
 **Expected Output:**
@@ -47,7 +47,7 @@ sql-server --test
 
 ```bash
 # Test all configured databases
-sql-setup --test-only
+mcp-sql-setup --test-only
 ```
 
 **Expected Output:**
@@ -115,7 +115,7 @@ Edit the Claude Desktop configuration file and add the SQL MCP Server:
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": []
  }
  }
@@ -130,7 +130,7 @@ If your `config.ini` is in a non-standard location:
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/path/to/your/config.ini"]
  }
  }
@@ -146,7 +146,7 @@ If you installed the SQL MCP Server locally (not globally):
  "mcpServers": {
  "sql-database": {
  "command": "npx",
- "args": ["sql-server"]
+ "args": ["mcp-sql-server"]
  }
  }
 }
@@ -160,7 +160,7 @@ To pass environment variables (like passwords):
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": [],
  "env": {
  "DB_PASSWORD": "your_secure_password",
@@ -177,7 +177,7 @@ To pass environment variables (like passwords):
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": [
  "--config", "/etc/claude-sql/config.ini",
  "--debug"
@@ -306,9 +306,9 @@ Would you like me to analyze posting patterns over time or explore other user en
 1. **Verify command path:**
  ```bash
  # Test if command is in PATH
- which sql-server
+ which mcp-sql-server
  # or
- sql-server --version
+ mcp-sql-server --version
  ```
 
 2. **Use full path in configuration:**
@@ -316,7 +316,7 @@ Would you like me to analyze posting patterns over time or explore other user en
  {
  "mcpServers": {
  "sql-database": {
- "command": "/usr/local/bin/sql-server",
+ "command": "/usr/local/bin/mcp-sql-server",
  "args": []
  }
  }
@@ -341,7 +341,7 @@ Would you like me to analyze posting patterns over time or explore other user en
  {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/full/path/to/config.ini"]
  }
  }
@@ -364,7 +364,7 @@ Would you like me to analyze posting patterns over time or explore other user en
 
 1. **Test connections independently:**
  ```bash
- sql-setup --test-only
+ mcp-sql-setup --test-only
  ```
 
 2. **Check environment variables:**
@@ -372,7 +372,7 @@ Would you like me to analyze posting patterns over time or explore other user en
  {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": [],
  "env": {
  "DB_PASSWORD": "correct_password"
@@ -387,7 +387,7 @@ Would you like me to analyze posting patterns over time or explore other user en
  {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--debug"],
  "env": {
  "DEBUG": "sql-mcp:*"
@@ -407,7 +407,7 @@ Would you like me to analyze posting patterns over time or explore other user en
 
 1. **Check file permissions:**
  ```bash
- chmod +x $(which sql-server)
+ chmod +x $(which mcp-sql-server)
  chmod 600 config.ini # Protect sensitive config
  ```
 
@@ -457,15 +457,15 @@ You can configure multiple MCP servers for different database environments:
 {
  "mcpServers": {
  "production-db": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/etc/sql-mcp/production.ini"]
  },
  "development-db": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/etc/sql-mcp/development.ini"]
  },
  "analytics-db": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/etc/sql-mcp/analytics.ini"]
  }
  }
@@ -480,7 +480,7 @@ For databases requiring SSH tunnels:
 {
  "mcpServers": {
  "secure-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/secure/path/config.ini"],
  "env": {
  "SSH_PRIVATE_KEY": "/path/to/ssh/private/key",
@@ -499,7 +499,7 @@ For databases requiring SSH tunnels:
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--debug"],
  "env": {
  "NODE_ENV": "development",
@@ -515,7 +515,7 @@ For databases requiring SSH tunnels:
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": ["--config", "/etc/claude-sql/production.ini"],
  "env": {
  "NODE_ENV": "production",
@@ -634,7 +634,7 @@ Now that Claude Desktop is integrated with your databases:
 {
  "mcpServers": {
  "sql-database": {
- "command": "sql-server",
+ "command": "mcp-sql-server",
  "args": [
  "--config", "/etc/claude-sql/config.ini"
  ],

@@ -44,17 +44,17 @@ npm run build
 npm link
 ```
 
-> **Note:** `npm link` makes the CLI commands (`sql-install`, `sql-server`, `sql-setup`) available globally. Alternatively, you can run them directly with `node dist/install.js`.
+> **Note:** `npm link` makes the CLI commands (`mcp-sql-install`, `mcp-sql-server`, `mcp-sql-setup`) available globally. Alternatively, you can run them directly with `node dist/install.js`.
 
 ### 2. Connect to Claude
 ```bash
-sql-install
+mcp-sql-install
 ```
 Registers the MCP server with Claude Code and/or Claude Desktop. Use `--client=claude-code` or `--client=claude-desktop` to target a specific client.
 
 ### 3. Configure Databases
 ```bash
-sql-setup
+mcp-sql-setup
 ```
 Interactive wizard for adding database connections, security settings, and SSH tunnels. You can also add databases at runtime using the `sql_add_database` MCP tool.
 
@@ -272,9 +272,9 @@ The following CLI commands are available after installation:
 
 | Command | Description |
 |---------|-------------|
-| `sql-server` | Start the MCP SQL Access Server |
-| `sql-setup` | Run the interactive configuration wizard |
-| `sql-install` | Automatic installer for quick setup and Claude Desktop integration |
+| `mcp-sql-server` | Start the MCP SQL Access Server |
+| `mcp-sql-setup` | Run the interactive configuration wizard |
+| `mcp-sql-install` | Automatic installer for quick setup and Claude Desktop integration |
 
 ## Development
 

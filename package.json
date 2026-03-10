@@ -5,9 +5,9 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "sql-server": "./dist/index.js",
-    "sql-setup": "./dist/setup.js",
-    "sql-install": "./dist/install.js"
+    "mcp-sql-server": "./dist/index.js",
+    "mcp-sql-setup": "./dist/setup.js",
+    "mcp-sql-install": "./dist/install.js"
   },
   "scripts": {
     "build": "npm run clean && tsc",

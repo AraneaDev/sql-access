@@ -6,7 +6,7 @@ Welcome to the comprehensive documentation for the SQL MCP Server - a high-perfo
 
 ### Getting Started
 - **[Quick Start Guide](guides/quick-start.md)** - Get up and running in 5 minutes
-- **[Automatic Installer](guides/installation-guide.md#option-0-automatic-installer-easiest)** - One-command setup with sql-install
+- **[Automatic Installer](guides/installation-guide.md#option-0-automatic-installer-easiest)** - One-command setup with mcp-sql-install
 - **[Installation Guide](guides/installation-guide.md)** - Detailed installation instructions 
 - **[Configuration Guide](guides/configuration-guide.md)** - Complete configuration reference
 - **[Troubleshooting](guides/troubleshooting-guide.md)** - Common issues and solutions

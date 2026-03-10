@@ -403,7 +403,7 @@ interface SecurityViolationError {
 **Default Location**: ./config.ini
 
 **Resolution Steps**:
-1. Run `sql-setup` to create configuration
+1. Run `mcp-sql-setup` to create configuration
 2. Verify config.ini exists in working directory
 3. Check file permissions
 4. Specify custom config path

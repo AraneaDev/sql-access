@@ -30,16 +30,16 @@ npm run build
 
 ```bash
 # Option A: Automatic installer (recommended)
-sql-install
+mcp-sql-install
 
 # Option B: Interactive setup wizard
-sql-setup
+mcp-sql-setup
 ```
 
 ### Step 2: Run Interactive Setup
 
 ```bash
-sql-setup
+mcp-sql-setup
 ```
 
 The setup wizard will guide you through:
@@ -106,7 +106,7 @@ Testing production...
 
 ### Step 4: Configure Claude Desktop
 
-> **Note:** If you used `sql-install` in Step 1, this step is handled automatically. You can skip to Step 5.
+> **Note:** If you used `mcp-sql-install` in Step 1, this step is handled automatically. You can skip to Step 5.
 
 Add the SQL MCP Server to your Claude Desktop configuration:
 

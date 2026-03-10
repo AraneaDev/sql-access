@@ -87,7 +87,7 @@ sqlite3 demo.db "SELECT COUNT(*) as order_count FROM orders;"
 
 ### 3. Start SQL MCP Server
 ```bash
-sql-server --config config.ini &
+mcp-sql-server --config config.ini &
 SERVER_PID=$!
 echo "Server started with PID: $SERVER_PID"
 ```
@@ -95,13 +95,13 @@ echo "Server started with PID: $SERVER_PID"
 ### 4. Test MCP Protocol
 ```bash
 # List tools
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | sql-server --test
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | mcp-sql-server --test
 
 # List databases
-echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sql_list_databases","arguments":{}}}' | sql-server --test
+echo '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sql_list_databases","arguments":{}}}' | mcp-sql-server --test
 
 # Execute query
-echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sql_query","arguments":{"database":"demo","query":"SELECT COUNT(*) as total FROM users"}}}' | sql-server --test
+echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sql_query","arguments":{"database":"demo","query":"SELECT COUNT(*) as total FROM users"}}}' | mcp-sql-server --test
 ```
 
 ### 5. Shutdown
@@ -150,7 +150,7 @@ sqlite3 demo.db < create-database.sql
 lsof -i :3000
 
 # Try different port
-sql-server --config config.ini --port 3001
+mcp-sql-server --config config.ini --port 3001
 ```
 
 ### Permission Errors

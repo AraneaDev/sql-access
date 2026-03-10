@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "sql-database": {
-      "command": "sql-server",
+      "command": "mcp-sql-server",
       "args": []
     }
   }

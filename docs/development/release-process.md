@@ -298,7 +298,7 @@ grep -E "^(files|main|bin)" package.json
 # Test installation locally
 npm pack
 npm install -g sql-access-2.1.0.tgz
-sql-server --version
+mcp-sql-server --version
 npm uninstall -g sql-access
 ```
 
@@ -420,7 +420,7 @@ npm view sql-access@2.1.0
 
 # Test installation from npm
 npm install -g sql-access@2.1.0
-sql-server --version
+mcp-sql-server --version
 ```
 
 ### 7. Post-Release Activities

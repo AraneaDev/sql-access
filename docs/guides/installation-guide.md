@@ -32,7 +32,7 @@ This comprehensive guide walks you through installing the SQL MCP Server on vari
 npm install -g sql-access
 
 # Run the automatic installer
-sql-install
+mcp-sql-install
 
 # The installer will:
 # - Detect your platform (macOS/Windows/Linux)
@@ -43,11 +43,11 @@ sql-install
 
 **Installer Options:**
 ```bash
-sql-install --client=claude-code # Configure Claude Code only
-sql-install --client=claude-desktop # Configure Claude Desktop only
-sql-install --config=/path/to/config.ini # Use custom config path
-sql-install --dry-run # Preview changes without modifying files
-sql-install --uninstall # Remove sql-access from client configs
+mcp-sql-install --client=claude-code # Configure Claude Code only
+mcp-sql-install --client=claude-desktop # Configure Claude Desktop only
+mcp-sql-install --config=/path/to/config.ini # Use custom config path
+mcp-sql-install --dry-run # Preview changes without modifying files
+mcp-sql-install --uninstall # Remove sql-access from client configs
 ```
 
 ### Option 1: NPM Package (Recommended)
@@ -60,7 +60,7 @@ npm install -g sql-access
 npm install sql-access
 
 # Run setup
-sql-setup
+mcp-sql-setup
 ```
 
 ### Option 2: From Source
@@ -106,7 +106,7 @@ mkdir C:\claude-sql-mcp
 cd C:\claude-sql-mcp
 
 # Run setup wizard
-sql-setup
+mcp-sql-setup
 ```
 
 #### Windows-Specific Configuration
@@ -146,7 +146,7 @@ mkdir ~/claude-sql-mcp
 cd ~/claude-sql-mcp
 
 # Run setup
-sql-setup
+mcp-sql-setup
 ```
 
 #### macOS-Specific Notes
@@ -176,7 +176,7 @@ sudo chown $USER:$USER /opt/claude-sql-mcp
 cd /opt/claude-sql-mcp
 
 # Run setup
-sql-setup
+mcp-sql-setup
 ```
 
 #### CentOS/RHEL/Rocky Linux
@@ -197,7 +197,7 @@ sudo chown $USER:$USER /opt/claude-sql-mcp
 cd /opt/claude-sql-mcp
 
 # Run setup
-sql-setup
+mcp-sql-setup
 ```
 
 ## Installation Directories
@@ -227,12 +227,12 @@ your-project/
 After installation, run the setup wizard:
 
 ```bash
-sql-setup
+mcp-sql-setup
 # or if installed locally:
-npx sql-setup
+npx mcp-sql-setup
 ```
 
-> **Tip:** As an alternative to `sql-setup`, you can run `sql-install` which will automatically detect your platform, configure your MCP client (Claude Code or Claude Desktop), and create a default config.ini if none exists. See [Option 0: Automatic Installer](#option-0-automatic-installer-easiest) above.
+> **Tip:** As an alternative to `mcp-sql-setup`, you can run `mcp-sql-install` which will automatically detect your platform, configure your MCP client (Claude Code or Claude Desktop), and create a default config.ini if none exists. See [Option 0: Automatic Installer](#option-0-automatic-installer-easiest) above.
 
 The setup wizard will guide you through:
 
@@ -471,7 +471,7 @@ npm update -g sql-mcp-server
 sql-mcp-server --version
 ```
 
-> **Tip:** After updating, you can re-run `sql-install` to ensure your MCP client configurations (Claude Code, Claude Desktop) are up to date with the latest server path and settings.
+> **Tip:** After updating, you can re-run `mcp-sql-install` to ensure your MCP client configurations (Claude Code, Claude Desktop) are up to date with the latest server path and settings.
 
 ### Update from Source
 ```bash
@@ -507,9 +507,9 @@ sql-mcp-migrate-config --apply
 
 | Command | Description |
 |---------|-------------|
-| `sql-install` | Automatic installer -- detects platform, configures MCP clients, creates default config |
-| `sql-setup` | Interactive setup wizard for database configuration |
-| `sql-server` | Start the MCP server |
+| `mcp-sql-install` | Automatic installer -- detects platform, configures MCP clients, creates default config |
+| `mcp-sql-setup` | Interactive setup wizard for database configuration |
+| `mcp-sql-server` | Start the MCP server |
 | `sql-mcp-start` | Start the MCP server (alias) |
 | `sql-mcp-test` | Test database connections |
 

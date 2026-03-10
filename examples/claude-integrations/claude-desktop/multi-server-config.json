@@ -1,14 +1,14 @@
 {
   "mcpServers": {
     "sql-database-prod": {
-      "command": "sql-server",
+      "command": "mcp-sql-server",
       "args": [],
       "env": {
         "CONFIG_PATH": "/path/to/production-config.ini"
       }
     },
     "sql-database-dev": {
-      "command": "sql-server", 
+      "command": "mcp-sql-server", 
       "args": [],
       "env": {
         "CONFIG_PATH": "/path/to/development-config.ini"

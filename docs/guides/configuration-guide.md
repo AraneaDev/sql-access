@@ -494,7 +494,7 @@ Use the built-in wizard for guided configuration:
 
 ```bash
 # Start configuration wizard
-sql-setup
+mcp-sql-setup
 
 # Follow prompts:
 ? Select database type: PostgreSQL
@@ -640,7 +640,7 @@ For the current release, use environment variables for sensitive values and conf
 ```
 **Solutions:**
 1. Create configuration file: `touch config.ini`
-2. Run setup wizard: `sql-setup`
+2. Run setup wizard: `mcp-sql-setup`
 3. Specify custom path: `--config=/path/to/config.ini`
 
 #### Permission Denied Reading Configuration

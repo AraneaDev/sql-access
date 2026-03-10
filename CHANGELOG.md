@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`sql_get_config` Tool** - View database configuration with automatic password/credential redaction
 - **`sql_set_mcp_configurable` Tool** - One-way lock mechanism to prevent MCP configuration changes (unlocking requires manual config edit)
 - **`mcp_configurable` Configuration Flag** - Per-database flag controlling whether MCP tools can modify the database settings
-- **`sql-install` CLI Installer** - Automatic installer that configures Claude Code and Claude Desktop MCP integration
+- **`mcp-sql-install` CLI Installer** - Automatic installer that configures Claude Code and Claude Desktop MCP integration
 - **Platform Detection** - Installer auto-detects macOS, Windows, and Linux config file locations
 - **Default Config Location** - New default config path at `~/.config/sql-access/config.ini` for installed usage
 
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config Persistence** - `saveConfigFile()` now writes `mcp_configurable` flag
 - **`SQLMCPServer`** - Stores config file path as instance variable for runtime config persistence
 - **`ConnectionManager`** - `createDatabaseListItems()` includes `mcp_configurable` in output
-- **`package.json`** - Added `sql-install` bin entry and `install-mcp` npm script
+- **`package.json`** - Added `mcp-sql-install` bin entry and `install-mcp` npm script
 - **esbuild Config** - Updated to bundle `install.ts` entry point
 - **Documentation** - Comprehensive updates across README, API reference, configuration guide, installation guide, tutorials, and architecture docs
 

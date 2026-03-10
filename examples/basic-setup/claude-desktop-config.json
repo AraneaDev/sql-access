@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "sql-database": {
-      "command": "sql-server",
+      "command": "mcp-sql-server",
       "args": []
     }
   }
@@ -13,7 +13,7 @@
 // {
 //   "mcpServers": {
 //     "sql-database": {
-//       "command": "sql-server",
+//       "command": "mcp-sql-server",
 //       "args": []
 //     }
 //   }
@@ -24,7 +24,7 @@
 //   "mcpServers": {
 //     "sql-database": {
 //       "command": "npx",
-//       "args": ["sql-server"],
+//       "args": ["mcp-sql-server"],
 //       "cwd": "/path/to/your/project"
 //     }
 //   }
@@ -51,8 +51,8 @@
 //    - Linux: ~/.config/Claude/claude_desktop_config.json
 //
 // 2. Choose the appropriate configuration method above:
-//    - Global installation: Use "sql-server" command (easiest)
-//    - Local project: Use "npx sql-server" with cwd
+//    - Global installation: Use "mcp-sql-server" command (easiest)
+//    - Local project: Use "npx mcp-sql-server" with cwd
 //    - Development: Use "node" with full path to dist/index.js
 //
 // 3. For development installations, update the path:
