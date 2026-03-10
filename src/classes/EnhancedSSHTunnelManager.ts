@@ -7,13 +7,13 @@ import * as net from 'net';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
 import type {
-  SSHTunnelInfo,
-  SSHTunnelCreateOptions,
-  SSHConnectionConfig,
-  SSHTunnelStatus,
-  SSHTunnelStatusInfo,
-  ISSHTunnelManager,
-  SSHEventPayload
+ SSHTunnelInfo,
+ SSHTunnelCreateOptions,
+ SSHConnectionConfig,
+ SSHTunnelStatus,
+ SSHTunnelStatusInfo,
+ ISSHTunnelManager,
+ SSHEventPayload
 } from '../types/index.js';
 import { ConnectionError } from '../types/index.js';
 import { validateSSHConfig } from '../types/index.js';
@@ -25,19 +25,19 @@ import { PortManager, type PortAssignmentResult } from '../utils/port-manager.js
 // ============================================================================
 
 export interface EnhancedTunnelInfo extends SSHTunnelInfo {
-  portAssignment: PortAssignmentResult;
-  databaseType?: string;
-  originalRequestedPort?: number;
+ portAssignment: PortAssignmentResult;
+ databaseType?: string;
+ originalRequestedPort?: number;
 }
 
 export interface TunnelCreationResult {
-  tunnel: EnhancedTunnelInfo;
-  portInfo: {
-    requested: number | undefined;
-    assigned: number;
-    wasPreferred: boolean;
-    reason: string;
-  };
+ tunnel: EnhancedTunnelInfo;
+ portInfo: {
+ requested: number | undefined;
+ assigned: number;
+ wasPreferred: boolean;
+ reason: string;
+ };
 }
 
 // ============================================================================
@@ -45,759 +45,759 @@ export interface TunnelCreationResult {
 // ============================================================================
 
 export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnelManager {
-  private tunnels = new Map<string, EnhancedTunnelInfo>();
-  private tunnelStatus = new Map<string, SSHTunnelStatusInfo>();
-  private portManager: PortManager;
-  private logger = getLogger();
-
-  constructor() {
-    super();
-    this.portManager = PortManager.getInstance();
-    
-    // Set up cleanup on process exit
-    process.on('exit', () => {
-      this.closeAllTunnels().catch(error => {
-        this.logger.error('Error during cleanup on exit', error);
-      });
-    });
-
-    process.on('SIGINT', () => {
-      this.closeAllTunnels().then(() => {
-        process.exit(0);
-      }).catch(error => {
-        this.logger.error('Error during SIGINT cleanup', error);
-        process.exit(1);
-      });
-    });
-  }
-
-  /**
-   * Initialize the SSH tunnel manager
-   */
-  async initialize(): Promise<void> {
-    this.logger.info('Enhanced SSH tunnel manager initialized');
-  }
-
-  /**
-   * Check if a tunnel exists for the given database
-   */
-  hasTunnel(dbName: string): boolean {
-    return this.tunnels.has(dbName);
-  }
-
-  // ============================================================================
-  // Enhanced Public Interface Methods
-  // ============================================================================
-
-  /**
-   * Create a new SSH tunnel with intelligent port assignment
-   */
-  async createTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo> {
-    const result = await this.createEnhancedTunnel(dbName, options);
-    return result.tunnel;
-  }
-
-  /**
-   * Create a new SSH tunnel with detailed port information
-   */
-  async createEnhancedTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<TunnelCreationResult> {
-    try {
-      // Validate SSH configuration
-      const validation = validateSSHConfig(options.sshConfig);
-      if (!validation.isValid) {
-        throw new ConnectionError(
-          `Invalid SSH configuration for '${dbName}': ${validation.errors.join(', ')}`,
-          { database: dbName, errors: validation.errors }
-        );
-      }
-
-      if (validation.warnings.length > 0) {
-        this.logger.warning(`SSH configuration warnings for '${dbName}'`, {
-          warnings: validation.warnings
-        });
-      }
-
-      // Extract database type from options or config if available
-      const databaseType = this.extractDatabaseType(options);
-      const originalRequestedPort = options.localPort;
-
-      this.logger.info(`Creating enhanced SSH tunnel for '${dbName}'`, {
-        sshHost: options.sshConfig.host,
-        sshPort: options.sshConfig.port,
-        destinationHost: options.forwardConfig.destinationHost,
-        destinationPort: options.forwardConfig.destinationPort,
-        requestedLocalPort: originalRequestedPort,
-        databaseType
-      });
-
-      // Close existing tunnel if it exists
-      if (this.tunnels.has(dbName)) {
-        await this.closeTunnel(dbName);
-      }
-
-      // Update status to connecting
-      this.updateTunnelStatus(dbName, {
-        status: 'connecting',
-        reconnectAttempts: 0,
-        isHealthy: false
-      });
-
-      // Smart port assignment
-      const portAssignment = await this.assignSmartPort(dbName, options.localPort, databaseType);
-      
-      this.logger.info(`Port assignment for '${dbName}'`, {
-        requested: originalRequestedPort,
-        assigned: portAssignment.assignedPort,
-        wasPreferred: portAssignment.wasPreferredPort,
-        reason: portAssignment.reason
-      });
-
-      // Create enhanced tunnel options with assigned port
-      const enhancedOptions: SSHTunnelCreateOptions = {
-        ...options,
-        localPort: portAssignment.assignedPort
-      };
-
-      const tunnelInfo = await this.establishTunnel(dbName, enhancedOptions, portAssignment, databaseType);
-      
-      // Update status to connected
-      this.updateTunnelStatus(dbName, {
-        status: 'connected',
-        connectedAt: new Date(),
-        reconnectAttempts: 0,
-        isHealthy: true
-      });
-
-      this.logger.info(`Enhanced SSH tunnel established for '${dbName}'`, {
-        localHost: tunnelInfo.localHost,
-        localPort: tunnelInfo.localPort,
-        remoteHost: tunnelInfo.remoteHost,
-        remotePort: tunnelInfo.remotePort,
-        portWasPreferred: portAssignment.wasPreferredPort
-      });
-
-      return {
-        tunnel: tunnelInfo,
-        portInfo: {
-          requested: originalRequestedPort,
-          assigned: portAssignment.assignedPort,
-          wasPreferred: portAssignment.wasPreferredPort,
-          reason: portAssignment.reason || 'Port assigned automatically'
-        }
-      };
-
-    } catch (error) {
-      this.updateTunnelStatus(dbName, {
-        status: 'error',
-        lastError: (error as Error).message,
-        reconnectAttempts: 0,
-        isHealthy: false
-      });
-
-      if (error instanceof ConnectionError) {
-        throw error;
-      }
-
-      throw new ConnectionError(
-        `Failed to create enhanced SSH tunnel for '${dbName}': ${(error as Error).message}`,
-        { database: dbName, originalError: (error as Error).message }
-      );
-    }
-  }
-
-  /**
-   * Get existing tunnel information
-   */
-  getTunnel(dbName: string): SSHTunnelInfo | undefined {
-    return this.tunnels.get(dbName);
-  }
-
-  /**
-   * Get enhanced tunnel information with port details
-   */
-  getEnhancedTunnel(dbName: string): EnhancedTunnelInfo | undefined {
-    return this.tunnels.get(dbName);
-  }
-
-  /**
-   * Close a specific SSH tunnel with proper port cleanup
-   */
-  async closeTunnel(dbName: string): Promise<void> {
-    const tunnel = this.tunnels.get(dbName);
-    
-    if (!tunnel) {
-      return; // Tunnel doesn't exist, nothing to close
-    }
-
-    this.logger.info(`Closing enhanced SSH tunnel for '${dbName}'`);
-
-    try {
-      // Release the port back to the pool
-      if (tunnel.localPort) {
-        this.portManager.releasePort(tunnel.localPort);
-      }
-
-      // Close the local server
-      if (tunnel.server) {
-        await new Promise<void>((resolve, reject) => {
-          tunnel.server.close((error) => {
-            if (error) reject(error);
-            else resolve();
-          });
-        });
-      }
-
-      // Close the SSH connection
-      if (tunnel.connection) {
-        tunnel.connection.end();
-      }
-
-      // Update tunnel status
-      this.updateTunnelStatus(dbName, {
-        status: 'disconnected',
-        reconnectAttempts: 0,
-        isHealthy: false
-      });
-
-      this.logger.info(`Enhanced SSH tunnel closed for '${dbName}', port ${tunnel.localPort} released`);
-
-    } catch (error) {
-      this.logger.error(`Error closing enhanced SSH tunnel for '${dbName}'`, error as Error);
-    } finally {
-      // Always remove from maps
-      this.tunnels.delete(dbName);
-      this.tunnelStatus.delete(dbName);
-    }
-  }
-
-  /**
-   * Close all SSH tunnels
-   */
-  async closeAllTunnels(): Promise<void> {
-    const dbNames = Array.from(this.tunnels.keys());
-    
-    if (dbNames.length === 0) {
-      return;
-    }
-
-    this.logger.info(`Closing ${dbNames.length} enhanced SSH tunnels`);
-
-    await Promise.all(
-      dbNames.map(async (dbName) => {
-        try {
-          await this.closeTunnel(dbName);
-        } catch (error) {
-          this.logger.error(`Error closing enhanced SSH tunnel for '${dbName}'`, error as Error);
-        }
-      })
-    );
-
-    this.logger.info('All enhanced SSH tunnels closed');
-  }
-
-  /**
-   * Check if a tunnel is connected
-   */
-  isConnected(dbName: string): boolean {
-    const tunnel = this.tunnels.get(dbName);
-    const status = this.tunnelStatus.get(dbName);
-    
-    // Quick health check - return false if tunnel/status doesn't exist or is marked unhealthy
-    if (!tunnel || !tunnel.isActive || !status || !status.isHealthy) {
-      return false;
-    }
-
-    // Additional validation - check if SSH connection is still readable/writable
-    try {
-      // SSH Client doesn't have readable/writable properties, so we use a different approach
-      // Check if connection exists and has event listeners (indicates it's active)
-      return !!(tunnel.connection && (tunnel.connection as any)._sock && !(tunnel.connection as any).destroyed);
-    } catch (error) {
-      this.logger.debug(`Connection health check error for '${dbName}'`, { error: (error as Error).message });
-      return false;
-    }
-  }
-
-  // ============================================================================
-  // Enhanced Status and Information Methods
-  // ============================================================================
-
-  /**
-   * Get tunnel status information
-   */
-  getTunnelStatus(dbName: string): SSHTunnelStatusInfo | undefined {
-    return this.tunnelStatus.get(dbName);
-  }
-
-  /**
-   * Get all active tunnels
-   */
-  getActiveTunnels(): string[] {
-    return Array.from(this.tunnels.keys()).filter(dbName => this.isConnected(dbName));
-  }
-
-  /**
-   * Get tunnel statistics including port information
-   */
-  getTunnelStats(): {
-    total: number;
-    active: number;
-    connecting: number;
-    errors: number;
-    portInfo: {
-      reserved: number[];
-      preferredUsed: number;
-      autoAssigned: number;
-    };
-  } {
-    const statuses = Array.from(this.tunnelStatus.values());
-    const tunnels = Array.from(this.tunnels.values());
-    
-    const preferredUsed = tunnels.filter(t => t.portAssignment.wasPreferredPort).length;
-    const autoAssigned = tunnels.length - preferredUsed;
-    
-    return {
-      total: statuses.length,
-      active: statuses.filter(s => s.status === 'connected' && s.isHealthy).length,
-      connecting: statuses.filter(s => s.status === 'connecting').length,
-      errors: statuses.filter(s => s.status === 'error').length,
-      portInfo: {
-        reserved: this.portManager.getReservedPorts(),
-        preferredUsed,
-        autoAssigned
-      }
-    };
-  }
-
-  /**
-   * Get port recommendations for a database type
-   */
-  async getPortRecommendations(databaseType: string): Promise<{
-    recommended: number[];
-    available: number[];
-    status: Array<{port: number; available: boolean; reason?: string}>;
-  }> {
-    const recommended = this.portManager.getPortRecommendations(databaseType, false); // Don't exclude used ports
-    const statusChecks = await this.portManager.checkMultiplePorts(recommended);
-    const available = statusChecks.filter(s => s.isAvailable).map(s => s.port);
-    
-    // Convert PortCheckResult to expected format
-    const status = statusChecks.map(check => ({
-      port: check.port,
-      available: check.isAvailable,
-      reason: check.reason
-    }));
-    
-    return {
-      recommended,
-      available,
-      status
-    };
-  }
-
-  /**
-   * Check port availability
-   */
-  async checkPortAvailability(port: number): Promise<{ 
-    available: boolean; 
-    reason?: string; 
-    suggestion?: number; 
-  }> {
-    const result = await this.portManager.isPortAvailable(port);
-    const response: { available: boolean; reason?: string; suggestion?: number } = {
-      available: result.isAvailable,
-      reason: result.reason
-    };
-
-    if (!result.isAvailable) {
-      // Try to suggest an alternative
-      try {
-        const suggestion = await this.portManager.findAvailablePort({
-          minPort: Math.max(port, 30000),
-          maxPort: port + 1000,
-          maxAttempts: 5
-        });
-        response.suggestion = suggestion.assignedPort;
-      } catch (error) {
-        // No suggestion available
-      }
-    }
-
-    return response;
-  }
-
-  // ============================================================================
-  // Private Enhanced Implementation Methods
-  // ============================================================================
-
-  private async assignSmartPort(dbName: string, requestedPort: number | undefined, databaseType?: string): Promise<PortAssignmentResult> {
-    if (requestedPort && requestedPort > 0) {
-      // User specified a port, check if it's available
-      const availability = await this.portManager.isPortAvailable(requestedPort);
-      
-      if (availability.isAvailable && !this.portManager.getReservedPorts().includes(requestedPort)) {
-        // Preferred port is available, reserve and use it
-        this.portManager.reservePort(requestedPort);
-        return {
-          assignedPort: requestedPort,
-          wasPreferredPort: true,
-          attemptedPorts: [requestedPort],
-          reason: 'User-specified port was available'
-        };
-      } else {
-        // Preferred port not available, log warning and fall through to smart assignment
-        this.logger.warning(`Requested port ${requestedPort} for '${dbName}' is not available: ${availability.reason}. Finding alternative...`);
-      }
-    }
-
-    // Smart port assignment
-    if (databaseType) {
-      return await this.portManager.suggestTunnelPort(databaseType, requestedPort);
-    } else {
-      return await this.portManager.findAvailablePort({
-        preferredPort: requestedPort,
-        minPort: 30000,
-        maxPort: 40000,
-        maxAttempts: 20
-      });
-    }
-  }
-
-  private extractDatabaseType(options: SSHTunnelCreateOptions): string | undefined {
-    // Try to extract database type from destination port
-    const destPort = options.forwardConfig.destinationPort;
-    
-    switch (destPort) {
-      case 3306: return 'mysql';
-      case 5432: return 'postgresql';
-      case 1433: return 'mssql';
-      default: return undefined;
-    }
-  }
-
-  private async establishTunnel(
-    dbName: string, 
-    options: SSHTunnelCreateOptions, 
-    portAssignment: PortAssignmentResult,
-    databaseType?: string
-  ): Promise<EnhancedTunnelInfo> {
-    return new Promise<EnhancedTunnelInfo>((resolve, reject) => {
-      const sshClient = new SSHClient();
-      let server: net.Server;
-      let assignedPort: number;
-
-      // Set up SSH client event handlers
-      sshClient.on('ready', () => {
-        this.logger.debug(`SSH connection established for '${dbName}'`);
-        
-        // Create server to listen for local connections
-        server = net.createServer((clientSocket) => {
-          this.logger.debug(`Local connection received for tunnel '${dbName}', creating forward`);
-          
-          sshClient.forwardOut(
-            options.forwardConfig.sourceHost,
-            options.forwardConfig.sourcePort,
-            options.forwardConfig.destinationHost,
-            options.forwardConfig.destinationPort,
-            (err, sshStream) => {
-              if (err) {
-                this.logger.error(`SSH forward error for '${dbName}'`, err);
-                clientSocket.end();
-                return;
-              }
-              
-              // Pipe data between client and SSH stream
-              clientSocket.pipe(sshStream);
-              sshStream.pipe(clientSocket);
-              
-              // Handle stream events
-              sshStream.on('close', () => {
-                clientSocket.end();
-              });
-              
-              sshStream.on('error', (streamError: Error) => {
-                this.logger.error(`SSH stream error for '${dbName}'`, streamError);
-                clientSocket.end();
-              });
-              
-              clientSocket.on('close', () => {
-                sshStream.close();
-              });
-
-              clientSocket.on('error', (clientError) => {
-                this.logger.error(`Client socket error for '${dbName}'`, clientError);
-                sshStream.close();
-              });
-            }
-          );
-        });
-
-        // Listen on the assigned port
-        const localPort = options.localPort || 0;
-        server.listen(localPort, '127.0.0.1', () => {
-          const address = server.address();
-          assignedPort = typeof address === 'object' && address ? address.port : localPort;
-          
-          this.logger.debug(`Enhanced SSH tunnel server listening on port ${assignedPort} for '${dbName}'`);
-          
-          const enhancedTunnelInfo: EnhancedTunnelInfo = {
-            server,
-            connection: sshClient,
-            localPort: assignedPort,
-            localHost: '127.0.0.1',
-            remoteHost: options.forwardConfig.destinationHost,
-            remotePort: options.forwardConfig.destinationPort,
-            isActive: true,
-            portAssignment,
-            databaseType,
-            originalRequestedPort: options.localPort
-          };
-
-          // Store tunnel info
-          this.tunnels.set(dbName, enhancedTunnelInfo);
-          
-          // Set up tunnel monitoring
-          this.setupTunnelMonitoring(dbName, enhancedTunnelInfo);
-          
-          resolve(enhancedTunnelInfo);
-        });
-
-        server.on('error', (serverError) => {
-          this.logger.error(`Enhanced SSH tunnel server error for '${dbName}'`, serverError);
-          
-          // Release the reserved port on server error
-          if (portAssignment.assignedPort) {
-            this.portManager.releasePort(portAssignment.assignedPort);
-          }
-          
-          reject(new Error(`SSH tunnel server failed: ${serverError.message}`));
-        });
-      });
-
-      sshClient.on('error', (sshError) => {
-        this.logger.error(`SSH client error for '${dbName}'`, sshError);
-        
-        // Release the reserved port on connection error
-        if (portAssignment.assignedPort) {
-          this.portManager.releasePort(portAssignment.assignedPort);
-        }
-        
-        reject(new Error(`SSH connection failed: ${sshError.message}`));
-      });
-
-      sshClient.on('end', () => {
-        this.logger.warning(`SSH connection ended for '${dbName}'`);
-        this.markTunnelInactive(dbName);
-      });
-
-      (sshClient as any).on('close', (_hadError: boolean) => {
-        this.logger.info(`SSH connection closed for '${dbName}'`, { hadError: _hadError });
-        this.markTunnelInactive(dbName);
-      });
-
-      // Connect to SSH server
-      const connectOptions = this.buildSSHConnectOptions(options.sshConfig);
-      
-      this.logger.debug(`Connecting to SSH server for '${dbName}'`, {
-        host: connectOptions.host,
-        port: connectOptions.port,
-        username: connectOptions.username,
-        authMethod: connectOptions.password ? 'password' : 'key'
-      });
-
-      sshClient.connect(connectOptions);
-    });
-  }
-
-  private buildSSHConnectOptions(config: SSHConnectionConfig): any {
-    const connectOptions: any = {
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      readyTimeout: 30000,
-      keepaliveInterval: 10000,    // Send keepalive every 10 seconds
-      keepaliveCountMax: 3,        // Max 3 failed keepalives before disconnect
-      algorithms: {                // Use reliable algorithms
-        kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512'],
-        cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr'],
-        hmac: ['hmac-sha2-256', 'hmac-sha2-512']
-      }
-    };
-
-    // Add connection debugging
-    connectOptions.debug = (message: string) => {
-      this.logger.debug(`SSH Debug: ${message}`);
-    };
-
-    if (config.password) {
-      connectOptions.password = config.password;
-    } else if (config.privateKey) {
-      try {
-        if (typeof config.privateKey === 'string') {
-          // Check if it's a file path or the key content
-          if (config.privateKey.includes('-----BEGIN') || !fs.existsSync(config.privateKey)) {
-            // It's the key content
-            connectOptions.privateKey = config.privateKey;
-          } else {
-            // It's a file path
-            connectOptions.privateKey = fs.readFileSync(config.privateKey);
-          }
-        } else {
-          connectOptions.privateKey = config.privateKey;
-        }
-        
-        if (config.passphrase) {
-          connectOptions.passphrase = config.passphrase;
-        }
-      } catch (error) {
-        throw new Error(`Failed to read SSH private key: ${(error as Error).message}`);
-      }
-    }
-
-    return connectOptions;
-  }
-
-  private setupTunnelMonitoring(dbName: string, tunnel: EnhancedTunnelInfo): void {
-    // Set up connection monitoring
-    tunnel.connection.on('error', (error) => {
-      this.handleTunnelEvent(dbName, {
-        event: 'error',
-        tunnel,
-        error,
-        message: `SSH connection error: ${error.message}`
-      });
-    });
-
-    tunnel.connection.on('end', () => {
-      this.handleTunnelEvent(dbName, {
-        event: 'end',
-        tunnel,
-        message: 'SSH connection ended'
-      });
-    });
-
-    (tunnel.connection as any).on('close', (_hadError: boolean) => {
-      this.handleTunnelEvent(dbName, {
-        event: 'close',
-        tunnel,
-        message: 'SSH connection closed'
-      });
-    });
-
-    // Monitor server events
-    tunnel.server.on('error', (error) => {
-      this.logger.error(`Enhanced SSH tunnel server error for '${dbName}'`, error);
-      this.updateTunnelStatus(dbName, {
-        status: 'error',
-        lastError: error.message,
-        isHealthy: false
-      });
-    });
-
-    tunnel.server.on('close', () => {
-      this.logger.info(`Enhanced SSH tunnel server closed for '${dbName}'`);
-      this.markTunnelInactive(dbName);
-    });
-  }
-
-  private handleTunnelEvent(dbName: string, event: SSHEventPayload): void {
-    this.logger.info(`Enhanced SSH tunnel event for '${dbName}': ${event.event}`, {
-      message: event.message,
-      error: event.error?.message
-    });
-
-    switch (event.event) {
-      case 'error':
-        this.updateTunnelStatus(dbName, {
-          status: 'error',
-          lastError: event.error?.message || 'Unknown error',
-          isHealthy: false
-        });
-        break;
-
-      case 'end':
-      case 'close':
-        this.markTunnelInactive(dbName);
-        break;
-    }
-  }
-
-  private markTunnelInactive(dbName: string): void {
-    const tunnel = this.tunnels.get(dbName);
-    if (tunnel) {
-      tunnel.isActive = false;
-      this.updateTunnelStatus(dbName, {
-        status: 'disconnected',
-        isHealthy: false
-      });
-    }
-  }
-
-  private updateTunnelStatus(dbName: string, updates: Partial<SSHTunnelStatusInfo>): void {
-    const current = this.tunnelStatus.get(dbName) || {
-      status: 'disconnected' as SSHTunnelStatus,
-      reconnectAttempts: 0,
-      isHealthy: false
-    };
-
-    const updated = { ...current, ...updates };
-    this.tunnelStatus.set(dbName, updated);
-  }
-
-  /**
-   * Test if a local port is accepting connections
-   */
-  private async testLocalPort(port: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const client = new net.Socket();
-      const timeout = setTimeout(() => {
-        client.destroy();
-        resolve(false);
-      }, 1000);
-
-      client.connect(port, '127.0.0.1', () => {
-        clearTimeout(timeout);
-        client.destroy();
-        resolve(true);
-      });
-
-      client.on('error', () => {
-        clearTimeout(timeout);
-        resolve(false);
-      });
-    });
-  }
-
-  /**
-   * Validate tunnel health with comprehensive checks
-   */
-  private async validateTunnelHealth(dbName: string): Promise<boolean> {
-    const tunnel = this.tunnels.get(dbName);
-    if (!tunnel || !tunnel.connection) return false;
-
-    try {
-      // Check if SSH connection is readable and writable
-      const sshHealthy = !!(tunnel.connection && (tunnel.connection as any)._sock && !(tunnel.connection as any).destroyed);
-      
-      // Check if local port is still bound
-      const portHealthy = await this.testLocalPort(tunnel.localPort);
-      
-      // Check if server is still accepting connections
-      const serverHealthy = tunnel.server && tunnel.server.listening;
-      
-      const isHealthy = sshHealthy && portHealthy && serverHealthy;
-      
-      this.logger.debug(`Health check for '${dbName}'`, {
-        sshHealthy,
-        portHealthy,
-        serverHealthy,
-        overall: isHealthy
-      });
-      
-      return isHealthy;
-    } catch (error) {
-      this.logger.error(`Health check error for '${dbName}'`, error as Error);
-      return false;
-    }
-  }
+ private tunnels = new Map<string, EnhancedTunnelInfo>();
+ private tunnelStatus = new Map<string, SSHTunnelStatusInfo>();
+ private portManager: PortManager;
+ private logger = getLogger();
+
+ constructor() {
+ super();
+ this.portManager = PortManager.getInstance();
+ 
+ // Set up cleanup on process exit
+ process.on('exit', () => {
+ this.closeAllTunnels().catch(error => {
+ this.logger.error('Error during cleanup on exit', error);
+ });
+ });
+
+ process.on('SIGINT', () => {
+ this.closeAllTunnels().then(() => {
+ process.exit(0);
+ }).catch(error => {
+ this.logger.error('Error during SIGINT cleanup', error);
+ process.exit(1);
+ });
+ });
+ }
+
+ /**
+ * Initialize the SSH tunnel manager
+ */
+ async initialize(): Promise<void> {
+ this.logger.info('Enhanced SSH tunnel manager initialized');
+ }
+
+ /**
+ * Check if a tunnel exists for the given database
+ */
+ hasTunnel(dbName: string): boolean {
+ return this.tunnels.has(dbName);
+ }
+
+ // ============================================================================
+ // Enhanced Public Interface Methods
+ // ============================================================================
+
+ /**
+ * Create a new SSH tunnel with intelligent port assignment
+ */
+ async createTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo> {
+ const result = await this.createEnhancedTunnel(dbName, options);
+ return result.tunnel;
+ }
+
+ /**
+ * Create a new SSH tunnel with detailed port information
+ */
+ async createEnhancedTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<TunnelCreationResult> {
+ try {
+ // Validate SSH configuration
+ const validation = validateSSHConfig(options.sshConfig);
+ if (!validation.isValid) {
+ throw new ConnectionError(
+ `Invalid SSH configuration for '${dbName}': ${validation.errors.join(', ')}`,
+ { database: dbName, errors: validation.errors }
+ );
+ }
+
+ if (validation.warnings.length > 0) {
+ this.logger.warning(`SSH configuration warnings for '${dbName}'`, {
+ warnings: validation.warnings
+ });
+ }
+
+ // Extract database type from options or config if available
+ const databaseType = this.extractDatabaseType(options);
+ const originalRequestedPort = options.localPort;
+
+ this.logger.info(`Creating enhanced SSH tunnel for '${dbName}'`, {
+ sshHost: options.sshConfig.host,
+ sshPort: options.sshConfig.port,
+ destinationHost: options.forwardConfig.destinationHost,
+ destinationPort: options.forwardConfig.destinationPort,
+ requestedLocalPort: originalRequestedPort,
+ databaseType
+ });
+
+ // Close existing tunnel if it exists
+ if (this.tunnels.has(dbName)) {
+ await this.closeTunnel(dbName);
+ }
+
+ // Update status to connecting
+ this.updateTunnelStatus(dbName, {
+ status: 'connecting',
+ reconnectAttempts: 0,
+ isHealthy: false
+ });
+
+ // Smart port assignment
+ const portAssignment = await this.assignSmartPort(dbName, options.localPort, databaseType);
+ 
+ this.logger.info(`Port assignment for '${dbName}'`, {
+ requested: originalRequestedPort,
+ assigned: portAssignment.assignedPort,
+ wasPreferred: portAssignment.wasPreferredPort,
+ reason: portAssignment.reason
+ });
+
+ // Create enhanced tunnel options with assigned port
+ const enhancedOptions: SSHTunnelCreateOptions = {
+ ...options,
+ localPort: portAssignment.assignedPort
+ };
+
+ const tunnelInfo = await this.establishTunnel(dbName, enhancedOptions, portAssignment, databaseType);
+ 
+ // Update status to connected
+ this.updateTunnelStatus(dbName, {
+ status: 'connected',
+ connectedAt: new Date(),
+ reconnectAttempts: 0,
+ isHealthy: true
+ });
+
+ this.logger.info(`Enhanced SSH tunnel established for '${dbName}'`, {
+ localHost: tunnelInfo.localHost,
+ localPort: tunnelInfo.localPort,
+ remoteHost: tunnelInfo.remoteHost,
+ remotePort: tunnelInfo.remotePort,
+ portWasPreferred: portAssignment.wasPreferredPort
+ });
+
+ return {
+ tunnel: tunnelInfo,
+ portInfo: {
+ requested: originalRequestedPort,
+ assigned: portAssignment.assignedPort,
+ wasPreferred: portAssignment.wasPreferredPort,
+ reason: portAssignment.reason || 'Port assigned automatically'
+ }
+ };
+
+ } catch (error) {
+ this.updateTunnelStatus(dbName, {
+ status: 'error',
+ lastError: (error as Error).message,
+ reconnectAttempts: 0,
+ isHealthy: false
+ });
+
+ if (error instanceof ConnectionError) {
+ throw error;
+ }
+
+ throw new ConnectionError(
+ `Failed to create enhanced SSH tunnel for '${dbName}': ${(error as Error).message}`,
+ { database: dbName, originalError: (error as Error).message }
+ );
+ }
+ }
+
+ /**
+ * Get existing tunnel information
+ */
+ getTunnel(dbName: string): SSHTunnelInfo | undefined {
+ return this.tunnels.get(dbName);
+ }
+
+ /**
+ * Get enhanced tunnel information with port details
+ */
+ getEnhancedTunnel(dbName: string): EnhancedTunnelInfo | undefined {
+ return this.tunnels.get(dbName);
+ }
+
+ /**
+ * Close a specific SSH tunnel with proper port cleanup
+ */
+ async closeTunnel(dbName: string): Promise<void> {
+ const tunnel = this.tunnels.get(dbName);
+ 
+ if (!tunnel) {
+ return; // Tunnel doesn't exist, nothing to close
+ }
+
+ this.logger.info(`Closing enhanced SSH tunnel for '${dbName}'`);
+
+ try {
+ // Release the port back to the pool
+ if (tunnel.localPort) {
+ this.portManager.releasePort(tunnel.localPort);
+ }
+
+ // Close the local server
+ if (tunnel.server) {
+ await new Promise<void>((resolve, reject) => {
+ tunnel.server.close((error) => {
+ if (error) reject(error);
+ else resolve();
+ });
+ });
+ }
+
+ // Close the SSH connection
+ if (tunnel.connection) {
+ tunnel.connection.end();
+ }
+
+ // Update tunnel status
+ this.updateTunnelStatus(dbName, {
+ status: 'disconnected',
+ reconnectAttempts: 0,
+ isHealthy: false
+ });
+
+ this.logger.info(`Enhanced SSH tunnel closed for '${dbName}', port ${tunnel.localPort} released`);
+
+ } catch (error) {
+ this.logger.error(`Error closing enhanced SSH tunnel for '${dbName}'`, error as Error);
+ } finally {
+ // Always remove from maps
+ this.tunnels.delete(dbName);
+ this.tunnelStatus.delete(dbName);
+ }
+ }
+
+ /**
+ * Close all SSH tunnels
+ */
+ async closeAllTunnels(): Promise<void> {
+ const dbNames = Array.from(this.tunnels.keys());
+ 
+ if (dbNames.length === 0) {
+ return;
+ }
+
+ this.logger.info(`Closing ${dbNames.length} enhanced SSH tunnels`);
+
+ await Promise.all(
+ dbNames.map(async (dbName) => {
+ try {
+ await this.closeTunnel(dbName);
+ } catch (error) {
+ this.logger.error(`Error closing enhanced SSH tunnel for '${dbName}'`, error as Error);
+ }
+ })
+ );
+
+ this.logger.info('All enhanced SSH tunnels closed');
+ }
+
+ /**
+ * Check if a tunnel is connected
+ */
+ isConnected(dbName: string): boolean {
+ const tunnel = this.tunnels.get(dbName);
+ const status = this.tunnelStatus.get(dbName);
+ 
+ // Quick health check - return false if tunnel/status doesn't exist or is marked unhealthy
+ if (!tunnel || !tunnel.isActive || !status || !status.isHealthy) {
+ return false;
+ }
+
+ // Additional validation - check if SSH connection is still readable/writable
+ try {
+ // SSH Client doesn't have readable/writable properties, so we use a different approach
+ // Check if connection exists and has event listeners (indicates it's active)
+ return !!(tunnel.connection && (tunnel.connection as any)._sock && !(tunnel.connection as any).destroyed);
+ } catch (error) {
+ this.logger.debug(`Connection health check error for '${dbName}'`, { error: (error as Error).message });
+ return false;
+ }
+ }
+
+ // ============================================================================
+ // Enhanced Status and Information Methods
+ // ============================================================================
+
+ /**
+ * Get tunnel status information
+ */
+ getTunnelStatus(dbName: string): SSHTunnelStatusInfo | undefined {
+ return this.tunnelStatus.get(dbName);
+ }
+
+ /**
+ * Get all active tunnels
+ */
+ getActiveTunnels(): string[] {
+ return Array.from(this.tunnels.keys()).filter(dbName => this.isConnected(dbName));
+ }
+
+ /**
+ * Get tunnel statistics including port information
+ */
+ getTunnelStats(): {
+ total: number;
+ active: number;
+ connecting: number;
+ errors: number;
+ portInfo: {
+ reserved: number[];
+ preferredUsed: number;
+ autoAssigned: number;
+ };
+ } {
+ const statuses = Array.from(this.tunnelStatus.values());
+ const tunnels = Array.from(this.tunnels.values());
+ 
+ const preferredUsed = tunnels.filter(t => t.portAssignment.wasPreferredPort).length;
+ const autoAssigned = tunnels.length - preferredUsed;
+ 
+ return {
+ total: statuses.length,
+ active: statuses.filter(s => s.status === 'connected' && s.isHealthy).length,
+ connecting: statuses.filter(s => s.status === 'connecting').length,
+ errors: statuses.filter(s => s.status === 'error').length,
+ portInfo: {
+ reserved: this.portManager.getReservedPorts(),
+ preferredUsed,
+ autoAssigned
+ }
+ };
+ }
+
+ /**
+ * Get port recommendations for a database type
+ */
+ async getPortRecommendations(databaseType: string): Promise<{
+ recommended: number[];
+ available: number[];
+ status: Array<{port: number; available: boolean; reason?: string}>;
+ }> {
+ const recommended = this.portManager.getPortRecommendations(databaseType, false); // Don't exclude used ports
+ const statusChecks = await this.portManager.checkMultiplePorts(recommended);
+ const available = statusChecks.filter(s => s.isAvailable).map(s => s.port);
+ 
+ // Convert PortCheckResult to expected format
+ const status = statusChecks.map(check => ({
+ port: check.port,
+ available: check.isAvailable,
+ reason: check.reason
+ }));
+ 
+ return {
+ recommended,
+ available,
+ status
+ };
+ }
+
+ /**
+ * Check port availability
+ */
+ async checkPortAvailability(port: number): Promise<{ 
+ available: boolean; 
+ reason?: string; 
+ suggestion?: number; 
+ }> {
+ const result = await this.portManager.isPortAvailable(port);
+ const response: { available: boolean; reason?: string; suggestion?: number } = {
+ available: result.isAvailable,
+ reason: result.reason
+ };
+
+ if (!result.isAvailable) {
+ // Try to suggest an alternative
+ try {
+ const suggestion = await this.portManager.findAvailablePort({
+ minPort: Math.max(port, 30000),
+ maxPort: port + 1000,
+ maxAttempts: 5
+ });
+ response.suggestion = suggestion.assignedPort;
+ } catch (error) {
+ // No suggestion available
+ }
+ }
+
+ return response;
+ }
+
+ // ============================================================================
+ // Private Enhanced Implementation Methods
+ // ============================================================================
+
+ private async assignSmartPort(dbName: string, requestedPort: number | undefined, databaseType?: string): Promise<PortAssignmentResult> {
+ if (requestedPort && requestedPort > 0) {
+ // User specified a port, check if it's available
+ const availability = await this.portManager.isPortAvailable(requestedPort);
+ 
+ if (availability.isAvailable && !this.portManager.getReservedPorts().includes(requestedPort)) {
+ // Preferred port is available, reserve and use it
+ this.portManager.reservePort(requestedPort);
+ return {
+ assignedPort: requestedPort,
+ wasPreferredPort: true,
+ attemptedPorts: [requestedPort],
+ reason: 'User-specified port was available'
+ };
+ } else {
+ // Preferred port not available, log warning and fall through to smart assignment
+ this.logger.warning(`Requested port ${requestedPort} for '${dbName}' is not available: ${availability.reason}. Finding alternative...`);
+ }
+ }
+
+ // Smart port assignment
+ if (databaseType) {
+ return await this.portManager.suggestTunnelPort(databaseType, requestedPort);
+ } else {
+ return await this.portManager.findAvailablePort({
+ preferredPort: requestedPort,
+ minPort: 30000,
+ maxPort: 40000,
+ maxAttempts: 20
+ });
+ }
+ }
+
+ private extractDatabaseType(options: SSHTunnelCreateOptions): string | undefined {
+ // Try to extract database type from destination port
+ const destPort = options.forwardConfig.destinationPort;
+ 
+ switch (destPort) {
+ case 3306: return 'mysql';
+ case 5432: return 'postgresql';
+ case 1433: return 'mssql';
+ default: return undefined;
+ }
+ }
+
+ private async establishTunnel(
+ dbName: string, 
+ options: SSHTunnelCreateOptions, 
+ portAssignment: PortAssignmentResult,
+ databaseType?: string
+ ): Promise<EnhancedTunnelInfo> {
+ return new Promise<EnhancedTunnelInfo>((resolve, reject) => {
+ const sshClient = new SSHClient();
+ let server: net.Server;
+ let assignedPort: number;
+
+ // Set up SSH client event handlers
+ sshClient.on('ready', () => {
+ this.logger.debug(`SSH connection established for '${dbName}'`);
+ 
+ // Create server to listen for local connections
+ server = net.createServer((clientSocket) => {
+ this.logger.debug(`Local connection received for tunnel '${dbName}', creating forward`);
+ 
+ sshClient.forwardOut(
+ options.forwardConfig.sourceHost,
+ options.forwardConfig.sourcePort,
+ options.forwardConfig.destinationHost,
+ options.forwardConfig.destinationPort,
+ (err, sshStream) => {
+ if (err) {
+ this.logger.error(`SSH forward error for '${dbName}'`, err);
+ clientSocket.end();
+ return;
+ }
+ 
+ // Pipe data between client and SSH stream
+ clientSocket.pipe(sshStream);
+ sshStream.pipe(clientSocket);
+ 
+ // Handle stream events
+ sshStream.on('close', () => {
+ clientSocket.end();
+ });
+ 
+ sshStream.on('error', (streamError: Error) => {
+ this.logger.error(`SSH stream error for '${dbName}'`, streamError);
+ clientSocket.end();
+ });
+ 
+ clientSocket.on('close', () => {
+ sshStream.close();
+ });
+
+ clientSocket.on('error', (clientError) => {
+ this.logger.error(`Client socket error for '${dbName}'`, clientError);
+ sshStream.close();
+ });
+ }
+ );
+ });
+
+ // Listen on the assigned port
+ const localPort = options.localPort || 0;
+ server.listen(localPort, '127.0.0.1', () => {
+ const address = server.address();
+ assignedPort = typeof address === 'object' && address ? address.port : localPort;
+ 
+ this.logger.debug(`Enhanced SSH tunnel server listening on port ${assignedPort} for '${dbName}'`);
+ 
+ const enhancedTunnelInfo: EnhancedTunnelInfo = {
+ server,
+ connection: sshClient,
+ localPort: assignedPort,
+ localHost: '127.0.0.1',
+ remoteHost: options.forwardConfig.destinationHost,
+ remotePort: options.forwardConfig.destinationPort,
+ isActive: true,
+ portAssignment,
+ databaseType,
+ originalRequestedPort: options.localPort
+ };
+
+ // Store tunnel info
+ this.tunnels.set(dbName, enhancedTunnelInfo);
+ 
+ // Set up tunnel monitoring
+ this.setupTunnelMonitoring(dbName, enhancedTunnelInfo);
+ 
+ resolve(enhancedTunnelInfo);
+ });
+
+ server.on('error', (serverError) => {
+ this.logger.error(`Enhanced SSH tunnel server error for '${dbName}'`, serverError);
+ 
+ // Release the reserved port on server error
+ if (portAssignment.assignedPort) {
+ this.portManager.releasePort(portAssignment.assignedPort);
+ }
+ 
+ reject(new Error(`SSH tunnel server failed: ${serverError.message}`));
+ });
+ });
+
+ sshClient.on('error', (sshError) => {
+ this.logger.error(`SSH client error for '${dbName}'`, sshError);
+ 
+ // Release the reserved port on connection error
+ if (portAssignment.assignedPort) {
+ this.portManager.releasePort(portAssignment.assignedPort);
+ }
+ 
+ reject(new Error(`SSH connection failed: ${sshError.message}`));
+ });
+
+ sshClient.on('end', () => {
+ this.logger.warning(`SSH connection ended for '${dbName}'`);
+ this.markTunnelInactive(dbName);
+ });
+
+ (sshClient as any).on('close', (_hadError: boolean) => {
+ this.logger.info(`SSH connection closed for '${dbName}'`, { hadError: _hadError });
+ this.markTunnelInactive(dbName);
+ });
+
+ // Connect to SSH server
+ const connectOptions = this.buildSSHConnectOptions(options.sshConfig);
+ 
+ this.logger.debug(`Connecting to SSH server for '${dbName}'`, {
+ host: connectOptions.host,
+ port: connectOptions.port,
+ username: connectOptions.username,
+ authMethod: connectOptions.password ? 'password' : 'key'
+ });
+
+ sshClient.connect(connectOptions);
+ });
+ }
+
+ private buildSSHConnectOptions(config: SSHConnectionConfig): any {
+ const connectOptions: any = {
+ host: config.host,
+ port: config.port,
+ username: config.username,
+ readyTimeout: 30000,
+ keepaliveInterval: 10000, // Send keepalive every 10 seconds
+ keepaliveCountMax: 3, // Max 3 failed keepalives before disconnect
+ algorithms: { // Use reliable algorithms
+ kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512'],
+ cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr'],
+ hmac: ['hmac-sha2-256', 'hmac-sha2-512']
+ }
+ };
+
+ // Add connection debugging
+ connectOptions.debug = (message: string) => {
+ this.logger.debug(`SSH Debug: ${message}`);
+ };
+
+ if (config.password) {
+ connectOptions.password = config.password;
+ } else if (config.privateKey) {
+ try {
+ if (typeof config.privateKey === 'string') {
+ // Check if it's a file path or the key content
+ if (config.privateKey.includes('-----BEGIN') || !fs.existsSync(config.privateKey)) {
+ // It's the key content
+ connectOptions.privateKey = config.privateKey;
+ } else {
+ // It's a file path
+ connectOptions.privateKey = fs.readFileSync(config.privateKey);
+ }
+ } else {
+ connectOptions.privateKey = config.privateKey;
+ }
+ 
+ if (config.passphrase) {
+ connectOptions.passphrase = config.passphrase;
+ }
+ } catch (error) {
+ throw new Error(`Failed to read SSH private key: ${(error as Error).message}`);
+ }
+ }
+
+ return connectOptions;
+ }
+
+ private setupTunnelMonitoring(dbName: string, tunnel: EnhancedTunnelInfo): void {
+ // Set up connection monitoring
+ tunnel.connection.on('error', (error) => {
+ this.handleTunnelEvent(dbName, {
+ event: 'error',
+ tunnel,
+ error,
+ message: `SSH connection error: ${error.message}`
+ });
+ });
+
+ tunnel.connection.on('end', () => {
+ this.handleTunnelEvent(dbName, {
+ event: 'end',
+ tunnel,
+ message: 'SSH connection ended'
+ });
+ });
+
+ (tunnel.connection as any).on('close', (_hadError: boolean) => {
+ this.handleTunnelEvent(dbName, {
+ event: 'close',
+ tunnel,
+ message: 'SSH connection closed'
+ });
+ });
+
+ // Monitor server events
+ tunnel.server.on('error', (error) => {
+ this.logger.error(`Enhanced SSH tunnel server error for '${dbName}'`, error);
+ this.updateTunnelStatus(dbName, {
+ status: 'error',
+ lastError: error.message,
+ isHealthy: false
+ });
+ });
+
+ tunnel.server.on('close', () => {
+ this.logger.info(`Enhanced SSH tunnel server closed for '${dbName}'`);
+ this.markTunnelInactive(dbName);
+ });
+ }
+
+ private handleTunnelEvent(dbName: string, event: SSHEventPayload): void {
+ this.logger.info(`Enhanced SSH tunnel event for '${dbName}': ${event.event}`, {
+ message: event.message,
+ error: event.error?.message
+ });
+
+ switch (event.event) {
+ case 'error':
+ this.updateTunnelStatus(dbName, {
+ status: 'error',
+ lastError: event.error?.message || 'Unknown error',
+ isHealthy: false
+ });
+ break;
+
+ case 'end':
+ case 'close':
+ this.markTunnelInactive(dbName);
+ break;
+ }
+ }
+
+ private markTunnelInactive(dbName: string): void {
+ const tunnel = this.tunnels.get(dbName);
+ if (tunnel) {
+ tunnel.isActive = false;
+ this.updateTunnelStatus(dbName, {
+ status: 'disconnected',
+ isHealthy: false
+ });
+ }
+ }
+
+ private updateTunnelStatus(dbName: string, updates: Partial<SSHTunnelStatusInfo>): void {
+ const current = this.tunnelStatus.get(dbName) || {
+ status: 'disconnected' as SSHTunnelStatus,
+ reconnectAttempts: 0,
+ isHealthy: false
+ };
+
+ const updated = { ...current, ...updates };
+ this.tunnelStatus.set(dbName, updated);
+ }
+
+ /**
+ * Test if a local port is accepting connections
+ */
+ private async testLocalPort(port: number): Promise<boolean> {
+ return new Promise((resolve) => {
+ const client = new net.Socket();
+ const timeout = setTimeout(() => {
+ client.destroy();
+ resolve(false);
+ }, 1000);
+
+ client.connect(port, '127.0.0.1', () => {
+ clearTimeout(timeout);
+ client.destroy();
+ resolve(true);
+ });
+
+ client.on('error', () => {
+ clearTimeout(timeout);
+ resolve(false);
+ });
+ });
+ }
+
+ /**
+ * Validate tunnel health with comprehensive checks
+ */
+ private async validateTunnelHealth(dbName: string): Promise<boolean> {
+ const tunnel = this.tunnels.get(dbName);
+ if (!tunnel || !tunnel.connection) return false;
+
+ try {
+ // Check if SSH connection is readable and writable
+ const sshHealthy = !!(tunnel.connection && (tunnel.connection as any)._sock && !(tunnel.connection as any).destroyed);
+ 
+ // Check if local port is still bound
+ const portHealthy = await this.testLocalPort(tunnel.localPort);
+ 
+ // Check if server is still accepting connections
+ const serverHealthy = tunnel.server && tunnel.server.listening;
+ 
+ const isHealthy = sshHealthy && portHealthy && serverHealthy;
+ 
+ this.logger.debug(`Health check for '${dbName}'`, {
+ sshHealthy,
+ portHealthy,
+ serverHealthy,
+ overall: isHealthy
+ });
+ 
+ return isHealthy;
+ } catch (error) {
+ this.logger.error(`Health check error for '${dbName}'`, error as Error);
+ return false;
+ }
+ }
 }

@@ -2,7 +2,7 @@
 
 This document records important architectural and design decisions made during the development of the SQL MCP Server, along with the reasoning, alternatives considered, and trade-offs involved.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Architecture Decisions](#architecture-decisions)
 - [Technology Choices](#technology-choices)
@@ -14,12 +14,12 @@ This document records important architectural and design decisions made during t
 
 ---
 
-## 🏗️ Architecture Decisions
+## Architecture Decisions
 
 ### ADR-001: Layered Architecture with Dependency Injection
 
-**Status**: Accepted  
-**Date**: 2024-11-15  
+**Status**: Accepted 
+**Date**: 2024-11-15 
 **Deciders**: Core Team
 
 #### Context
@@ -34,7 +34,7 @@ Implement a layered architecture with clear separation of concerns:
 #### Consequences
 **Positive:**
 - Clear separation of concerns
-- High testability through dependency injection  
+- High testability through dependency injection 
 - Easy to extend with new database types
 - Maintainable codebase
 
@@ -44,16 +44,16 @@ Implement a layered architecture with clear separation of concerns:
 
 #### Alternatives Considered
 1. **Monolithic approach**: Single class handling all concerns
-   - Rejected: Would be difficult to test and maintain
+ - Rejected: Would be difficult to test and maintain
 2. **Microservices**: Separate services for each concern
-   - Rejected: Overkill for single-binary deployment requirement
+ - Rejected: Overkill for single-binary deployment requirement
 
 ---
 
 ### ADR-002: Event-Driven Component Communication
 
-**Status**: Accepted  
-**Date**: 2024-11-18  
+**Status**: Accepted 
+**Date**: 2024-11-18 
 **Deciders**: Core Team
 
 #### Context
@@ -80,16 +80,16 @@ securityManager.emit('query-blocked', database, reason);
 
 #### Alternatives Considered
 1. **Direct method calls**: Components call each other directly
-   - Rejected: Creates tight coupling
+ - Rejected: Creates tight coupling
 2. **Message queue**: External message broker
-   - Rejected: Adds deployment complexity
+ - Rejected: Adds deployment complexity
 
 ---
 
 ### ADR-003: Database Adapter Pattern
 
-**Status**: Accepted  
-**Date**: 2024-11-20  
+**Status**: Accepted 
+**Date**: 2024-11-20 
 **Deciders**: Core Team, Database Expert
 
 #### Context
@@ -103,10 +103,10 @@ Implement adapter pattern with:
 
 ```typescript
 interface DatabaseAdapter {
-  connect(config: DatabaseConfig): Promise<void>;
-  executeQuery(query: string, params?: any[]): Promise<QueryResult>;
-  getSchema(): Promise<DatabaseSchema>;
-  disconnect(): Promise<void>;
+ connect(config: DatabaseConfig): Promise<void>;
+ executeQuery(query: string, params?: any[]): Promise<QueryResult>;
+ getSchema(): Promise<DatabaseSchema>;
+ disconnect(): Promise<void>;
 }
 ```
 
@@ -123,18 +123,18 @@ interface DatabaseAdapter {
 
 #### Alternatives Considered
 1. **Single universal adapter**: One adapter for all databases
-   - Rejected: Would miss database-specific features
+ - Rejected: Would miss database-specific features
 2. **Query builder library**: Use existing ORM/query builder
-   - Rejected: Too heavy for our use case, limits SQL flexibility
+ - Rejected: Too heavy for our use case, limits SQL flexibility
 
 ---
 
-## 💻 Technology Choices
+## Technology Choices
 
 ### ADR-004: TypeScript as Primary Language
 
-**Status**: Accepted  
-**Date**: 2024-11-10  
+**Status**: Accepted 
+**Date**: 2024-11-10 
 **Deciders**: Core Team
 
 #### Context
@@ -158,18 +158,18 @@ Use TypeScript for all implementation code with strict type checking enabled.
 
 #### Alternatives Considered
 1. **JavaScript**: Simpler deployment, no build step
-   - Rejected: Lack of type safety for complex system
+ - Rejected: Lack of type safety for complex system
 2. **Python**: Great database library ecosystem
-   - Rejected: Performance concerns, deployment complexity
+ - Rejected: Performance concerns, deployment complexity
 3. **Go**: Excellent performance, single binary
-   - Rejected: Team expertise in Node.js ecosystem
+ - Rejected: Team expertise in Node.js ecosystem
 
 ---
 
 ### ADR-005: Node.js Runtime Platform
 
-**Status**: Accepted  
-**Date**: 2024-11-10  
+**Status**: Accepted 
+**Date**: 2024-11-10 
 **Deciders**: Core Team
 
 #### Context
@@ -194,18 +194,18 @@ Use Node.js as runtime platform with focus on LTS versions.
 
 #### Alternatives Considered
 1. **Python**: Great for data processing
-   - Rejected: Performance concerns for high-throughput scenarios
+ - Rejected: Performance concerns for high-throughput scenarios
 2. **Rust**: Excellent performance and safety
-   - Rejected: Team expertise and development speed concerns
+ - Rejected: Team expertise and development speed concerns
 3. **Java**: Mature ecosystem
-   - Rejected: Heavy runtime, complex deployment
+ - Rejected: Heavy runtime, complex deployment
 
 ---
 
 ### ADR-006: INI Configuration Format
 
-**Status**: Accepted  
-**Date**: 2024-11-25  
+**Status**: Accepted 
+**Date**: 2024-11-25 
 **Deciders**: Core Team, UX Designer
 
 #### Context
@@ -240,20 +240,20 @@ max_complexity_score=100
 
 #### Alternatives Considered
 1. **JSON**: Structured and widely supported
-   - Rejected: No comments, error-prone for manual editing
+ - Rejected: No comments, error-prone for manual editing
 2. **YAML**: More readable than JSON, supports comments
-   - Rejected: Indentation-sensitive, more complex syntax
+ - Rejected: Indentation-sensitive, more complex syntax
 3. **TOML**: More features than INI
-   - Rejected: Less familiar to users
+ - Rejected: Less familiar to users
 
 ---
 
-## 🔒 Security Decisions
+## Security Decisions
 
 ### ADR-007: SELECT-Only Mode as Default
 
-**Status**: Accepted  
-**Date**: 2024-11-12  
+**Status**: Accepted 
+**Date**: 2024-11-12 
 **Deciders**: Security Team, Core Team
 
 #### Context
@@ -265,8 +265,8 @@ Make SELECT-only mode the default for all database configurations, requiring exp
 ```typescript
 // Default configuration
 const defaultConfig: DatabaseConfig = {
-  select_only: true, // Default to safe mode
-  // ... other settings
+ select_only: true, // Default to safe mode
+ // ... other settings
 };
 ```
 
@@ -283,16 +283,16 @@ const defaultConfig: DatabaseConfig = {
 
 #### Alternatives Considered
 1. **Full access by default**: More permissive default
-   - Rejected: Too risky for production environments
+ - Rejected: Too risky for production environments
 2. **Runtime permission prompts**: Ask user at execution time
-   - Rejected: Breaks automation and server-side operation
+ - Rejected: Breaks automation and server-side operation
 
 ---
 
 ### ADR-008: Query Complexity Analysis
 
-**Status**: Accepted  
-**Date**: 2024-11-14  
+**Status**: Accepted 
+**Date**: 2024-11-14 
 **Deciders**: Security Team, Database Expert
 
 #### Context
@@ -307,10 +307,10 @@ Implement static query complexity analysis based on:
 
 ```typescript
 interface ComplexityAnalysis {
-  score: number;
-  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  factors: ComplexityFactor[];
-  recommendations: string[];
+ score: number;
+ riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+ factors: ComplexityFactor[];
+ recommendations: string[];
 }
 ```
 
@@ -328,18 +328,18 @@ interface ComplexityAnalysis {
 
 #### Alternatives Considered
 1. **Runtime query timeouts only**: Simpler approach
-   - Rejected: Doesn't prevent resource consumption
+ - Rejected: Doesn't prevent resource consumption
 2. **Database query plans**: Use EXPLAIN for analysis
-   - Rejected: Database-specific and requires query execution
+ - Rejected: Database-specific and requires query execution
 3. **No complexity analysis**: Trust user judgment
-   - Rejected: Too risky for production environments
+ - Rejected: Too risky for production environments
 
 ---
 
 ### ADR-009: SSH Tunnel Security Model
 
-**Status**: Accepted  
-**Date**: 2024-11-16  
+**Status**: Accepted 
+**Date**: 2024-11-16 
 **Deciders**: Security Team, Infrastructure Team
 
 #### Context
@@ -354,11 +354,11 @@ Implement SSH tunnel support with:
 
 ```typescript
 interface SSHConfig {
-  host: string;
-  username: string;
-  privateKey?: string;  // Preferred
-  password?: string;    // Fallback
-  passphrase?: string;  // For encrypted keys
+ host: string;
+ username: string;
+ privateKey?: string; // Preferred
+ password?: string; // Fallback
+ passphrase?: string; // For encrypted keys
 }
 ```
 
@@ -377,20 +377,20 @@ interface SSHConfig {
 
 #### Alternatives Considered
 1. **VPN-only access**: Require VPN for database access
-   - Rejected: Not always available, deployment complexity
+ - Rejected: Not always available, deployment complexity
 2. **Database SSL/TLS only**: Use database native encryption
-   - Rejected: Doesn't solve network accessibility
+ - Rejected: Doesn't solve network accessibility
 3. **No tunnel support**: Require direct network access
-   - Rejected: Not compatible with secure production environments
+ - Rejected: Not compatible with secure production environments
 
 ---
 
-## ⚡ Performance Decisions
+## Performance Decisions
 
 ### ADR-010: Connection Pooling Strategy
 
-**Status**: Accepted  
-**Date**: 2024-11-22  
+**Status**: Accepted 
+**Date**: 2024-11-22 
 **Deciders**: Performance Team, Core Team
 
 #### Context
@@ -405,15 +405,15 @@ Implement per-database connection pooling with:
 
 ```typescript
 class ConnectionManager {
-  private connections = new Map<string, DatabaseConnection>();
-  
-  async getConnection(database: string): Promise<DatabaseConnection> {
-    if (!this.connections.has(database)) {
-      const connection = await this.createConnection(database);
-      this.connections.set(database, connection);
-    }
-    return this.connections.get(database)!;
-  }
+ private connections = new Map<string, DatabaseConnection>();
+ 
+ async getConnection(database: string): Promise<DatabaseConnection> {
+ if (!this.connections.has(database)) {
+ const connection = await this.createConnection(database);
+ this.connections.set(database, connection);
+ }
+ return this.connections.get(database)!;
+ }
 }
 ```
 
@@ -431,18 +431,18 @@ class ConnectionManager {
 
 #### Alternatives Considered
 1. **New connection per query**: Simpler but slower
-   - Rejected: Poor performance for interactive use
+ - Rejected: Poor performance for interactive use
 2. **External connection pooler**: Use pgbouncer, etc.
-   - Rejected: Additional deployment complexity
+ - Rejected: Additional deployment complexity
 3. **Shared connection pool**: Pool across all databases
-   - Rejected: Security isolation concerns
+ - Rejected: Security isolation concerns
 
 ---
 
 ### ADR-011: Schema Caching Strategy
 
-**Status**: Accepted  
-**Date**: 2024-11-24  
+**Status**: Accepted 
+**Date**: 2024-11-24 
 **Deciders**: Performance Team, Database Expert
 
 #### Context
@@ -457,13 +457,13 @@ Implement in-memory schema caching with:
 
 ```typescript
 class SchemaManager {
-  private schemas = new Map<string, DatabaseSchema>();
-  
-  async captureSchema(database: string): Promise<DatabaseSchema> {
-    const schema = await this.introspectDatabase(database);
-    this.schemas.set(database, schema);
-    return schema;
-  }
+ private schemas = new Map<string, DatabaseSchema>();
+ 
+ async captureSchema(database: string): Promise<DatabaseSchema> {
+ const schema = await this.introspectDatabase(database);
+ this.schemas.set(database, schema);
+ return schema;
+ }
 }
 ```
 
@@ -482,18 +482,18 @@ class SchemaManager {
 
 #### Alternatives Considered
 1. **Real-time schema queries**: Query schema for each request
-   - Rejected: Poor performance, database load
+ - Rejected: Poor performance, database load
 2. **TTL-based expiration**: Automatic cache invalidation
-   - Rejected: May miss rapid schema changes or cache unnecessarily
+ - Rejected: May miss rapid schema changes or cache unnecessarily
 3. **File-based caching**: Persist schema to disk
-   - Rejected: File management complexity, slower access
+ - Rejected: File management complexity, slower access
 
 ---
 
 ### ADR-012: Result Set Limiting
 
-**Status**: Accepted  
-**Date**: 2024-11-26  
+**Status**: Accepted 
+**Date**: 2024-11-26 
 **Deciders**: Performance Team, UX Designer
 
 #### Context
@@ -508,9 +508,9 @@ Implement configurable result set limits with:
 
 ```typescript
 interface QueryResult {
-  rows: Record<string, any>[];
-  rowCount: number;
-  truncated: boolean;  // Indicates if results were limited
+ rows: Record<string, any>[];
+ rowCount: number;
+ truncated: boolean; // Indicates if results were limited
 }
 ```
 
@@ -528,20 +528,20 @@ interface QueryResult {
 
 #### Alternatives Considered
 1. **No limits**: Return all results
-   - Rejected: Memory and performance issues
+ - Rejected: Memory and performance issues
 2. **Pagination**: Return results in pages
-   - Rejected: Complex for AI chat interface
+ - Rejected: Complex for AI chat interface
 3. **Streaming**: Stream results as they arrive
-   - Deferred: Requires protocol enhancements
+ - Deferred: Requires protocol enhancements
 
 ---
 
-## 🔌 Protocol Decisions
+## Protocol Decisions
 
 ### ADR-013: Stdio-based MCP Transport
 
-**Status**: Accepted  
-**Date**: 2024-11-08  
+**Status**: Accepted 
+**Date**: 2024-11-08 
 **Deciders**: Protocol Team, Claude Integration Team
 
 #### Context
@@ -566,18 +566,18 @@ Use stdio (standard input/output) transport as primary and only supported method
 
 #### Alternatives Considered
 1. **HTTP/WebSocket transport**: More flexible networking
-   - Rejected: More complex deployment, firewall issues
+ - Rejected: More complex deployment, firewall issues
 2. **TCP socket transport**: Better performance
-   - Rejected: Network configuration complexity
+ - Rejected: Network configuration complexity
 3. **Named pipes**: Platform-specific IPC
-   - Rejected: Cross-platform compatibility issues
+ - Rejected: Cross-platform compatibility issues
 
 ---
 
 ### ADR-014: JSON-RPC 2.0 Message Format
 
-**Status**: Accepted  
-**Date**: 2024-11-08  
+**Status**: Accepted 
+**Date**: 2024-11-08 
 **Deciders**: Protocol Team
 
 #### Context
@@ -600,18 +600,18 @@ Implement strict JSON-RPC 2.0 compliance with no custom extensions.
 
 #### Alternatives Considered
 1. **Custom protocol**: Design domain-specific protocol
-   - Rejected: Loss of MCP ecosystem compatibility
+ - Rejected: Loss of MCP ecosystem compatibility
 2. **JSON-RPC with extensions**: Add custom fields
-   - Rejected: May break compatibility with other clients
+ - Rejected: May break compatibility with other clients
 
 ---
 
-## 👤 User Experience Decisions
+## User Experience Decisions
 
 ### ADR-015: Interactive Configuration Wizard
 
-**Status**: Accepted  
-**Date**: 2024-11-28  
+**Status**: Accepted 
+**Date**: 2024-11-28 
 **Deciders**: UX Team, Core Team
 
 #### Context
@@ -647,18 +647,18 @@ sql-mcp-setup
 
 #### Alternatives Considered
 1. **Manual configuration only**: Users edit INI files directly
-   - Rejected: Too error-prone for complex configurations
+ - Rejected: Too error-prone for complex configurations
 2. **Web-based configuration UI**: Browser-based setup
-   - Rejected: Additional deployment complexity, security concerns
+ - Rejected: Additional deployment complexity, security concerns
 3. **Configuration templates**: Pre-built examples
-   - Rejected: Still requires manual editing, less guidance
+ - Rejected: Still requires manual editing, less guidance
 
 ---
 
 ### ADR-016: Rich Error Messages with Troubleshooting
 
-**Status**: Accepted  
-**Date**: 2024-11-30  
+**Status**: Accepted 
+**Date**: 2024-11-30 
 **Deciders**: UX Team, Support Team
 
 #### Context
@@ -674,14 +674,14 @@ Implement rich error messages that include:
 ```typescript
 // Example error response
 {
-  error: "Connection failed to database 'production'",
-  troubleshooting: [
-    "• Verify database host and port are correct",
-    "• Check network connectivity", 
-    "• Ensure database is running",
-    "• Validate credentials"
-  ],
-  documentation: "docs/troubleshooting-guide.md#connection-errors"
+ error: "Connection failed to database 'production'",
+ troubleshooting: [
+ "- Verify database host and port are correct",
+ "- Check network connectivity", 
+ "- Ensure database is running",
+ "- Validate credentials"
+ ],
+ documentation: "docs/troubleshooting-guide.md#connection-errors"
 }
 ```
 
@@ -699,18 +699,18 @@ Implement rich error messages that include:
 
 #### Alternatives Considered
 1. **Simple error messages**: Just error codes and basic messages
-   - Rejected: Poor user experience, high support load
+ - Rejected: Poor user experience, high support load
 2. **External error database**: Look up detailed errors separately
-   - Rejected: Adds complexity, requires network access
+ - Rejected: Adds complexity, requires network access
 
 ---
 
-## 🛠️ Development Process Decisions
+## Development Process Decisions
 
 ### ADR-017: Test-Driven Development Approach
 
-**Status**: Accepted  
-**Date**: 2024-11-05  
+**Status**: Accepted 
+**Date**: 2024-11-05 
 **Deciders**: Core Team, Quality Team
 
 #### Context
@@ -738,18 +738,18 @@ Adopt test-driven development with:
 
 #### Alternatives Considered
 1. **Manual testing only**: Test by hand during development
-   - Rejected: Not sufficient for complex system with multiple integrations
+ - Rejected: Not sufficient for complex system with multiple integrations
 2. **Integration tests only**: Focus on end-to-end scenarios
-   - Rejected: Harder to debug failures, slower feedback loop
+ - Rejected: Harder to debug failures, slower feedback loop
 3. **Unit tests only**: Focus on individual component testing
-   - Rejected: Doesn't catch integration issues
+ - Rejected: Doesn't catch integration issues
 
 ---
 
 ### ADR-018: Semantic Versioning and Release Strategy
 
-**Status**: Accepted  
-**Date**: 2024-12-01  
+**Status**: Accepted 
+**Date**: 2024-12-01 
 **Deciders**: Core Team, DevOps Team
 
 #### Context
@@ -780,18 +780,18 @@ export const SERVER_VERSION = '2.0.0';
 
 #### Alternatives Considered
 1. **CalVer (Calendar Versioning)**: Version based on release date
-   - Rejected: Less clear about compatibility impact
+ - Rejected: Less clear about compatibility impact
 2. **Custom versioning**: Project-specific scheme
-   - Rejected: Confusing for users familiar with SemVer
+ - Rejected: Confusing for users familiar with SemVer
 3. **No versioning**: Always latest version
-   - Rejected: No way to manage compatibility
+ - Rejected: No way to manage compatibility
 
 ---
 
 ### ADR-019: Monorepo vs Multi-repo Structure
 
-**Status**: Accepted  
-**Date**: 2024-11-03  
+**Status**: Accepted 
+**Date**: 2024-11-03 
 **Deciders**: Core Team, DevOps Team
 
 #### Context
@@ -819,16 +819,16 @@ Use monorepo structure with all components in single repository:
 
 #### Alternatives Considered
 1. **Multi-repo**: Separate repositories for server, docs, examples
-   - Rejected: Coordination overhead, version management complexity
+ - Rejected: Coordination overhead, version management complexity
 2. **Hybrid**: Server separate, documentation and tools together
-   - Rejected: Partial benefits of either approach
+ - Rejected: Partial benefits of either approach
 
 ---
 
 ### ADR-020: Documentation-Driven Development
 
-**Status**: Accepted  
-**Date**: 2024-12-02  
+**Status**: Accepted 
+**Date**: 2024-12-02 
 **Deciders**: Core Team, Documentation Team
 
 #### Context
@@ -855,13 +855,13 @@ Adopt documentation-driven development approach:
 
 #### Alternatives Considered
 1. **Code-first approach**: Write code, document later
-   - Rejected: Often results in poor documentation coverage
+ - Rejected: Often results in poor documentation coverage
 2. **Minimal documentation**: Only basic API docs
-   - Rejected: Insufficient for complex system with multiple user types
+ - Rejected: Insufficient for complex system with multiple user types
 
 ---
 
-## 📊 Decision Impact Assessment
+## Decision Impact Assessment
 
 ### High-Impact Decisions
 These decisions had the most significant impact on system design:
@@ -876,10 +876,10 @@ Some decisions built on or constrained others:
 
 ```mermaid
 graph TD
-    A[ADR-004: TypeScript] --> B[ADR-017: Test-Driven Development]
-    C[ADR-013: Stdio Transport] --> D[ADR-014: JSON-RPC 2.0]
-    E[ADR-003: Database Adapter Pattern] --> F[ADR-010: Connection Pooling]
-    G[ADR-015: Configuration Wizard] --> H[ADR-016: Rich Error Messages]
+ A[ADR-004: TypeScript] --> B[ADR-017: Test-Driven Development]
+ C[ADR-013: Stdio Transport] --> D[ADR-014: JSON-RPC 2.0]
+ E[ADR-003: Database Adapter Pattern] --> F[ADR-010: Connection Pooling]
+ G[ADR-015: Configuration Wizard] --> H[ADR-016: Rich Error Messages]
 ```
 
 ### Future Decision Points
@@ -893,7 +893,7 @@ Areas that may require future architectural decisions:
 
 ---
 
-## 🔄 Decision Review Process
+## Decision Review Process
 
 ### Regular Review Schedule
 - **Quarterly**: Review performance and security decisions

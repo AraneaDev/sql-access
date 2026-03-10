@@ -2,20 +2,20 @@
 
 This tutorial walks you through connecting your first database to the SQL MCP Server, from initial setup to running your first query with Claude Desktop.
 
-## 📋 What You'll Learn
+## What You'll Learn
 
 - How to configure different database types
 - Setting up secure connections with SSL/SSH
 - Testing database connectivity
 - Making your first Claude query
 
-## 🎯 Prerequisites
+## Prerequisites
 
 - SQL MCP Server installed ([Tutorial 1: Installation](01-installation.md))
 - A database to connect to (PostgreSQL, MySQL, SQLite, or SQL Server)
 - Database credentials and network access
 
-## 🗄️ Database Connection Examples
+## Database Connection Examples
 
 ### PostgreSQL Database
 
@@ -149,7 +149,7 @@ select_only=true
 timeout=30000
 ```
 
-## 🔧 Step-by-Step Configuration
+## Step-by-Step Configuration
 
 ### Step 1: Choose Your Database
 
@@ -192,7 +192,7 @@ SELECT-only mode restricts this database to SELECT, WITH, SHOW, EXPLAIN, and DES
 This is recommended for production databases or read-only access scenarios.
 Enable SELECT-only mode? (y/n): y
 
-✅ Database 'production' configured with SELECT-only access
+ Database 'production' configured with SELECT-only access
 ```
 
 ### Step 4: Test the Connection
@@ -204,15 +204,15 @@ Test database connections now? (y/n): y
 
 --- Testing Connections ---
 Testing production...
-✅ Connected
-📊 Schema captured: 23 tables, 456 columns
-🛡️ Access mode: SELECT-only
+ Connected
+ Schema captured: 23 tables, 456 columns
+ Access mode: SELECT-only
 ```
 
 If the test fails, you'll see diagnostic information:
 
 ```
-❌ Connection failed: Connection timeout after 30000ms
+ Connection failed: Connection timeout after 30000ms
 
 Troubleshooting:
 - Verify database host and port are correct
@@ -235,7 +235,7 @@ Schema cached: production
 Server ready for Claude Desktop integration
 ```
 
-## 🔒 Security Configuration Deep Dive
+## Security Configuration Deep Dive
 
 ### SELECT-Only Mode (Recommended for Production)
 
@@ -250,7 +250,7 @@ database=production
 username=readonly_user
 password=readonly_pass
 ssl=true
-select_only=true  # ← This enables read-only mode
+select_only=true # <- This enables read-only mode
 ```
 
 **What's Allowed:**
@@ -262,7 +262,7 @@ select_only=true  # ← This enables read-only mode
 
 **What's Blocked:**
 - `INSERT`, `UPDATE`, `DELETE` - Data modification
-- `CREATE`, `ALTER`, `DROP` - Schema changes  
+- `CREATE`, `ALTER`, `DROP` - Schema changes 
 - `TRUNCATE` - Data deletion
 - `EXEC`, `CALL` - Stored procedure execution
 
@@ -277,7 +277,7 @@ database=development
 username=dev_user
 password=dev_pass
 ssl=false
-select_only=false  # ← Full access mode
+select_only=false # <- Full access mode
 ```
 
 **Use Cases for Full Access:**
@@ -293,12 +293,12 @@ Always use SSL for production databases:
 ```ini
 # PostgreSQL with SSL
 [database.secure_postgres]
-ssl=true  # Enable SSL/TLS encryption
+ssl=true # Enable SSL/TLS encryption
 
 # SQL Server with encryption
 [database.secure_mssql]
 ssl=true
-encrypt=true  # SQL Server specific encryption
+encrypt=true # SQL Server specific encryption
 ```
 
 ### SSH Tunneling for Remote Access
@@ -308,7 +308,7 @@ For databases behind firewalls or on private networks:
 ```ini
 [database.remote_secure]
 type=postgresql
-host=internal-db-server.local  # Internal hostname
+host=internal-db-server.local # Internal hostname
 port=5432
 database=production
 username=app_user
@@ -323,15 +323,15 @@ ssh_username=tunnel_user
 
 # SSH Key Authentication (Recommended)
 ssh_private_key=/path/to/ssh/key
-ssh_passphrase=key_passphrase  # If key is encrypted
+ssh_passphrase=key_passphrase # If key is encrypted
 
 # OR Password Authentication
 # ssh_password=ssh_password
 
-local_port=0  # Auto-assign local port
+local_port=0 # Auto-assign local port
 ```
 
-## 🛠️ Database-Specific Setup Tips
+## Database-Specific Setup Tips
 
 ### PostgreSQL
 
@@ -348,7 +348,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO claude_readonly;
 
 -- Grant SELECT on all future tables
 ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-  GRANT SELECT ON TABLES TO claude_readonly;
+ GRANT SELECT ON TABLES TO claude_readonly;
 
 -- Allow EXPLAIN queries
 GRANT EXECUTE ON FUNCTION pg_stat_statements_reset() TO claude_readonly;
@@ -415,7 +415,7 @@ ALTER ROLE db_datareader ADD MEMBER claude_readonly;
 GRANT VIEW DEFINITION TO claude_readonly;
 ```
 
-## 🧪 Testing Your Connection
+## Testing Your Connection
 
 ### Manual Connection Test
 
@@ -432,22 +432,22 @@ npm run setup
 Once connected, try these test queries through Claude Desktop:
 
 1. **Basic Connection Test:**
-   > "Test the connection to my production database"
+ > "Test the connection to my production database"
 
 2. **Schema Exploration:**
-   > "Show me the table structure of my production database"
+ > "Show me the table structure of my production database"
 
 3. **Simple Data Query:**
-   > "Count the total number of records in each table"
+ > "Count the total number of records in each table"
 
 4. **Sample Data:**
-   > "Show me 5 sample records from the users table"
+ > "Show me 5 sample records from the users table"
 
 ### Common Connection Issues
 
 #### Connection Timeout
 ```
-❌ Connection timeout after 30000ms
+ Connection timeout after 30000ms
 ```
 **Solutions:**
 - Increase timeout in configuration: `timeout=60000`
@@ -456,7 +456,7 @@ Once connected, try these test queries through Claude Desktop:
 
 #### Authentication Failed
 ```
-❌ Authentication failed for user 'username'
+ Authentication failed for user 'username'
 ```
 **Solutions:**
 - Verify username and password are correct
@@ -466,7 +466,7 @@ Once connected, try these test queries through Claude Desktop:
 
 #### Database Not Found
 ```
-❌ Database 'myapp' does not exist
+ Database 'myapp' does not exist
 ```
 **Solutions:**
 - Verify database name is correct
@@ -475,7 +475,7 @@ Once connected, try these test queries through Claude Desktop:
 
 #### SSL Connection Issues
 ```
-❌ SSL connection required but not supported
+ SSL connection required but not supported
 ```
 **Solutions:**
 - Enable SSL in your configuration: `ssl=true`
@@ -485,7 +485,7 @@ Once connected, try these test queries through Claude Desktop:
 
 #### SSH Tunnel Problems
 ```
-❌ SSH tunnel failed: Authentication failed
+ SSH tunnel failed: Authentication failed
 ```
 **Solutions:**
 - Test SSH connection manually: `ssh user@bastion-host`
@@ -493,7 +493,7 @@ Once connected, try these test queries through Claude Desktop:
 - Check SSH key permissions: `chmod 600 ~/.ssh/id_rsa`
 - Ensure SSH user has tunneling permissions
 
-## 🎯 Next Steps
+## Next Steps
 
 Once you have a working database connection:
 
@@ -502,7 +502,7 @@ Once you have a working database connection:
 3. **[Advanced Multi-Database Setup](advanced-01-multi-database.md)** - Add more databases
 4. **[SSH Tunnel Configuration](advanced-02-ssh-tunnels.md)** - Secure remote access
 
-## 💡 Pro Tips
+## Pro Tips
 
 ### Security Best Practices
 - Always use SELECT-only mode for production databases

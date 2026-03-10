@@ -28,7 +28,7 @@ const colors = {
  * Main validation function
  */
 async function validateDocumentation() {
-  console.log(`${colors.blue}🔍 Documentation Validation Starting...${colors.reset}\n`);
+  console.log(`${colors.blue}[SEARCH] Documentation Validation Starting...${colors.reset}\n`);
 
   const results = {
     passed: 0,
@@ -37,33 +37,33 @@ async function validateDocumentation() {
   };
 
   // Test 1: Version Consistency
-  console.log('📋 Checking version consistency...');
+  console.log('[LIST] Checking version consistency...');
   await checkVersionConsistency(results);
 
   // Test 2: Setup Script Features
-  console.log('\n📋 Validating setup script features...');
+  console.log('\n[LIST] Validating setup script features...');
   await validateSetupFeatures(results);
 
   // Test 3: MCP Tools Documentation
-  console.log('\n📋 Validating MCP tools documentation...');
+  console.log('\n[LIST] Validating MCP tools documentation...');
   await validateMCPTools(results);
 
   // Test 4: Configuration Examples
-  console.log('\n📋 Validating configuration examples...');
+  console.log('\n[LIST] Validating configuration examples...');
   await validateConfigurationExamples(results);
 
   // Summary
   console.log('\n' + '='.repeat(50));
-  console.log(`${colors.blue}📊 Validation Summary:${colors.reset}`);
-  console.log(`  ✅ Passed: ${colors.green}${results.passed}${colors.reset}`);
-  console.log(`  ❌ Failed: ${colors.red}${results.failed}${colors.reset}`);
-  console.log(`  ⚠️  Warnings: ${colors.yellow}${results.warnings}${colors.reset}`);
+  console.log(`${colors.blue}[STATS] Validation Summary:${colors.reset}`);
+  console.log(`  [OK] Passed: ${colors.green}${results.passed}${colors.reset}`);
+  console.log(`  [FAIL] Failed: ${colors.red}${results.failed}${colors.reset}`);
+  console.log(`  [WARN]  Warnings: ${colors.yellow}${results.warnings}${colors.reset}`);
   
   if (results.failed === 0) {
-    console.log(`\n${colors.green}🎉 All validation checks passed!${colors.reset}`);
+    console.log(`\n${colors.green} All validation checks passed!${colors.reset}`);
     process.exit(0);
   } else {
-    console.log(`\n${colors.red}❌ ${results.failed} validation check(s) failed.${colors.reset}`);
+    console.log(`\n${colors.red}[FAIL] ${results.failed} validation check(s) failed.${colors.reset}`);
     process.exit(1);
   }
 }
@@ -77,7 +77,7 @@ async function checkVersionConsistency(results) {
     const packageJson = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'package.json'), 'utf8'));
     const expectedVersion = packageJson.version;
     
-    console.log(`  📦 Package version: ${expectedVersion}`);
+    console.log(`  [PKG] Package version: ${expectedVersion}`);
 
     // Check files that should contain version references
     const filesToCheck = [
@@ -91,7 +91,7 @@ async function checkVersionConsistency(results) {
       const filePath = path.join(PROJECT_ROOT, file);
       
       if (!fs.existsSync(filePath)) {
-        console.log(`  ⚠️  File not found: ${file}`);
+        console.log(`  [WARN]  File not found: ${file}`);
         results.warnings++;
         continue;
       }
@@ -100,21 +100,21 @@ async function checkVersionConsistency(results) {
       const matches = [...content.matchAll(pattern)];
       
       if (matches.length === 0) {
-        console.log(`  ❌ No version found in ${name}`);
+        console.log(`  [FAIL] No version found in ${name}`);
         results.failed++;
       } else {
         const foundVersion = matches[0][1];
         if (foundVersion === expectedVersion) {
-          console.log(`  ✅ ${name}: ${foundVersion}`);
+          console.log(`  [OK] ${name}: ${foundVersion}`);
           results.passed++;
         } else {
-          console.log(`  ❌ ${name}: Expected ${expectedVersion}, found ${foundVersion}`);
+          console.log(`  [FAIL] ${name}: Expected ${expectedVersion}, found ${foundVersion}`);
           results.failed++;
         }
       }
     }
   } catch (error) {
-    console.log(`  ❌ Error checking version consistency: ${error.message}`);
+    console.log(`  [FAIL] Error checking version consistency: ${error.message}`);
     results.failed++;
   }
 }
@@ -129,18 +129,18 @@ async function validateSetupFeatures(results) {
     const distSetupPath = path.join(PROJECT_ROOT, 'dist/setup.js');
     
     if (!fs.existsSync(setupPath)) {
-      console.log('  ❌ Setup script source not found');
+      console.log('  [FAIL] Setup script source not found');
       results.failed++;
       return;
     }
     
     if (!fs.existsSync(distSetupPath)) {
-      console.log('  ❌ Setup script not built (run npm run build)');
+      console.log('  [FAIL] Setup script not built (run npm run build)');
       results.failed++;
       return;
     }
     
-    console.log('  ✅ Setup script exists and is built');
+    console.log('  [OK] Setup script exists and is built');
     results.passed++;
     
     // Check if setup UI has been cleaned up (should not have excessive debug output)
@@ -150,15 +150,15 @@ async function validateSetupFeatures(results) {
       
       // Check that debug output is conditional
       if (content.includes('process.env.DEBUG_SETUP')) {
-        console.log('  ✅ Setup UI has conditional debug output');
+        console.log('  [OK] Setup UI has conditional debug output');
         results.passed++;
       } else {
-        console.log('  ⚠️  Setup UI might have unconditional debug output');
+        console.log('  [WARN]  Setup UI might have unconditional debug output');
         results.warnings++;
       }
     }
   } catch (error) {
-    console.log(`  ❌ Error validating setup features: ${error.message}`);
+    console.log(`  [FAIL] Error validating setup features: ${error.message}`);
     results.failed++;
   }
 }
@@ -171,7 +171,7 @@ async function validateMCPTools(results) {
     const toolsDocPath = path.join(PROJECT_ROOT, 'docs/api/mcp-tools-reference.md');
     
     if (!fs.existsSync(toolsDocPath)) {
-      console.log('  ❌ MCP tools reference documentation not found');
+      console.log('  [FAIL] MCP tools reference documentation not found');
       results.failed++;
       return;
     }
@@ -179,20 +179,20 @@ async function validateMCPTools(results) {
     const content = fs.readFileSync(toolsDocPath, 'utf8');
     
     // Check for implementation status labels
-    if (content.includes('🚧 **Basic Implementation**')) {
-      console.log('  ✅ Contains implementation status indicators');
+    if (content.includes('[WIP] **Basic Implementation**')) {
+      console.log('  [OK] Contains implementation status indicators');
       results.passed++;
     } else {
-      console.log('  ⚠️  Missing implementation status indicators');
+      console.log('  [WARN]  Missing implementation status indicators');
       results.warnings++;
     }
     
     // Check for proper caveats about planned features
     if (content.includes('planned for future releases')) {
-      console.log('  ✅ Contains appropriate future feature caveats');
+      console.log('  [OK] Contains appropriate future feature caveats');
       results.passed++;
     } else {
-      console.log('  ⚠️  Missing future feature caveats');
+      console.log('  [WARN]  Missing future feature caveats');
       results.warnings++;
     }
     
@@ -206,19 +206,19 @@ async function validateMCPTools(results) {
     let hasProblematicClaims = false;
     for (const claim of problematicClaims) {
       if (content.includes(claim)) {
-        console.log(`  ❌ Contains unimplemented feature claim: "${claim}"`);
+        console.log(`  [FAIL] Contains unimplemented feature claim: "${claim}"`);
         results.failed++;
         hasProblematicClaims = true;
       }
     }
     
     if (!hasProblematicClaims) {
-      console.log('  ✅ No unimplemented feature claims found');
+      console.log('  [OK] No unimplemented feature claims found');
       results.passed++;
     }
     
   } catch (error) {
-    console.log(`  ❌ Error validating MCP tools documentation: ${error.message}`);
+    console.log(`  [FAIL] Error validating MCP tools documentation: ${error.message}`);
     results.failed++;
   }
 }
@@ -231,7 +231,7 @@ async function validateConfigurationExamples(results) {
     const configDocPath = path.join(PROJECT_ROOT, 'docs/guides/configuration-guide.md');
     
     if (!fs.existsSync(configDocPath)) {
-      console.log('  ❌ Configuration guide not found');
+      console.log('  [FAIL] Configuration guide not found');
       results.failed++;
       return;
     }
@@ -240,10 +240,10 @@ async function validateConfigurationExamples(results) {
     
     // Check that unimplemented features are properly marked
     if (content.includes('Advanced Configuration (Planned Features)')) {
-      console.log('  ✅ Unimplemented features properly marked as planned');
+      console.log('  [OK] Unimplemented features properly marked as planned');
       results.passed++;
     } else {
-      console.log('  ⚠️  Advanced features not properly marked as planned');
+      console.log('  [WARN]  Advanced features not properly marked as planned');
       results.warnings++;
     }
     
@@ -258,19 +258,19 @@ async function validateConfigurationExamples(results) {
     let hasProblematicCommands = false;
     for (const command of problematicCommands) {
       if (content.includes(command) && !content.includes('planned for future')) {
-        console.log(`  ❌ Contains unimplemented command: "${command}"`);
+        console.log(`  [FAIL] Contains unimplemented command: "${command}"`);
         results.failed++;
         hasProblematicCommands = true;
       }
     }
     
     if (!hasProblematicCommands) {
-      console.log('  ✅ No unimplemented command examples found');
+      console.log('  [OK] No unimplemented command examples found');
       results.passed++;
     }
     
   } catch (error) {
-    console.log(`  ❌ Error validating configuration examples: ${error.message}`);
+    console.log(`  [FAIL] Error validating configuration examples: ${error.message}`);
     results.failed++;
   }
 }
@@ -278,7 +278,7 @@ async function validateConfigurationExamples(results) {
 // Run validation if this script is executed directly
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   validateDocumentation().catch(error => {
-    console.error(`${colors.red}❌ Validation script failed: ${error.message}${colors.reset}`);
+    console.error(`${colors.red}[FAIL] Validation script failed: ${error.message}${colors.reset}`);
     process.exit(1);
   });
 }

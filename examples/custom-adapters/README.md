@@ -6,29 +6,29 @@ This directory contains examples and templates for creating custom database adap
 
 ```
 custom-adapters/
-├── README.md                          # This file
-├── adapter-template.ts                # Base template for new adapters
-├── oracle-adapter/                    # Oracle Database adapter example
-│   ├── oracle-adapter.ts             # Oracle adapter implementation
-│   ├── README.md                     # Oracle-specific documentation
-│   ├── package.json                  # Oracle dependencies
-│   └── test-oracle-adapter.js        # Testing script
-├── redis-adapter/                     # Redis adapter example
-│   ├── redis-adapter.ts             # Redis adapter (NoSQL example)
-│   ├── README.md                     # Redis-specific documentation
-│   └── package.json                  # Redis dependencies
-├── csv-adapter/                       # CSV file adapter example
-│   ├── csv-adapter.ts               # CSV file adapter
-│   ├── README.md                    # CSV adapter documentation
-│   └── sample-data.csv              # Sample CSV file
-├── snowflake-adapter/                 # Snowflake Data Warehouse adapter
-│   ├── snowflake-adapter.ts         # Snowflake adapter
-│   ├── README.md                    # Snowflake documentation
-│   └── package.json                 # Snowflake dependencies
-├── integration-guide.md               # How to integrate custom adapters
-├── testing-framework.md               # Testing custom adapters
-├── best-practices.md                  # Adapter development best practices
-└── troubleshooting.md                 # Common issues and solutions
+|-- README.md # This file
+|-- adapter-template.ts # Base template for new adapters
+|-- oracle-adapter/ # Oracle Database adapter example
+| |-- oracle-adapter.ts # Oracle adapter implementation
+| |-- README.md # Oracle-specific documentation
+| |-- package.json # Oracle dependencies
+| \-- test-oracle-adapter.js # Testing script
+|-- redis-adapter/ # Redis adapter example
+| |-- redis-adapter.ts # Redis adapter (NoSQL example)
+| |-- README.md # Redis-specific documentation
+| \-- package.json # Redis dependencies
+|-- csv-adapter/ # CSV file adapter example
+| |-- csv-adapter.ts # CSV file adapter
+| |-- README.md # CSV adapter documentation
+| \-- sample-data.csv # Sample CSV file
+|-- snowflake-adapter/ # Snowflake Data Warehouse adapter
+| |-- snowflake-adapter.ts # Snowflake adapter
+| |-- README.md # Snowflake documentation
+| \-- package.json # Snowflake dependencies
+|-- integration-guide.md # How to integrate custom adapters
+|-- testing-framework.md # Testing custom adapters
+|-- best-practices.md # Adapter development best practices
+\-- troubleshooting.md # Common issues and solutions
 ```
 
 ## What are Custom Adapters?
@@ -59,11 +59,11 @@ cp examples/custom-adapters/adapter-template.ts src/database/adapters/my-databas
 import { MyDatabaseAdapter } from './my-database.js';
 
 export function createAdapter(config: DatabaseConfig): DatabaseAdapter {
-  switch (config.type.toLowerCase()) {
-    case 'mydatabase':
-      return new MyDatabaseAdapter(config);
-    // ... other cases
-  }
+ switch (config.type.toLowerCase()) {
+ case 'mydatabase':
+ return new MyDatabaseAdapter(config);
+ // ... other cases
+ }
 }
 ```
 
@@ -71,7 +71,7 @@ export function createAdapter(config: DatabaseConfig): DatabaseAdapter {
 ```typescript
 // Update src/types/database.ts
 export type DatabaseTypeString = 
-  'mysql' | 'postgresql' | 'sqlite' | 'mssql' | 'mydatabase';
+ 'mysql' | 'postgresql' | 'sqlite' | 'mssql' | 'mydatabase';
 ```
 
 ### 4. Test Your Adapter
@@ -147,27 +147,27 @@ Cloud data warehouse adapter with features:
 **Unit Tests:**
 ```typescript
 describe('MyDatabaseAdapter', () => {
-  it('should connect successfully', async () => {
-    const adapter = new MyDatabaseAdapter(config);
-    const connection = await adapter.connect();
-    expect(connection).toBeDefined();
-  });
+ it('should connect successfully', async () => {
+ const adapter = new MyDatabaseAdapter(config);
+ const connection = await adapter.connect();
+ expect(connection).toBeDefined();
+ });
 });
 ```
 
 **Integration Tests:**
 ```typescript
 it('should execute queries correctly', async () => {
-  const result = await adapter.executeQuery(connection, 'SELECT 1');
-  expect(result.rows).toHaveLength(1);
+ const result = await adapter.executeQuery(connection, 'SELECT 1');
+ expect(result.rows).toHaveLength(1);
 });
 ```
 
 **Performance Tests:**
 ```typescript
 it('should handle large result sets', async () => {
-  const result = await adapter.executeQuery(connection, largeQuery);
-  expect(result.execution_time_ms).toBeLessThan(5000);
+ const result = await adapter.executeQuery(connection, largeQuery);
+ expect(result.execution_time_ms).toBeLessThan(5000);
 });
 ```
 
@@ -176,57 +176,57 @@ it('should handle large result sets', async () => {
 ### Connection Management
 ```typescript
 class MyDatabaseAdapter extends DatabaseAdapter {
-  private connectionPool: Pool;
+ private connectionPool: Pool;
 
-  async connect(): Promise<DatabaseConnection> {
-    // Implement connection logic
-    // Consider connection pooling for performance
-    // Handle authentication and SSL
-  }
+ async connect(): Promise<DatabaseConnection> {
+ // Implement connection logic
+ // Consider connection pooling for performance
+ // Handle authentication and SSL
+ }
 
-  async disconnect(connection: DatabaseConnection): Promise<void> {
-    // Clean up resources
-    // Close connections properly
-    // Handle connection pool cleanup
-  }
+ async disconnect(connection: DatabaseConnection): Promise<void> {
+ // Clean up resources
+ // Close connections properly
+ // Handle connection pool cleanup
+ }
 }
 ```
 
 ### Query Translation
 ```typescript
 async executeQuery(
-  connection: DatabaseConnection,
-  query: string,
-  params?: unknown[]
+ connection: DatabaseConnection,
+ query: string,
+ params?: unknown[]
 ): Promise<QueryResult> {
-  // Translate standard SQL to database-specific dialect
-  const translatedQuery = this.translateQuery(query);
-  
-  // Execute with proper error handling
-  try {
-    const result = await connection.query(translatedQuery, params);
-    return this.normalizeResult(result);
-  } catch (error) {
-    throw this.createError('Query execution failed', error);
-  }
+ // Translate standard SQL to database-specific dialect
+ const translatedQuery = this.translateQuery(query);
+ 
+ // Execute with proper error handling
+ try {
+ const result = await connection.query(translatedQuery, params);
+ return this.normalizeResult(result);
+ } catch (error) {
+ throw this.createError('Query execution failed', error);
+ }
 }
 ```
 
 ### Schema Capture
 ```typescript
 async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
-  const schema = this.createBaseSchema(this.config.database!);
-  
-  // Implement database-specific schema queries
-  const tables = await this.getTables(connection);
-  const views = await this.getViews(connection);
-  
-  // Process and normalize schema information
-  for (const table of tables) {
-    schema.tables[table.name] = await this.getTableDetails(connection, table.name);
-  }
-  
-  return schema;
+ const schema = this.createBaseSchema(this.config.database!);
+ 
+ // Implement database-specific schema queries
+ const tables = await this.getTables(connection);
+ const views = await this.getViews(connection);
+ 
+ // Process and normalize schema information
+ for (const table of tables) {
+ schema.tables[table.name] = await this.getTableDetails(connection, table.name);
+ }
+ 
+ return schema;
 }
 ```
 
@@ -295,9 +295,9 @@ oracle_service_name=PROD.company.com
 ### 1. Add Dependencies
 ```json
 {
-  "dependencies": {
-    "my-database-driver": "^2.0.0"
-  }
+ "dependencies": {
+ "my-database-driver": "^2.0.0"
+ }
 }
 ```
 
@@ -305,12 +305,12 @@ oracle_service_name=PROD.company.com
 ```typescript
 // src/types/database.ts
 export type DatabaseTypeString = 
-  'mysql' | 'postgresql' | 'sqlite' | 'mssql' | 'mydatabase';
+ 'mysql' | 'postgresql' | 'sqlite' | 'mssql' | 'mydatabase';
 
 // Add any custom configuration options
 export interface DatabaseConfig {
-  // ... existing properties
-  my_database_option?: string;
+ // ... existing properties
+ my_database_option?: string;
 }
 ```
 
@@ -320,12 +320,12 @@ export interface DatabaseConfig {
 import { MyDatabaseAdapter } from './my-database.js';
 
 export function createAdapter(config: DatabaseConfig): DatabaseAdapter {
-  switch (config.type.toLowerCase()) {
-    case 'mydatabase':
-      return new MyDatabaseAdapter(config);
-    default:
-      throw new Error(`Unsupported database type: ${config.type}`);
-  }
+ switch (config.type.toLowerCase()) {
+ case 'mydatabase':
+ return new MyDatabaseAdapter(config);
+ default:
+ throw new Error(`Unsupported database type: ${config.type}`);
+ }
 }
 ```
 
@@ -344,54 +344,54 @@ npm test
 ### Connection Pooling
 ```typescript
 class MyDatabaseAdapter extends DatabaseAdapter {
-  private pool: ConnectionPool;
+ private pool: ConnectionPool;
 
-  constructor(config: DatabaseConfig) {
-    super(config);
-    this.pool = new ConnectionPool({
-      host: config.host,
-      max: 10,
-      min: 1,
-      idleTimeoutMillis: 30000
-    });
-  }
+ constructor(config: DatabaseConfig) {
+ super(config);
+ this.pool = new ConnectionPool({
+ host: config.host,
+ max: 10,
+ min: 1,
+ idleTimeoutMillis: 30000
+ });
+ }
 }
 ```
 
 ### Query Result Transformation
 ```typescript
 protected normalizeQueryResult(rawResult: MyDatabaseResult): QueryResult {
-  return {
-    rows: rawResult.data.map(row => this.transformRow(row)),
-    rowCount: rawResult.data.length,
-    fields: rawResult.columns.map(col => col.name),
-    truncated: false,
-    execution_time_ms: rawResult.executionTime
-  };
+ return {
+ rows: rawResult.data.map(row => this.transformRow(row)),
+ rowCount: rawResult.data.length,
+ fields: rawResult.columns.map(col => col.name),
+ truncated: false,
+ execution_time_ms: rawResult.executionTime
+ };
 }
 ```
 
 ### Schema Information
 ```typescript
 async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
-  const schema = this.createBaseSchema(this.config.database!);
-  
-  // Get table information
-  const tablesQuery = "SHOW TABLES"; // Adjust for your database
-  const tablesResult = await this.executeQuery(connection, tablesQuery);
-  
-  for (const tableRow of tablesResult.rows) {
-    const tableName = tableRow.table_name;
-    const columns = await this.getColumnInfo(connection, tableName);
-    
-    schema.tables[tableName] = {
-      name: tableName,
-      type: 'BASE TABLE',
-      columns: columns
-    };
-  }
-  
-  return schema;
+ const schema = this.createBaseSchema(this.config.database!);
+ 
+ // Get table information
+ const tablesQuery = "SHOW TABLES"; // Adjust for your database
+ const tablesResult = await this.executeQuery(connection, tablesQuery);
+ 
+ for (const tableRow of tablesResult.rows) {
+ const tableName = tableRow.table_name;
+ const columns = await this.getColumnInfo(connection, tableName);
+ 
+ schema.tables[tableName] = {
+ name: tableName,
+ type: 'BASE TABLE',
+ columns: columns
+ };
+ }
+ 
+ return schema;
 }
 ```
 

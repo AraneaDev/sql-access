@@ -3,11 +3,11 @@
 
 set -e
 
-echo "🛑 Stopping SQL MCP Server..."
+echo "[STOP] Stopping SQL MCP Server..."
 
 # Check if PID file exists
 if [ ! -f "server.pid" ]; then
-    echo "⚠️  No server PID file found"
+    echo "[WARN] No server PID file found"
     echo "   Server may not be running"
     exit 0
 fi
@@ -24,7 +24,7 @@ if ps -p $SERVER_PID > /dev/null 2>&1; then
     # Wait up to 10 seconds for graceful shutdown
     for i in {1..10}; do
         if ! ps -p $SERVER_PID > /dev/null 2>&1; then
-            echo "✅ Server stopped gracefully"
+            echo "[OK] Server stopped gracefully"
             rm server.pid
             exit 0
         fi
@@ -38,14 +38,14 @@ if ps -p $SERVER_PID > /dev/null 2>&1; then
     sleep 1
     
     if ps -p $SERVER_PID > /dev/null 2>&1; then
-        echo "❌ Failed to stop server"
+        echo "[ERROR] Failed to stop server"
         exit 1
     else
-        echo "✅ Server stopped (forced)"
+        echo "[OK] Server stopped (forced)"
         rm server.pid
     fi
 else
-    echo "⚠️  Server process not found (PID: $SERVER_PID)"
+    echo "[WARN] Server process not found (PID: $SERVER_PID)"
     echo "   Cleaning up PID file"
     rm server.pid
 fi
@@ -60,4 +60,4 @@ if [ -f "server.log" ]; then
     fi
 fi
 
-echo "🧹 Cleanup complete"
+echo "[CLEAN] Cleanup complete"

@@ -7,7 +7,7 @@ This tutorial walks you through installing and setting up the SQL MCP Server fro
 ### System Requirements
 
 - **Node.js**: Version 16.0.0 or higher
-- **npm**: Version 8.0.0 or higher  
+- **npm**: Version 8.0.0 or higher 
 - **Operating System**: Windows, macOS, or Linux
 - **Memory**: At least 512MB RAM available
 - **Disk Space**: 50MB for installation
@@ -23,6 +23,25 @@ The SQL MCP Server supports these database systems:
 
 ## Installation Methods
 
+### Method 0: Automatic Installer (Easiest)
+
+The fastest way to get started:
+
+```bash
+# Install the package
+npm install -g sql-access
+
+# Run the automatic installer
+sql-install
+
+# The installer automatically:
+# 1. Detects Claude Code and Claude Desktop
+# 2. Adds sql-access to their MCP configurations
+# 3. Creates a default config.ini
+```
+
+After installation, add your databases using the `sql_add_database` MCP tool directly from Claude, or edit `~/.config/sql-access/config.ini`.
+
 ### Method 1: NPM Global Installation (Recommended)
 
 Install globally for system-wide access:
@@ -37,7 +56,7 @@ sql-server --version
 
 **Expected Output:**
 ```
-SQL MCP Server v2.2.0
+SQL MCP Server v2.3.0
 ```
 
 ### Method 2: Local Project Installation
@@ -104,7 +123,7 @@ The wizard will guide you through:
 Here's what the interactive setup looks like for PostgreSQL:
 
 ```
-🔧 Claude SQL MCP Server Setup
+ Claude SQL MCP Server Setup
 
 === Claude SQL Extension Configuration ===
 
@@ -133,18 +152,18 @@ Query timeout (ms, default: 30000): 30000
 Maximum queries in batch operations (default: 10): 10
 Enable debug mode? (y/n): n
 
-✅ Database 'production' configured with SELECT-only access
-✅ Configuration saved to config.ini
+ Database 'production' configured with SELECT-only access
+ Configuration saved to config.ini
 
 Test database connections now? (y/n): y
 
 --- Testing Connections ---
 Testing production...
-✅ Connected
-   Schema captured: 15 tables, 127 columns
-   Access mode: SELECT-only
+ Connected
+ Schema captured: 15 tables, 127 columns
+ Access mode: SELECT-only
 
-🎉 Configuration complete!
+ Configuration complete!
 ```
 
 ### Manual Configuration
@@ -194,11 +213,11 @@ npx sql-server
 
 **Expected Output:**
 ```
-🚀 SQL MCP Server starting...
-📊 Loaded 1 database configuration(s):
-   • primary (postgresql, SELECT-only)
-🔒 Security manager initialized
-✅ MCP Server listening on stdio
+ SQL MCP Server starting...
+ Loaded 1 database configuration(s):
+ - primary (postgresql, SELECT-only)
+ Security manager initialized
+ MCP Server listening on stdio
 ```
 
 ### 2. Test Database Connection
@@ -214,9 +233,9 @@ sql-setup --test-only
 ```
 --- Testing Connections ---
 Testing primary...
-✅ Connected
-   Schema captured: 15 tables, 127 columns
-   Access mode: SELECT-only
+ Connected
+ Schema captured: 15 tables, 127 columns
+ Access mode: SELECT-only
 ```
 
 ### 3. Verify MCP Protocol
@@ -229,20 +248,20 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | sql-server
 **Expected Response:**
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "tools": [
-      {
-        "name": "sql_query",
-        "description": "Execute SQL queries with safety validation"
-      },
-      {
-        "name": "sql_list_databases",
-        "description": "List all configured databases"
-      }
-    ]
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "result": {
+ "tools": [
+ {
+ "name": "sql_query",
+ "description": "Execute SQL queries with safety validation"
+ },
+ {
+ "name": "sql_list_databases",
+ "description": "List all configured databases"
+ }
+ ]
+ }
 }
 ```
 
@@ -288,62 +307,62 @@ npx sql-mcp-server
 
 **Error:**
 ```
-❌ Failed: Connection refused
+ Failed: Connection refused
 ```
 
 **Solutions:**
 
 1. **Check database is running:**
-   ```bash
-   # PostgreSQL
-   sudo systemctl status postgresql
-   
-   # MySQL
-   sudo systemctl status mysql
-   
-   # Check if port is open
-   telnet localhost 5432
-   ```
+ ```bash
+ # PostgreSQL
+ sudo systemctl status postgresql
+ 
+ # MySQL
+ sudo systemctl status mysql
+ 
+ # Check if port is open
+ telnet localhost 5432
+ ```
 
 2. **Verify credentials:**
-   ```sql
-   -- Test connection manually
-   psql -h localhost -U readonly_user -d myapp
-   ```
+ ```sql
+ -- Test connection manually
+ psql -h localhost -U readonly_user -d myapp
+ ```
 
 3. **Check firewall settings:**
-   ```bash
-   # Allow database port through firewall
-   sudo ufw allow 5432
-   ```
+ ```bash
+ # Allow database port through firewall
+ sudo ufw allow 5432
+ ```
 
 ### Issue 4: SSL Connection Issues
 
 **Error:**
 ```
-❌ Failed: SSL connection error
+ Failed: SSL connection error
 ```
 
 **Solutions:**
 
 1. **Disable SSL for testing:**
-   ```ini
-   [database.primary]
-   ssl=false
-   ```
+ ```ini
+ [database.primary]
+ ssl=false
+ ```
 
 2. **Check server SSL configuration:**
-   ```sql
-   -- PostgreSQL: Check SSL settings
-   SHOW ssl;
-   ```
+ ```sql
+ -- PostgreSQL: Check SSL settings
+ SHOW ssl;
+ ```
 
 3. **Use self-signed certificate:**
-   ```ini
-   [database.primary]
-   ssl=true
-   # Server handles self-signed certificates automatically
-   ```
+ ```ini
+ [database.primary]
+ ssl=true
+ # Server handles self-signed certificates automatically
+ ```
 
 ## Configuration Templates
 
@@ -518,48 +537,55 @@ CMD ["sql-server"]
 # Build and run
 docker build -t sql-mcp-server .
 docker run -d --name sql-mcp \
-  -v $(pwd)/config.ini:/app/config.ini \
-  sql-mcp-server
+ -v $(pwd)/config.ini:/app/config.ini \
+ sql-mcp-server
 ```
 
 ## Next Steps
 
 After successful installation:
 
-1. **Configure Claude Desktop Integration** → [Claude Integration Tutorial](03-claude-integration.md)
-2. **Learn Basic Query Operations** → [Basic Queries Tutorial](04-basic-queries.md)
-3. **Review Security Configuration** → [Security Guide](../guides/security-guide.md)
-4. **Explore Advanced Features** → [Configuration Guide](../guides/configuration-guide.md)
+1. **Configure Claude Desktop Integration** -> [Claude Integration Tutorial](03-claude-integration.md)
+2. **Learn Basic Query Operations** -> [Basic Queries Tutorial](04-basic-queries.md)
+3. **Review Security Configuration** -> [Security Guide](../guides/security-guide.md)
+4. **Explore Advanced Features** -> [Configuration Guide](../guides/configuration-guide.md)
 
 ## Command Reference
 
 ### Installation Commands
 ```bash
-npm install -g sql-mcp-server    # Global installation
-npm install sql-mcp-server       # Local installation
-git clone <repo-url>             # Development installation
+npm install -g sql-mcp-server # Global installation
+npm install sql-mcp-server # Local installation
+git clone <repo-url> # Development installation
 ```
 
 ### Configuration Commands
 ```bash
-sql-setup                        # Interactive configuration
-sql-setup --template=production  # Generate template
-sql-setup --config=/path/to/config.ini  # Custom config path
+sql-setup # Interactive configuration
+sql-setup --template=production # Generate template
+sql-setup --config=/path/to/config.ini # Custom config path
 ```
 
 ### Server Commands
 ```bash
-sql-server                       # Start server
-sql-server --version            # Show version
-sql-server --help               # Show help
-sql-test-connections            # Test database connections
+sql-server # Start server
+sql-server --version # Show version
+sql-server --help # Show help
+sql-test-connections # Test database connections
+```
+
+### Installer Commands
+```bash
+sql-install # Automatic MCP installer
+sql-install --client=claude-code # Install for Claude Code only
+sql-install --uninstall # Remove from MCP configs
 ```
 
 ### Utility Commands
 ```bash
-sql-validate-config             # Validate configuration
-sql-generate-schema             # Generate database schema
-sql-benchmark                   # Run performance benchmarks
+sql-validate-config # Validate configuration
+sql-generate-schema # Generate database schema
+sql-benchmark # Run performance benchmarks
 ```
 
 ## Getting Help
@@ -584,4 +610,4 @@ sql-benchmark                   # Run performance benchmarks
 
 ---
 
-**🎉 Congratulations!** You've successfully installed the SQL MCP Server. Continue with the [Claude Integration Tutorial](03-claude-integration.md) to connect it with Claude Desktop.
+** Congratulations!** You've successfully installed the SQL MCP Server. Continue with the [Claude Integration Tutorial](03-claude-integration.md) to connect it with Claude Desktop.

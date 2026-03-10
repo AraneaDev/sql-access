@@ -3,13 +3,13 @@
 
 set -e
 
-echo "🚀 Starting SQL MCP Server..."
+echo "[START] Starting SQL MCP Server..."
 
 # Check if server is already running
 if [ -f "server.pid" ]; then
     PID=$(cat server.pid)
     if ps -p $PID > /dev/null 2>&1; then
-        echo "⚠️  Server already running (PID: $PID)"
+        echo "[WARN] Server already running (PID: $PID)"
         echo "   Use ./stop-server.sh to stop it first"
         exit 1
     else
@@ -19,14 +19,14 @@ fi
 
 # Check if config exists
 if [ ! -f "config.ini" ]; then
-    echo "❌ Configuration file not found"
+    echo "[ERROR] Configuration file not found"
     echo "   Run ./setup-demo.sh first"
     exit 1
 fi
 
 # Check if database exists
 if [ ! -f "demo.db" ]; then
-    echo "❌ Demo database not found"
+    echo "[ERROR] Demo database not found"
     echo "   Run ./setup-demo.sh first"
     exit 1
 fi
@@ -45,7 +45,7 @@ sleep 3
 
 # Check if server is running
 if ps -p $SERVER_PID > /dev/null 2>&1; then
-    echo "✅ SQL MCP Server started successfully"
+    echo "[OK] SQL MCP Server started successfully"
     echo "   PID: $SERVER_PID"
     echo "   Config: config.ini"
     echo "   Database: demo.db"
@@ -54,7 +54,7 @@ if ps -p $SERVER_PID > /dev/null 2>&1; then
     echo "   To stop: ./stop-server.sh"
     echo "   To test: ./test-queries.sh"
 else
-    echo "❌ Failed to start server"
+    echo "[ERROR] Failed to start server"
     echo "   Check server.log for errors:"
     tail -10 server.log
     rm -f server.pid

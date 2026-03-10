@@ -2,14 +2,14 @@
 
 **Objective**: Demonstrate production-ready PostgreSQL configuration with security, monitoring, and real-world data patterns.
 
-## ✅ Prerequisites
+## Prerequisites
 
 - Docker and Docker Compose installed
-- Node.js 16+ installed  
+- Node.js 16+ installed 
 - sql-access package installed (`npm install -g sql-access`)
 - At least 512MB RAM available for containers
 
-## 🚀 Try It Now!
+## Try It Now!
 
 ### One-Command Setup
 ```bash
@@ -25,7 +25,7 @@ docker-compose up -d
 # 2. Wait for database initialization
 ./wait-for-postgres.sh
 
-# 3. Setup SQL MCP Server configuration  
+# 3. Setup SQL MCP Server configuration 
 ./setup-config.sh
 
 # 4. Start SQL MCP Server
@@ -41,7 +41,7 @@ docker-compose up -d
 ./cleanup.sh
 ```
 
-## 📊 What This Demo Shows
+## What This Demo Shows
 
 ### Production-Grade Features
 - **Security**: SELECT-only mode, readonly user, SSL connections
@@ -51,7 +51,7 @@ docker-compose up -d
 
 ### Database Schema
 - **application** schema: Core business tables (users, products, orders)
-- **analytics** schema: Pre-computed views and aggregations  
+- **analytics** schema: Pre-computed views and aggregations 
 - **audit** schema: Change tracking and compliance logging
 - **monitoring** schema: Performance and health metrics
 
@@ -62,52 +62,52 @@ docker-compose up -d
 - Historical data spanning 2 years
 - Realistic business relationships
 
-## 🏗️ Architecture Demonstrated
+## Architecture Demonstrated
 
 ```
 Claude Desktop
-     ↓
+ v
 SQL MCP Server (SELECT-only)
-     ↓
+ v
 PostgreSQL (Docker)
-├── application schema (business data)
-├── analytics schema (views & reports)
-├── audit schema (change tracking) 
-└── monitoring schema (metrics)
+|-- application schema (business data)
+|-- analytics schema (views & reports)
+|-- audit schema (change tracking) 
+\-- monitoring schema (metrics)
 ```
 
-## 📁 Files in This Demo
+## Files in This Demo
 
 - `README.md` - This documentation
 - `run-production-demo.sh` - Complete automated demo
 - `docker-compose.yml` - PostgreSQL with monitoring stack
 - `init-scripts/` - Database initialization
-  - `01-create-schemas.sql` - Schema creation
-  - `02-create-tables.sql` - Table definitions
-  - `03-create-views.sql` - Analytics views
-  - `04-insert-sample-data.sql` - Realistic test data
-  - `05-create-indexes.sql` - Performance indexes
-  - `06-create-users.sql` - Security setup
+ - `01-create-schemas.sql` - Schema creation
+ - `02-create-tables.sql` - Table definitions
+ - `03-create-views.sql` - Analytics views
+ - `04-insert-sample-data.sql` - Realistic test data
+ - `05-create-indexes.sql` - Performance indexes
+ - `06-create-users.sql` - Security setup
 - `config/` - Configuration files
-  - `production.ini` - SQL MCP Server config
-  - `readonly-config.ini` - Readonly-only config
-  - `monitoring-config.ini` - Monitoring enhanced config
+ - `production.ini` - SQL MCP Server config
+ - `readonly-config.ini` - Readonly-only config
+ - `monitoring-config.ini` - Monitoring enhanced config
 - `scripts/` - Utility scripts
-  - `setup-config.sh` - Configuration setup
-  - `wait-for-postgres.sh` - Startup wait script
-  - `start-server.sh` - Server startup
-  - `test-production-queries.sh` - Query tests
-  - `test-monitoring.sh` - Monitoring tests
-  - `cleanup.sh` - Environment cleanup
+ - `setup-config.sh` - Configuration setup
+ - `wait-for-postgres.sh` - Startup wait script
+ - `start-server.sh` - Server startup
+ - `test-production-queries.sh` - Query tests
+ - `test-monitoring.sh` - Monitoring tests
+ - `cleanup.sh` - Environment cleanup
 - `monitoring/` - Monitoring configuration
-  - `prometheus.yml` - Metrics collection
-  - `grafana-dashboard.json` - Visualization
+ - `prometheus.yml` - Metrics collection
+ - `grafana-dashboard.json` - Visualization
 - `claude-integration/` - Claude Desktop setup
-  - `production-config.json` - Production integration
-  - `development-config.json` - Development integration
-  - `sample-prompts.md` - Example queries for Claude
+ - `production-config.json` - Production integration
+ - `development-config.json` - Development integration
+ - `sample-prompts.md` - Example queries for Claude
 
-## 🔒 Security Features Demonstrated
+## Security Features Demonstrated
 
 ### Database Security
 - **Readonly User**: Limited to SELECT permissions only
@@ -148,7 +148,7 @@ max_batch_size=20
 debug=false
 ```
 
-## 📈 Performance Features
+## Performance Features
 
 ### Query Optimization
 - Strategic indexes on frequently queried columns
@@ -180,11 +180,11 @@ JOIN application.departments d ON u.department_id = d.id
 WHERE u.email = $1;
 ```
 
-## 🎯 Business Use Cases Demonstrated
+## Business Use Cases Demonstrated
 
 ### Analytics & Reporting
 - Monthly sales reports by department
-- Customer segmentation analysis  
+- Customer segmentation analysis 
 - Product performance tracking
 - Revenue trend analysis
 
@@ -200,7 +200,7 @@ WHERE u.email = $1;
 - Regulatory reporting queries
 - Security event monitoring
 
-## 💡 Claude Integration Examples
+## Claude Integration Examples
 
 Once set up, try these queries with Claude:
 
@@ -209,7 +209,7 @@ Once set up, try these queries with Claude:
 > "Show me the revenue trend by department for the past quarter"
 > "Which customers have the highest lifetime value?"
 
-### Operational Analytics  
+### Operational Analytics 
 > "How many pending orders do we have right now?"
 > "What's our average order fulfillment time this week?"
 > "Show me users who haven't placed orders in 90 days"
@@ -219,7 +219,7 @@ Once set up, try these queries with Claude:
 > "What's our database connection usage pattern?"
 > "Show me the most frequently accessed tables"
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Automated Test Suite
 The demo includes comprehensive tests:
@@ -229,18 +229,18 @@ The demo includes comprehensive tests:
 ```
 
 Tests cover:
-- ✅ Database connectivity and authentication
-- ✅ Schema access permissions
-- ✅ Query execution performance
-- ✅ Complex analytical queries
-- ✅ Error handling and validation
-- ✅ Security constraint enforcement
-- ✅ Monitoring data collection
+- Database connectivity and authentication
+- Schema access permissions
+- Query execution performance
+- Complex analytical queries
+- Error handling and validation
+- Security constraint enforcement
+- Monitoring data collection
 
 ### Performance Benchmarks
 Expected performance on modern hardware:
 - Simple queries: < 50ms
-- Complex analytical queries: < 500ms  
+- Complex analytical queries: < 500ms 
 - Schema operations: < 100ms
 - Connection establishment: < 200ms
 
@@ -250,7 +250,7 @@ Expected performance on modern hardware:
 ./scripts/load-test.sh --concurrent-users=10 --duration=60s
 ```
 
-## 🔧 Customization Guide
+## Customization Guide
 
 ### Adapting for Your Data
 1. **Update Schema**: Modify `init-scripts/02-create-tables.sql`
@@ -260,7 +260,7 @@ Expected performance on modern hardware:
 
 ### Environment Variations
 - **Development**: Use `development-config.ini` with relaxed security
-- **Staging**: Use `staging-config.ini` with production-like settings  
+- **Staging**: Use `staging-config.ini` with production-like settings 
 - **Production**: Use `production-config.ini` with full security
 
 ### Scaling Considerations
@@ -269,7 +269,7 @@ Expected performance on modern hardware:
 - **Network**: Configure SSL certificates for production
 - **Backup**: Implement automated backup strategies
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -285,7 +285,7 @@ docker-compose logs postgres
 docker-compose down && docker-compose up -d
 ```
 
-#### Connection Issues  
+#### Connection Issues 
 ```bash
 # Test database connectivity
 docker-compose exec postgres pg_isready
@@ -307,10 +307,10 @@ docker stats
 ```bash
 # Verify user permissions
 docker-compose exec postgres psql -U postgres -d production_app \
-  -c "SELECT * FROM information_schema.role_table_grants WHERE grantee='readonly_user'"
+ -c "SELECT * FROM information_schema.role_table_grants WHERE grantee='readonly_user'"
 ```
 
-## 📊 Monitoring Dashboard
+## Monitoring Dashboard
 
 Access the monitoring dashboard:
 ```bash
@@ -324,12 +324,12 @@ open http://localhost:3000
 
 ### Key Metrics Tracked
 - Query execution times
-- Connection pool usage  
+- Connection pool usage 
 - Error rates and patterns
 - Resource utilization
 - Security events
 
-## 🎓 Learning Outcomes
+## Learning Outcomes
 
 After completing this demo, you'll understand:
 
@@ -340,20 +340,20 @@ After completing this demo, you'll understand:
 - Claude integration for business intelligence
 - Scaling considerations for real-world usage
 
-## 🔗 Related Resources
+## Related Resources
 
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [SQL MCP Server Security Guide](../../../docs/guides/security-guide.md)
 - [Performance Tuning Guide](../../../docs/operations/performance-tuning.md)
 - [Monitoring Setup](../../../docs/operations/monitoring.md)
 
-## ✅ Success Checklist
+## Success Checklist
 
 - [ ] PostgreSQL containers start successfully
 - [ ] Database initialized with sample data
 - [ ] Readonly user created with proper permissions
 - [ ] SQL MCP Server connects and validates config
-- [ ] All test queries execute successfully  
+- [ ] All test queries execute successfully 
 - [ ] Performance benchmarks meet expectations
 - [ ] Monitoring data collection works
 - [ ] Claude Desktop integration configured
@@ -362,4 +362,4 @@ After completing this demo, you'll understand:
 
 ---
 
-**🎉 Ready to start?** Run `./run-production-demo.sh` to begin the complete demonstration!
+** Ready to start?** Run `./run-production-demo.sh` to begin the complete demonstration!

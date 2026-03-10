@@ -13,29 +13,29 @@ export type { DatabaseType, DatabaseTypeString, SecurityConfig, ExtensionConfig,
 // ============================================================================
 
 export interface SetupConfig {
-  security?: SecurityConfig;
-  extension?: ExtensionConfig;
-  [key: string]: unknown; // This allows database.* keys
+ security?: SecurityConfig;
+ extension?: ExtensionConfig;
+ [key: string]: unknown; // This allows database.* keys
 }
 
 export interface GeneratedConfigFile {
-  content: string;
-  filepath?: string;
-  databases?: string[];
-  metadata: {
-    version: string;
-    generated: Date;
-    description: string;
-    database_count: number;
-    security_enabled: boolean; 
-    ssh_enabled: boolean;
-    generated_at: string;
-  };
+ content: string;
+ filepath?: string;
+ databases?: string[];
+ metadata: {
+ version: string;
+ generated: Date;
+ description: string;
+ database_count: number;
+ security_enabled: boolean; 
+ ssh_enabled: boolean;
+ generated_at: string;
+ };
 }
 
 export interface SetupWizardAction {
-  action: 'save_and_test' | 'test_only' | 'add_database' | 'edit_database' | 'remove_database' | 'configure_security' | 'configure_extension' | 'save_config' | 'test_connections' | 'exit';
-  databases: string[];
+ action: 'save_and_test' | 'test_only' | 'add_database' | 'edit_database' | 'remove_database' | 'configure_security' | 'configure_extension' | 'save_config' | 'test_connections' | 'exit';
+ databases: string[];
 }
 
 // ============================================================================
@@ -43,33 +43,36 @@ export interface SetupWizardAction {
 // ============================================================================
 
 export interface DatabaseSectionConfig {
-  type: string;
-  host?: string;
-  port?: string | number;
-  database?: string;
-  username?: string;
-  password?: string;
-  ssl?: string | boolean;
-  select_only?: string | boolean;
-  timeout?: string | number;
-  file?: string;
-  encrypt?: string | boolean;
-  
-  // SSH Configuration
-  ssh_host?: string;
-  ssh_port?: string | number;
-  ssh_username?: string;
-  ssh_password?: string;
-  ssh_private_key?: string;
-  ssh_passphrase?: string;
-  local_port?: string | number;
+ type: string;
+ host?: string;
+ port?: string | number;
+ database?: string;
+ username?: string;
+ password?: string;
+ ssl?: string | boolean;
+ select_only?: string | boolean;
+ timeout?: string | number;
+ file?: string;
+ encrypt?: string | boolean;
+ 
+ // SSH Configuration
+ ssh_host?: string;
+ ssh_port?: string | number;
+ ssh_username?: string;
+ ssh_password?: string;
+ ssh_private_key?: string;
+ ssh_passphrase?: string;
+ local_port?: string | number;
+
+ // MCP Configuration Access Control
+ mcp_configurable?: string | boolean;
 }
 
 export interface RawConfigFile {
-  database?: Record<string, DatabaseSectionConfig>;
-  security?: Record<string, string | number>;
-  extension?: Record<string, string | number>;
-  [section: string]: unknown;
+ database?: Record<string, DatabaseSectionConfig>;
+ security?: Record<string, string | number>;
+ extension?: Record<string, string | number>;
+ [section: string]: unknown;
 }
 
 // ============================================================================
@@ -77,47 +80,47 @@ export interface RawConfigFile {
 // ============================================================================
 
 export interface ParsedDatabaseConfig {
-  type: DatabaseTypeString;
-  host?: string;
-  port?: number;
-  database?: string;
-  username?: string;
-  password?: string;
-  ssl?: boolean;
-  select_only?: boolean;
-  timeout?: number;
-  file?: string;
-  encrypt?: boolean;
-  
-  // SSH Configuration
-  ssh_host?: string;
-  ssh_port?: number;
-  ssh_username?: string;
-  ssh_password?: string;
-  ssh_private_key?: string;
-  ssh_passphrase?: string;
-  local_port?: number;
+ type: DatabaseTypeString;
+ host?: string;
+ port?: number;
+ database?: string;
+ username?: string;
+ password?: string;
+ ssl?: boolean;
+ select_only?: boolean;
+ timeout?: number;
+ file?: string;
+ encrypt?: boolean;
+ 
+ // SSH Configuration
+ ssh_host?: string;
+ ssh_port?: number;
+ ssh_username?: string;
+ ssh_password?: string;
+ ssh_private_key?: string;
+ ssh_passphrase?: string;
+ local_port?: number;
 }
 
 export interface ParsedSecurityConfig {
-  max_joins: number;
-  max_subqueries: number;
-  max_unions: number;
-  max_group_bys: number;
-  max_complexity_score: number;
-  max_query_length: number;
+ max_joins: number;
+ max_subqueries: number;
+ max_unions: number;
+ max_group_bys: number;
+ max_complexity_score: number;
+ max_query_length: number;
 }
 
 export interface ParsedExtensionConfig {
-  max_rows: number;
-  max_batch_size: number;
-  query_timeout: number;
+ max_rows: number;
+ max_batch_size: number;
+ query_timeout: number;
 }
 
 export interface ParsedServerConfig {
-  databases: Record<string, import('./database.js').DatabaseConfig>;
-  security?: ParsedSecurityConfig;
-  extension?: ParsedExtensionConfig;
+ databases: Record<string, import('./database.js').DatabaseConfig>;
+ security?: ParsedSecurityConfig;
+ extension?: ParsedExtensionConfig;
 }
 
 // ============================================================================
@@ -125,18 +128,18 @@ export interface ParsedServerConfig {
 // ============================================================================
 
 export interface ConfigValidationError {
-  section: string;
-  field: string;
-  value: unknown;
-  message: string;
-  severity: 'error' | 'warning';
+ section: string;
+ field: string;
+ value: unknown;
+ message: string;
+ severity: 'error' | 'warning';
 }
 
 export interface ConfigValidationResult {
-  isValid: boolean;
-  errors: ConfigValidationError[];
-  warnings: ConfigValidationError[];
-  parsedConfig?: ParsedServerConfig;
+ isValid: boolean;
+ errors: ConfigValidationError[];
+ warnings: ConfigValidationError[];
+ parsedConfig?: ParsedServerConfig;
 }
 
 // ============================================================================
@@ -144,10 +147,10 @@ export interface ConfigValidationResult {
 // ============================================================================
 
 export interface IConfigLoader {
-  loadConfig(_configPath?: string): Promise<ParsedServerConfig>;
-  validateConfig(_rawConfig: RawConfigFile): ConfigValidationResult;
-  getDefaultConfig(): ParsedServerConfig;
-  parseDatabaseConfig(_raw: DatabaseSectionConfig, _dbName: string): ParsedDatabaseConfig;
+ loadConfig(_configPath?: string): Promise<ParsedServerConfig>;
+ validateConfig(_rawConfig: RawConfigFile): ConfigValidationResult;
+ getDefaultConfig(): ParsedServerConfig;
+ parseDatabaseConfig(_raw: DatabaseSectionConfig, _dbName: string): ParsedDatabaseConfig;
 }
 
 // ============================================================================
@@ -155,28 +158,28 @@ export interface IConfigLoader {
 // ============================================================================
 
 export const DEFAULT_SECURITY_CONFIG: Required<SecurityConfig> = {
-  max_joins: 10,
-  max_subqueries: 5,
-  max_unions: 3,
-  max_group_bys: 5,
-  max_complexity_score: 100,
-  max_query_length: 10000
+ max_joins: 10,
+ max_subqueries: 5,
+ max_unions: 3,
+ max_group_bys: 5,
+ max_complexity_score: 100,
+ max_query_length: 10000
 };
 
 export const DEFAULT_EXTENSION_CONFIG: Required<ExtensionConfig> = {
-  max_rows: 1000,
-  max_batch_size: 10,
-  query_timeout: 30000,
-  debug: false
+ max_rows: 1000,
+ max_batch_size: 10,
+ query_timeout: 30000,
+ debug: false
 };
 
 export const DEFAULT_DATABASE_PORTS: Record<DatabaseTypeString, number> = {
-  mysql: 3306,
-  postgresql: 5432,
-  postgres: 5432,
-  sqlite: 0, // Not applicable
-  mssql: 1433,
-  sqlserver: 1433
+ mysql: 3306,
+ postgresql: 5432,
+ postgres: 5432,
+ sqlite: 0, // Not applicable
+ mssql: 1433,
+ sqlserver: 1433
 };
 
 export const DEFAULT_CONNECTION_TIMEOUT = 30000;
@@ -187,16 +190,16 @@ export const DEFAULT_SSH_PORT = 22;
 // ============================================================================
 
 export function isDatabaseSectionConfig(value: unknown): value is DatabaseSectionConfig {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'type' in value &&
-    typeof (value as DatabaseSectionConfig).type === 'string'
-  );
+ return (
+ typeof value === 'object' &&
+ value !== null &&
+ 'type' in value &&
+ typeof (value as DatabaseSectionConfig).type === 'string'
+ );
 }
 
 export function isRawConfigFile(value: unknown): value is RawConfigFile {
-  return typeof value === 'object' && value !== null;
+ return typeof value === 'object' && value !== null;
 }
 
 // ============================================================================
@@ -204,64 +207,64 @@ export function isRawConfigFile(value: unknown): value is RawConfigFile {
 // ============================================================================
 
 export function parseStringToNumber(value: string | number | undefined, defaultValue: number): number {
-  if (typeof value === 'number') return value;
-  if (typeof value === 'string') {
-    const parsed = parseInt(value, 10);
-    return isNaN(parsed) ? defaultValue : parsed;
-  }
-  return defaultValue;
+ if (typeof value === 'number') return value;
+ if (typeof value === 'string') {
+ const parsed = parseInt(value, 10);
+ return isNaN(parsed) ? defaultValue : parsed;
+ }
+ return defaultValue;
 }
 
 export function parseStringToBoolean(value: string | boolean | undefined, defaultValue: boolean): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-    return value.toLowerCase() === 'true';
-  }
-  return defaultValue;
+ if (typeof value === 'boolean') return value;
+ if (typeof value === 'string') {
+ return value.toLowerCase() === 'true';
+ }
+ return defaultValue;
 }
 
 export function validateDatabaseType(type: string): DatabaseTypeString | null {
-  const lowerType = type.toLowerCase();
-  const validTypes: DatabaseTypeString[] = ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'];
-  
-  return validTypes.find(t => t === lowerType) || null;
+ const lowerType = type.toLowerCase();
+ const validTypes: DatabaseTypeString[] = ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'];
+ 
+ return validTypes.find(t => t === lowerType) || null;
 }
 
 export function getRequiredFields(type: DatabaseTypeString): string[] {
-  switch (type) {
-    case 'sqlite':
-      return ['file'];
-    case 'mysql':
-    case 'postgresql':
-    case 'postgres':
-    case 'mssql':
-    case 'sqlserver':
-      return ['host', 'database', 'username', 'password'];
-    default:
-      return [];
-  }
+ switch (type) {
+ case 'sqlite':
+ return ['file'];
+ case 'mysql':
+ case 'postgresql':
+ case 'postgres':
+ case 'mssql':
+ case 'sqlserver':
+ return ['host', 'database', 'username', 'password'];
+ default:
+ return [];
+ }
 }
 
 export function validateRequiredFields(
-  config: DatabaseSectionConfig,
-  _dbName: string,
-  type: DatabaseTypeString
+ config: DatabaseSectionConfig,
+ _dbName: string,
+ type: DatabaseTypeString
 ): ConfigValidationError[] {
-  const errors: ConfigValidationError[] = [];
-  const required = getRequiredFields(type);
+ const errors: ConfigValidationError[] = [];
+ const required = getRequiredFields(type);
 
-  for (const field of required) {
-    const value = config[field as keyof DatabaseSectionConfig];
-    if (!value || (typeof value === 'string' && value.trim() === '')) {
-      errors.push({
-        section: `database.${_dbName}`,
-        field,
-        value,
-        message: `Required field '${field}' is missing or empty for ${type} database`,
-        severity: 'error'
-      });
-    }
-  }
+ for (const field of required) {
+ const value = config[field as keyof DatabaseSectionConfig];
+ if (!value || (typeof value === 'string' && value.trim() === '')) {
+ errors.push({
+ section: `database.${_dbName}`,
+ field,
+ value,
+ message: `Required field '${field}' is missing or empty for ${type} database`,
+ severity: 'error'
+ });
+ }
+ }
 
-  return errors;
+ return errors;
 }

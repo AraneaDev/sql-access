@@ -22,7 +22,7 @@ Add SSH parameters to your database configuration:
 ```ini
 [database.production_tunnel]
 type=postgresql
-host=internal-db.company.com  # Internal database host
+host=internal-db.company.com # Internal database host
 port=5432
 database=production_app
 username=app_user
@@ -230,12 +230,12 @@ Configuration remains the same - the tunnel manager will use the agent automatic
 The tunnel creates a local port forward:
 
 ```
-Local Machine:random_port → SSH Server → Database:database_port
+Local Machine:random_port -> SSH Server -> Database:database_port
 ```
 
 Example flow:
 ```
-MCP Server:50123 → bastion.company.com:22 → mysql.internal.net:3306
+MCP Server:50123 -> bastion.company.com:22 -> mysql.internal.net:3306
 ```
 
 ### Dynamic Port Assignment
@@ -264,10 +264,10 @@ The tunnel manager provides comprehensive status information:
 ```javascript
 // Available tunnel states
 enum SSHTunnelStatus {
-  'connecting',    // Establishing SSH connection
-  'connected',     // Tunnel active and healthy
-  'disconnected',  // Tunnel closed normally
-  'error'          // Tunnel failed with error
+ 'connecting', // Establishing SSH connection
+ 'connected', // Tunnel active and healthy
+ 'disconnected', // Tunnel closed normally
+ 'error' // Tunnel failed with error
 }
 ```
 
@@ -345,7 +345,7 @@ ssh_private_key=/path/to/azure-key
 ```ini
 [database.gcp_tunnel]
 type=mysql
-host=10.x.x.x  # Private IP
+host=10.x.x.x # Private IP
 port=3306
 database=gcp_app
 username=mysql_user
@@ -544,9 +544,9 @@ For multiple databases through same SSH server:
 ```bash
 # SSH client config (~/.ssh/config)
 Host bastion.company.com
-    ControlMaster auto
-    ControlPath ~/.ssh/control:%h:%p:%r
-    ControlPersist 600
+ ControlMaster auto
+ ControlPath ~/.ssh/control:%h:%p:%r
+ ControlPersist 600
 ```
 
 ### SSH Config File Integration
@@ -556,17 +556,17 @@ Use SSH config files for complex setups:
 ```bash
 # ~/.ssh/config
 Host production-tunnel
-    HostName bastion.company.com
-    Port 22
-    User tunnel_user
-    IdentityFile ~/.ssh/production_key
-    IdentitiesOnly yes
-    ConnectTimeout 30
+ HostName bastion.company.com
+ Port 22
+ User tunnel_user
+ IdentityFile ~/.ssh/production_key
+ IdentitiesOnly yes
+ ConnectTimeout 30
 ```
 
 Then reference in configuration:
 ```ini
-ssh_host=production-tunnel  # Uses SSH config
+ssh_host=production-tunnel # Uses SSH config
 ```
 
 ### Custom SSH Options
@@ -715,37 +715,37 @@ CMD ["npm", "start"]
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ssh-tunnel-keys
+ name: ssh-tunnel-keys
 type: Opaque
 data:
-  tunnel_key: LS0tLS1CRUdJTi... # base64 encoded private key
-  tunnel_key.pub: c3NoLXJzYS... # base64 encoded public key
+ tunnel_key: LS0tLS1CRUdJTi... # base64 encoded private key
+ tunnel_key.pub: c3NoLXJzYS... # base64 encoded public key
 
 ---
 # deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sql-mcp-server
+ name: sql-mcp-server
 spec:
-  replicas: 1
-  template:
-    spec:
-      containers:
-      - name: mcp-server
-        image: sql-mcp-server:latest
-        volumeMounts:
-        - name: ssh-keys
-          mountPath: /app/ssh-keys
-          readOnly: true
-        env:
-        - name: SSH_PRIVATE_KEY
-          value: "/app/ssh-keys/tunnel_key"
-      volumes:
-      - name: ssh-keys
-        secret:
-          secretName: ssh-tunnel-keys
-          defaultMode: 0600
+ replicas: 1
+ template:
+ spec:
+ containers:
+ - name: mcp-server
+ image: sql-mcp-server:latest
+ volumeMounts:
+ - name: ssh-keys
+ mountPath: /app/ssh-keys
+ readOnly: true
+ env:
+ - name: SSH_PRIVATE_KEY
+ value: "/app/ssh-keys/tunnel_key"
+ volumes:
+ - name: ssh-keys
+ secret:
+ secretName: ssh-tunnel-keys
+ defaultMode: 0600
 ```
 
 ## Performance Optimization
@@ -782,33 +782,33 @@ Track tunnel performance:
 ## Best Practices Summary
 
 ### Security
-- ✅ Use key-based authentication
-- ✅ Disable SSH password authentication
-- ✅ Use strong passphrases for keys
-- ✅ Restrict SSH user permissions
-- ✅ Monitor SSH access logs
-- ✅ Rotate keys regularly
+- Use key-based authentication
+- Disable SSH password authentication
+- Use strong passphrases for keys
+- Restrict SSH user permissions
+- Monitor SSH access logs
+- Rotate keys regularly
 
 ### Performance
-- ✅ Use connection multiplexing when possible
-- ✅ Monitor tunnel health and reconnections
-- ✅ Optimize SSH server configuration
-- ✅ Consider geographic proximity
-- ✅ Use appropriate timeout values
+- Use connection multiplexing when possible
+- Monitor tunnel health and reconnections
+- Optimize SSH server configuration
+- Consider geographic proximity
+- Use appropriate timeout values
 
 ### Reliability
-- ✅ Test SSH connectivity independently
-- ✅ Implement proper error handling
-- ✅ Monitor tunnel status
-- ✅ Use automatic reconnection
-- ✅ Have backup connectivity methods
+- Test SSH connectivity independently
+- Implement proper error handling
+- Monitor tunnel status
+- Use automatic reconnection
+- Have backup connectivity methods
 
 ### Operations
-- ✅ Document tunnel configurations
-- ✅ Use environment variables for secrets
-- ✅ Implement proper logging
-- ✅ Monitor resource usage
-- ✅ Plan for disaster recovery
+- Document tunnel configurations
+- Use environment variables for secrets
+- Implement proper logging
+- Monitor resource usage
+- Plan for disaster recovery
 
 ## Conclusion
 

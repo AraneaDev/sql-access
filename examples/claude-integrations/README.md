@@ -6,31 +6,31 @@ This directory contains comprehensive examples for integrating SQL MCP Server wi
 
 ```
 claude-integrations/
-├── README.md                           # This file
-├── claude-desktop/                     # Claude Desktop integration
-│   ├── basic-config.json              # Basic Claude Desktop configuration
-│   ├── advanced-config.json           # Advanced configuration with env vars
-│   ├── multi-server-config.json       # Multiple MCP servers setup
-│   └── troubleshooting.md             # Desktop integration troubleshooting
-├── claude-api/                        # Claude API integration examples
-│   ├── python-example.py              # Python API integration
-│   ├── javascript-example.js          # Node.js API integration
-│   ├── requirements.txt               # Python dependencies
-│   └── package.json                   # Node.js dependencies
-├── workflows/                          # Common workflow examples
-│   ├── data-analysis-prompts.md       # Data analysis workflows
-│   ├── reporting-templates.md         # Report generation templates
-│   ├── database-administration.md     # DBA task workflows
-│   └── business-intelligence.md       # BI and analytics workflows
-├── prompt-engineering/                # Optimized prompts for SQL tasks
-│   ├── schema-exploration.md          # Database schema discovery
-│   ├── query-optimization.md          # SQL query optimization
-│   ├── data-validation.md             # Data quality and validation
-│   └── security-analysis.md           # Security-focused queries
-└── automation/                        # Automation examples
-    ├── scheduled-reports.js           # Automated reporting
-    ├── data-monitoring.py             # Data monitoring scripts
-    └── alert-systems.md               # Alert and notification systems
+|-- README.md # This file
+|-- claude-desktop/ # Claude Desktop integration
+| |-- basic-config.json # Basic Claude Desktop configuration
+| |-- advanced-config.json # Advanced configuration with env vars
+| |-- multi-server-config.json # Multiple MCP servers setup
+| \-- troubleshooting.md # Desktop integration troubleshooting
+|-- claude-api/ # Claude API integration examples
+| |-- python-example.py # Python API integration
+| |-- javascript-example.js # Node.js API integration
+| |-- requirements.txt # Python dependencies
+| \-- package.json # Node.js dependencies
+|-- workflows/ # Common workflow examples
+| |-- data-analysis-prompts.md # Data analysis workflows
+| |-- reporting-templates.md # Report generation templates
+| |-- database-administration.md # DBA task workflows
+| \-- business-intelligence.md # BI and analytics workflows
+|-- prompt-engineering/ # Optimized prompts for SQL tasks
+| |-- schema-exploration.md # Database schema discovery
+| |-- query-optimization.md # SQL query optimization
+| |-- data-validation.md # Data quality and validation
+| \-- security-analysis.md # Security-focused queries
+\-- automation/ # Automation examples
+ |-- scheduled-reports.js # Automated reporting
+ |-- data-monitoring.py # Data monitoring scripts
+ \-- alert-systems.md # Alert and notification systems
 ```
 
 ## Integration Types
@@ -66,36 +66,36 @@ Pre-built workflows for common database tasks and analysis patterns.
 
 ### Claude Desktop Setup
 1. **Install and configure SQL MCP Server**:
-   ```bash
-   npm install
-   npm run build
-   ```
+ ```bash
+ npm install
+ npm run build
+ ```
 
 2. **Configure Claude Desktop**:
-   ```bash
-   # Copy the basic configuration
-   cp examples/claude-integrations/claude-desktop/basic-config.json ~/.config/Claude/claude_desktop_config.json
-   
-   # Edit paths to match your installation
-   ```
+ ```bash
+ # Copy the basic configuration
+ cp examples/claude-integrations/claude-desktop/basic-config.json ~/.config/Claude/claude_desktop_config.json
+ 
+ # Edit paths to match your installation
+ ```
 
 3. **Test the integration**:
-   - Restart Claude Desktop
-   - Ask: "What databases do you have access to?"
+ - Restart Claude Desktop
+ - Ask: "What databases do you have access to?"
 
 ### API Integration Setup
 1. **Python example**:
-   ```bash
-   pip install -r examples/claude-integrations/claude-api/requirements.txt
-   python examples/claude-integrations/claude-api/python-example.py
-   ```
+ ```bash
+ pip install -r examples/claude-integrations/claude-api/requirements.txt
+ python examples/claude-integrations/claude-api/python-example.py
+ ```
 
 2. **Node.js example**:
-   ```bash
-   cd examples/claude-integrations/claude-api
-   npm install
-   node javascript-example.js
-   ```
+ ```bash
+ cd examples/claude-integrations/claude-api
+ npm install
+ node javascript-example.js
+ ```
 
 ## Common Use Cases
 
@@ -148,29 +148,29 @@ Perform complex data analysis:
 ### Basic Claude Desktop Config
 ```json
 {
-  "mcpServers": {
-    "sql-mcp-server": {
-      "command": "node",
-      "args": ["/path/to/sql-mcp-server/dist/index.js"]
-    }
-  }
+ "mcpServers": {
+ "sql-mcp-server": {
+ "command": "node",
+ "args": ["/path/to/sql-mcp-server/dist/index.js"]
+ }
+ }
 }
 ```
 
 ### Advanced Configuration
 ```json
 {
-  "mcpServers": {
-    "sql-mcp-server": {
-      "command": "node",
-      "args": ["/path/to/sql-mcp-server/dist/index.js"],
-      "env": {
-        "CONFIG_PATH": "/path/to/config.ini",
-        "LOG_LEVEL": "info",
-        "NODE_ENV": "production"
-      }
-    }
-  }
+ "mcpServers": {
+ "sql-mcp-server": {
+ "command": "node",
+ "args": ["/path/to/sql-mcp-server/dist/index.js"],
+ "env": {
+ "CONFIG_PATH": "/path/to/config.ini",
+ "LOG_LEVEL": "info",
+ "NODE_ENV": "production"
+ }
+ }
+ }
 }
 ```
 

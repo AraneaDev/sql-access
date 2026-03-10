@@ -80,14 +80,14 @@ console.log('Config loaded:', Object.keys(config.databases));
 # Check your config.ini for common issues:
 
 [database.example]
-type=postgresql  # Make sure type is correct
-host=localhost   # Verify host is accessible
-port=5432       # Check port is not blocked
-database=mydb   # Ensure database exists
-username=user   # Verify user exists and has permissions
-password=pass   # Check password is correct
-ssl=false       # Try both true/false if having SSL issues
-timeout=30000   # Increase if getting timeouts
+type=postgresql # Make sure type is correct
+host=localhost # Verify host is accessible
+port=5432 # Check port is not blocked
+database=mydb # Ensure database exists
+username=user # Verify user exists and has permissions
+password=pass # Check password is correct
+ssl=false # Try both true/false if having SSL issues
+timeout=30000 # Increase if getting timeouts
 ```
 
 **Test Network Connectivity:**
@@ -114,15 +114,15 @@ mysql -h your-db-host -u your-username -p -e "SELECT 1;"
 **Use Absolute Paths:**
 ```json
 {
-  "mcpServers": {
-    "sql-mcp-server": {
-      "command": "/usr/local/bin/node",
-      "args": ["/full/absolute/path/to/sql-mcp-server/dist/index.js"],
-      "env": {
-        "CONFIG_PATH": "/full/absolute/path/to/config.ini"
-      }
-    }
-  }
+ "mcpServers": {
+ "sql-mcp-server": {
+ "command": "/usr/local/bin/node",
+ "args": ["/full/absolute/path/to/sql-mcp-server/dist/index.js"],
+ "env": {
+ "CONFIG_PATH": "/full/absolute/path/to/config.ini"
+ }
+ }
+ }
 }
 ```
 
@@ -159,28 +159,28 @@ chmod 644 /path/to/config.ini
 **Increase Timeouts:**
 ```json
 {
-  "mcpServers": {
-    "sql-mcp-server": {
-      "command": "node",
-      "args": ["/path/to/sql-mcp-server/dist/index.js"],
-      "env": {
-        "QUERY_TIMEOUT": "60000",
-        "CONNECTION_TIMEOUT": "30000"
-      }
-    }
-  }
+ "mcpServers": {
+ "sql-mcp-server": {
+ "command": "node",
+ "args": ["/path/to/sql-mcp-server/dist/index.js"],
+ "env": {
+ "QUERY_TIMEOUT": "60000",
+ "CONNECTION_TIMEOUT": "30000"
+ }
+ }
+ }
 }
 ```
 
 **Optimize Config.ini:**
 ```ini
 [extension]
-max_rows=500          # Reduce if getting large result sets
-query_timeout=45000   # Increase for complex queries
-max_batch_size=5      # Reduce if running multiple queries
+max_rows=500 # Reduce if getting large result sets
+query_timeout=45000 # Increase for complex queries
+max_batch_size=5 # Reduce if running multiple queries
 
 [security]
-max_complexity_score=50  # Reduce if queries are too complex
+max_complexity_score=50 # Reduce if queries are too complex
 ```
 
 **Monitor Resource Usage:**
@@ -219,15 +219,15 @@ SHOW GRANTS FOR 'your_username'@'your_host';
 ```ini
 # If you need full access, change this setting
 [database.example]
-select_only=false  # Change from true to false for full access
+select_only=false # Change from true to false for full access
 ```
 
 **Review Security Settings:**
 ```ini
 [security]
-max_joins=20           # Increase if complex joins are needed
-max_subqueries=10      # Increase for complex queries
-max_complexity_score=200  # Increase for complex operations
+max_joins=20 # Increase if complex joins are needed
+max_subqueries=10 # Increase for complex queries
+max_complexity_score=200 # Increase for complex operations
 ```
 
 ### 6. Logging and Debug Information
@@ -235,17 +235,17 @@ max_complexity_score=200  # Increase for complex operations
 **Enable Debug Logging:**
 ```json
 {
-  "mcpServers": {
-    "sql-mcp-server": {
-      "command": "node",
-      "args": ["/path/to/sql-mcp-server/dist/index.js"],
-      "env": {
-        "LOG_LEVEL": "debug",
-        "DEBUG_QUERIES": "true",
-        "NODE_ENV": "development"
-      }
-    }
-  }
+ "mcpServers": {
+ "sql-mcp-server": {
+ "command": "node",
+ "args": ["/path/to/sql-mcp-server/dist/index.js"],
+ "env": {
+ "LOG_LEVEL": "debug",
+ "DEBUG_QUERIES": "true",
+ "NODE_ENV": "development"
+ }
+ }
+ }
 }
 ```
 
@@ -274,16 +274,16 @@ journalctl -f | grep -i claude
 
 ### macOS
 - **Gatekeeper**: May block execution of the server
-  ```bash
-  xattr -d com.apple.quarantine /path/to/sql-mcp-server/dist/index.js
-  ```
+ ```bash
+ xattr -d com.apple.quarantine /path/to/sql-mcp-server/dist/index.js
+ ```
 - **Permission**: Ensure Claude Desktop has necessary permissions
 
 ### Windows
 - **Path Separators**: Use double backslashes in JSON strings
-  ```json
-  "args": ["C:\\Users\\name\\sql-mcp-server\\dist\\index.js"]
-  ```
+ ```json
+ "args": ["C:\\Users\\name\\sql-mcp-server\\dist\\index.js"]
+ ```
 - **PowerShell Execution Policy**: May need to be adjusted
 - **Antivirus**: May block Node.js execution
 
@@ -320,11 +320,11 @@ require('/path/to/sql-mcp-server/dist/index.js');
 node -e "
 const { loadConfiguration, validateConfiguration } = require('/path/to/sql-mcp-server/dist/utils/config.js');
 try {
-  const config = loadConfiguration('/path/to/config.ini');
-  validateConfiguration(config);
-  console.log('Config is valid');
+ const config = loadConfiguration('/path/to/config.ini');
+ validateConfiguration(config);
+ console.log('Config is valid');
 } catch (error) {
-  console.error('Config error:', error.message);
+ console.error('Config error:', error.message);
 }
 "
 ```
@@ -334,28 +334,28 @@ try {
 If you're still experiencing issues:
 
 1. **Gather Information:**
-   - Claude Desktop version
-   - Operating system and version
-   - Node.js version
-   - SQL MCP Server version
-   - Database type and version
-   - Complete error messages
+ - Claude Desktop version
+ - Operating system and version
+ - Node.js version
+ - SQL MCP Server version
+ - Database type and version
+ - Complete error messages
 
 2. **Check Documentation:**
-   - [Installation Guide](../../../docs/guides/installation-guide.md)
-   - [Configuration Guide](../../../docs/guides/configuration-guide.md)
-   - [Troubleshooting Guide](../../../docs/guides/troubleshooting-guide.md)
+ - [Installation Guide](../../../docs/guides/installation-guide.md)
+ - [Configuration Guide](../../../docs/guides/configuration-guide.md)
+ - [Troubleshooting Guide](../../../docs/guides/troubleshooting-guide.md)
 
 3. **Create a Minimal Reproduction:**
-   - Use the simplest possible configuration
-   - Test with SQLite first (no network dependencies)
-   - Provide complete config files (with sensitive data redacted)
+ - Use the simplest possible configuration
+ - Test with SQLite first (no network dependencies)
+ - Provide complete config files (with sensitive data redacted)
 
 4. **Report Issues:**
-   - Include all gathered information
-   - Provide steps to reproduce
-   - Share relevant log messages
-   - Use the provided issue template
+ - Include all gathered information
+ - Provide steps to reproduce
+ - Share relevant log messages
+ - Use the provided issue template
 
 ## Success Indicators
 

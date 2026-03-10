@@ -15,28 +15,28 @@ This advanced tutorial covers secure database connections through SSH tunnels, e
 ## SSH Tunnel Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SSH Tunnel Architecture                     │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐    Encrypted SSH    ┌─────────────────┐        │
-│  │ SQL MCP     │════════Tunnel═══════│  SSH Bastion    │        │
-│  │ Server      │                     │  Host           │        │
-│  │(Local:1234) │                     │                 │        │
-│  └─────────────┘                     └─────────────────┘        │
-│                                               │                 │
-│                                        Internal Network         │
-│                                               │                 │
-│    ┌─────────────────────────────────────────┼────────────┐    │
-│    │                                         │            │    │
-│    v                                         v            v    │
-│  ┌─────────┐                          ┌─────────┐  ┌─────────┐  │
-│  │Database │                          │Database │  │Database │  │
-│  │Server 1 │                          │Server 2 │  │Server 3 │  │
-│  │:5432    │                          │:3306    │  │:1433    │  │
-│  └─────────┘                          └─────────┘  └─────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------+
+| SSH Tunnel Architecture                                           |
++-------------------------------------------------------------------+
+|                                                                   |
+|  +--------------+ Encrypted SSH  +------------------+             |
+|  | SQL MCP      |====Tunnel======| SSH Bastion      |             |
+|  | Server       |                | Host             |             |
+|  |(Local:1234)  |                |                  |             |
+|  +--------------+                +------------------+             |
+|                                        |                          |
+|                                 Internal Network                  |
+|                                        |                          |
+|          +-----------------------------+------------+             |
+|          |                             |            |             |
+|          v                             v            v             |
+|     +---------+                   +---------+  +---------+        |
+|     |Database |                   |Database |  |Database |        |
+|     |Server 1 |                   |Server 2 |  |Server 3 |        |
+|     |:5432    |                   |:3306    |  |:1433    |        |
+|     +---------+                   +---------+  +---------+        |
+|                                                                   |
++-------------------------------------------------------------------+
 ```
 
 ## SSH Tunnel Patterns
@@ -49,8 +49,8 @@ This advanced tutorial covers secure database connections through SSH tunnels, e
 # config.ini - Basic SSH tunnel configuration
 [database.production]
 type=postgresql
-host=localhost           # Local tunnel endpoint
-port=15432              # Local tunnel port (avoid conflicts)
+host=localhost # Local tunnel endpoint
+port=15432 # Local tunnel port (avoid conflicts)
 database=production_db
 username=app_user
 password=secure_db_password
@@ -58,13 +58,13 @@ ssl=true
 select_only=true
 
 # SSH tunnel configuration
-ssh_host=bastion.company.com        # SSH server
-ssh_port=22                         # SSH port (default 22)
-ssh_username=db_tunnel_user         # SSH username
+ssh_host=bastion.company.com # SSH server
+ssh_port=22 # SSH port (default 22)
+ssh_username=db_tunnel_user # SSH username
 ssh_private_key=/secure/keys/prod.key # SSH private key path
-ssh_local_port=15432               # Local port for tunnel
-ssh_remote_host=db.internal.com    # Internal database host
-ssh_remote_port=5432               # Internal database port
+ssh_local_port=15432 # Local port for tunnel
+ssh_remote_host=db.internal.com # Internal database host
+ssh_remote_port=5432 # Internal database port
 ```
 
 ### 2. Multi-Database SSH Tunnels
@@ -160,26 +160,26 @@ ssh_private_key=/keys/external.key
 ```bash
 # ~/.ssh/config
 Host external-bastion
-    HostName external-bastion.company.com
-    Port 2222
-    User external_tunnel
-    IdentityFile /keys/external.key
-    ControlMaster auto
-    ControlPath /tmp/ssh_%r@%h:%p
-    ControlPersist 600
+ HostName external-bastion.company.com
+ Port 2222
+ User external_tunnel
+ IdentityFile /keys/external.key
+ ControlMaster auto
+ ControlPath /tmp/ssh_%r@%h:%p
+ ControlPersist 600
 
 Host internal-bastion
-    HostName internal-bastion.company.local
-    User internal_tunnel
-    IdentityFile /keys/internal.key
-    ProxyJump external-bastion
+ HostName internal-bastion.company.local
+ User internal_tunnel
+ IdentityFile /keys/internal.key
+ ProxyJump external-bastion
 
 Host secure-db
-    HostName secure-db.company.local
-    User db_tunnel
-    IdentityFile /keys/database.key
-    ProxyJump internal-bastion
-    LocalForward 25432 secure-db.company.local:5432
+ HostName secure-db.company.local
+ User db_tunnel
+ IdentityFile /keys/database.key
+ ProxyJump internal-bastion
+ LocalForward 25432 secure-db.company.local:5432
 ```
 
 ## Authentication Methods
@@ -216,7 +216,7 @@ port=15432
 ssh_host=bastion.company.com
 ssh_username=tunnel_service
 ssh_private_key=/secure/keys/sql-mcp-tunnel
-ssh_private_key_passphrase=optional_key_passphrase  # If key is encrypted
+ssh_private_key_passphrase=optional_key_passphrase # If key is encrypted
 ```
 
 ### 2. SSH Agent Authentication
@@ -230,7 +230,7 @@ type=postgresql
 # SSH tunnel using SSH agent
 ssh_host=bastion.company.com
 ssh_username=tunnel_service
-ssh_use_agent=true  # Use SSH agent instead of private key file
+ssh_use_agent=true # Use SSH agent instead of private key file
 ```
 
 **SSH Agent setup**:
@@ -275,14 +275,14 @@ ssh_private_key=/secure/keys/sql-mcp-key
 [database.dynamic_tunnel]
 type=postgresql
 host=localhost
-port=0  # System will assign available port
+port=0 # System will assign available port
 database=production
 # ... other settings
 
 ssh_host=bastion.company.com
 ssh_username=tunnel_user
 ssh_private_key=/keys/tunnel.key
-ssh_local_port=0  # Auto-assign local port
+ssh_local_port=0 # Auto-assign local port
 ssh_remote_host=db.internal.com
 ssh_remote_port=5432
 ```
@@ -302,15 +302,15 @@ database=production
 ssh_host=bastion.company.com
 ssh_username=pool_tunnel
 ssh_private_key=/keys/pool.key
-ssh_compression=true           # Enable compression
-ssh_keep_alive=60             # Keep connection alive
-ssh_keep_alive_count_max=3    # Max keep-alive failures
-ssh_tcp_keep_alive=true       # TCP level keep-alive
+ssh_compression=true # Enable compression
+ssh_keep_alive=60 # Keep connection alive
+ssh_keep_alive_count_max=3 # Max keep-alive failures
+ssh_tcp_keep_alive=true # TCP level keep-alive
 
 # Connection pool settings
 [extension]
-connection_pool_size=5        # Reuse tunnel connections
-ssh_tunnel_pool_size=2        # SSH tunnel connection pool
+connection_pool_size=5 # Reuse tunnel connections
+ssh_tunnel_pool_size=2 # SSH tunnel connection pool
 ```
 
 ### 3. High Availability Tunnel Setup
@@ -362,14 +362,14 @@ sudo chown sql-mcp:sql-mcp /etc/sql-mcp/keys/tunnel_key*
 # Create key configuration
 cat > /etc/sql-mcp/ssh-config << EOF
 Host tunnel-bastion
-    HostName bastion.company.com
-    User tunnel_service
-    IdentityFile /etc/sql-mcp/keys/tunnel_key
-    IdentitiesOnly yes
-    StrictHostKeyChecking yes
-    UserKnownHostsFile /etc/sql-mcp/known_hosts
-    ServerAliveInterval 60
-    ServerAliveCountMax 3
+ HostName bastion.company.com
+ User tunnel_service
+ IdentityFile /etc/sql-mcp/keys/tunnel_key
+ IdentitiesOnly yes
+ StrictHostKeyChecking yes
+ UserKnownHostsFile /etc/sql-mcp/known_hosts
+ ServerAliveInterval 60
+ ServerAliveCountMax 3
 EOF
 
 echo "Secure SSH key setup complete"
@@ -381,7 +381,7 @@ echo "Secure SSH key setup complete"
 ```bash
 # /etc/ssh/sshd_config hardening
 Protocol 2
-Port 2222                          # Non-standard port
+Port 2222 # Non-standard port
 PermitRootLogin no
 PasswordAuthentication no
 PubkeyAuthentication yes
@@ -436,51 +436,51 @@ REMOTE_PORT=5432
 
 # Function to check SSH connectivity
 check_ssh_connection() {
-    ssh -i "$SSH_KEY" -o ConnectTimeout=10 -o BatchMode=yes "$SSH_USER@$BASTION_HOST" "echo SSH connection successful"
-    return $?
+ ssh -i "$SSH_KEY" -o ConnectTimeout=10 -o BatchMode=yes "$SSH_USER@$BASTION_HOST" "echo SSH connection successful"
+ return $?
 }
 
 # Function to check tunnel connectivity
 check_tunnel() {
-    # Test if local port is listening
-    if ! lsof -i ":$LOCAL_PORT" > /dev/null 2>&1; then
-        echo "ERROR: Tunnel port $LOCAL_PORT not listening"
-        return 1
-    fi
-    
-    # Test database connectivity through tunnel
-    nc -z localhost "$LOCAL_PORT"
-    return $?
+ # Test if local port is listening
+ if ! lsof -i ":$LOCAL_PORT" > /dev/null 2>&1; then
+ echo "ERROR: Tunnel port $LOCAL_PORT not listening"
+ return 1
+ fi
+ 
+ # Test database connectivity through tunnel
+ nc -z localhost "$LOCAL_PORT"
+ return $?
 }
 
 # Function to restart tunnel
 restart_tunnel() {
-    echo "Restarting SSH tunnel..."
-    pkill -f "ssh.*$LOCAL_PORT:$REMOTE_HOST:$REMOTE_PORT"
-    sleep 2
-    
-    ssh -i "$SSH_KEY" -fN -L "$LOCAL_PORT:$REMOTE_HOST:$REMOTE_PORT" "$SSH_USER@$BASTION_HOST"
-    return $?
+ echo "Restarting SSH tunnel..."
+ pkill -f "ssh.*$LOCAL_PORT:$REMOTE_HOST:$REMOTE_PORT"
+ sleep 2
+ 
+ ssh -i "$SSH_KEY" -fN -L "$LOCAL_PORT:$REMOTE_HOST:$REMOTE_PORT" "$SSH_USER@$BASTION_HOST"
+ return $?
 }
 
 # Main monitoring logic
 echo "Checking SSH tunnel health..."
 
 if ! check_ssh_connection; then
-    echo "ERROR: SSH connection to bastion failed"
-    exit 1
+ echo "ERROR: SSH connection to bastion failed"
+ exit 1
 fi
 
 if ! check_tunnel; then
-    echo "WARNING: Tunnel connectivity issue detected"
-    if restart_tunnel; then
-        echo "Tunnel restarted successfully"
-    else
-        echo "ERROR: Failed to restart tunnel"
-        exit 1
-    fi
+ echo "WARNING: Tunnel connectivity issue detected"
+ if restart_tunnel; then
+ echo "Tunnel restarted successfully"
+ else
+ echo "ERROR: Failed to restart tunnel"
+ exit 1
+ fi
 else
-    echo "SSH tunnel healthy"
+ echo "SSH tunnel healthy"
 fi
 ```
 
@@ -490,25 +490,25 @@ fi
 ```sql
 -- Test basic connectivity through tunnel
 SELECT 'Tunnel connection successful' as status, 
-       current_timestamp as test_time,
-       version() as database_version;
+ current_timestamp as test_time,
+ version() as database_version;
 
 -- Check connection source (should show localhost)
 SELECT 
-    client_addr as connection_source,
-    state,
-    query_start,
-    application_name
+ client_addr as connection_source,
+ state,
+ query_start,
+ application_name
 FROM pg_stat_activity 
 WHERE pid = pg_backend_pid();
 
 -- Monitor active connections through tunnel
 SELECT 
-    count(*) as active_connections,
-    client_addr,
-    application_name
+ count(*) as active_connections,
+ client_addr,
+ application_name
 FROM pg_stat_activity 
-WHERE client_addr = '127.0.0.1'  -- Tunnel connections
+WHERE client_addr = '127.0.0.1' -- Tunnel connections
 GROUP BY client_addr, application_name;
 ```
 
@@ -530,11 +530,11 @@ ssh_private_key=/keys/tunnel.key
 
 # Compression settings
 ssh_compression=true
-ssh_compression_level=6  # Balance between CPU and bandwidth
+ssh_compression_level=6 # Balance between CPU and bandwidth
 
 # Connection reuse
 ssh_multiplex=true
-ssh_control_persist=600  # Keep master connection for 10 minutes
+ssh_control_persist=600 # Keep master connection for 10 minutes
 
 # Buffer sizes
 ssh_send_env=LC_TUNNEL_BUFFER_SIZE=131072
@@ -563,74 +563,74 @@ source "$CONFIG_FILE"
 
 # Function to start all tunnels
 start_tunnels() {
-    echo "Starting SSH tunnels..." | tee -a "$LOG_FILE"
-    
-    for tunnel in "${TUNNELS[@]}"; do
-        IFS=':' read -r name local_port remote_host remote_port ssh_config <<< "$tunnel"
-        
-        echo "Starting tunnel: $name ($local_port -> $remote_host:$remote_port)" | tee -a "$LOG_FILE"
-        
-        ssh -f -N -L "$local_port:$remote_host:$remote_port" "$ssh_config" \
-            -o ExitOnForwardFailure=yes \
-            -o ServerAliveInterval=60 \
-            -o ServerAliveCountMax=3
-            
-        if [ $? -eq 0 ]; then
-            echo "Tunnel $name started successfully" | tee -a "$LOG_FILE"
-        else
-            echo "ERROR: Failed to start tunnel $name" | tee -a "$LOG_FILE"
-        fi
-    done
+ echo "Starting SSH tunnels..." | tee -a "$LOG_FILE"
+ 
+ for tunnel in "${TUNNELS[@]}"; do
+ IFS=':' read -r name local_port remote_host remote_port ssh_config <<< "$tunnel"
+ 
+ echo "Starting tunnel: $name ($local_port -> $remote_host:$remote_port)" | tee -a "$LOG_FILE"
+ 
+ ssh -f -N -L "$local_port:$remote_host:$remote_port" "$ssh_config" \
+ -o ExitOnForwardFailure=yes \
+ -o ServerAliveInterval=60 \
+ -o ServerAliveCountMax=3
+ 
+ if [ $? -eq 0 ]; then
+ echo "Tunnel $name started successfully" | tee -a "$LOG_FILE"
+ else
+ echo "ERROR: Failed to start tunnel $name" | tee -a "$LOG_FILE"
+ fi
+ done
 }
 
 # Function to stop all tunnels
 stop_tunnels() {
-    echo "Stopping SSH tunnels..." | tee -a "$LOG_FILE"
-    
-    for tunnel in "${TUNNELS[@]}"; do
-        IFS=':' read -r name local_port remote_host remote_port ssh_config <<< "$tunnel"
-        
-        # Kill tunnel processes
-        pkill -f "ssh.*$local_port:$remote_host:$remote_port"
-        echo "Stopped tunnel: $name" | tee -a "$LOG_FILE"
-    done
+ echo "Stopping SSH tunnels..." | tee -a "$LOG_FILE"
+ 
+ for tunnel in "${TUNNELS[@]}"; do
+ IFS=':' read -r name local_port remote_host remote_port ssh_config <<< "$tunnel"
+ 
+ # Kill tunnel processes
+ pkill -f "ssh.*$local_port:$remote_host:$remote_port"
+ echo "Stopped tunnel: $name" | tee -a "$LOG_FILE"
+ done
 }
 
 # Function to check tunnel status
 check_tunnels() {
-    echo "Checking tunnel status..." | tee -a "$LOG_FILE"
-    
-    for tunnel in "${TUNNELS[@]}"; do
-        IFS=':' read -r name local_port remote_host remote_port ssh_config <<< "$tunnel"
-        
-        if lsof -i ":$local_port" > /dev/null 2>&1; then
-            echo "Tunnel $name (port $local_port): ACTIVE" | tee -a "$LOG_FILE"
-        else
-            echo "Tunnel $name (port $local_port): INACTIVE" | tee -a "$LOG_FILE"
-        fi
-    done
+ echo "Checking tunnel status..." | tee -a "$LOG_FILE"
+ 
+ for tunnel in "${TUNNELS[@]}"; do
+ IFS=':' read -r name local_port remote_host remote_port ssh_config <<< "$tunnel"
+ 
+ if lsof -i ":$local_port" > /dev/null 2>&1; then
+ echo "Tunnel $name (port $local_port): ACTIVE" | tee -a "$LOG_FILE"
+ else
+ echo "Tunnel $name (port $local_port): INACTIVE" | tee -a "$LOG_FILE"
+ fi
+ done
 }
 
 # Main script logic
 case "$1" in
-    start)
-        start_tunnels
-        ;;
-    stop)
-        stop_tunnels
-        ;;
-    restart)
-        stop_tunnels
-        sleep 3
-        start_tunnels
-        ;;
-    status)
-        check_tunnels
-        ;;
-    *)
-        echo "Usage: $0 {start|stop|restart|status}"
-        exit 1
-        ;;
+ start)
+ start_tunnels
+ ;;
+ stop)
+ stop_tunnels
+ ;;
+ restart)
+ stop_tunnels
+ sleep 3
+ start_tunnels
+ ;;
+ status)
+ check_tunnels
+ ;;
+ *)
+ echo "Usage: $0 {start|stop|restart|status}"
+ exit 1
+ ;;
 esac
 ```
 
@@ -678,8 +678,8 @@ RUN apk add --no-cache openssh-client
 
 # Create SSH directory
 RUN mkdir -p /home/node/.ssh && \
-    chmod 700 /home/node/.ssh && \
-    chown node:node /home/node/.ssh
+ chmod 700 /home/node/.ssh && \
+ chown node:node /home/node/.ssh
 
 # Copy SSH configuration and keys
 COPY --chown=node:node ssh-config/config /home/node/.ssh/config
@@ -712,18 +712,18 @@ echo "Starting SSH tunnels..."
 
 # Start SSH tunnels in background
 ssh -f -N -L 15432:db.internal.com:5432 tunnel_service@bastion.company.com \
-    -o StrictHostKeyChecking=no \
-    -o UserKnownHostsFile=/dev/null \
-    -o ServerAliveInterval=60 \
-    -o ServerAliveCountMax=3
+ -o StrictHostKeyChecking=no \
+ -o UserKnownHostsFile=/dev/null \
+ -o ServerAliveInterval=60 \
+ -o ServerAliveCountMax=3
 
 # Wait for tunnels to establish
 sleep 5
 
 # Verify tunnel connectivity
 nc -z localhost 15432 || {
-    echo "ERROR: SSH tunnel failed to establish"
-    exit 1
+ echo "ERROR: SSH tunnel failed to establish"
+ exit 1
 }
 
 echo "SSH tunnels established successfully"
@@ -739,36 +739,36 @@ exec node dist/index.js
 version: '3.8'
 
 services:
-  ssh-tunnel:
-    image: alpine/socat
-    command: >
-      sh -c "
-        apk add --no-cache openssh-client &&
-        ssh -f -N -L 0.0.0.0:5432:db.internal.com:5432 tunnel_service@bastion.company.com \
-          -i /keys/tunnel_key \
-          -o StrictHostKeyChecking=no &&
-        socat TCP-LISTEN:5432,fork,reuseaddr TCP:localhost:5432
-      "
-    volumes:
-      - ./ssh-keys:/keys:ro
-    ports:
-      - "15432:5432"
-    networks:
-      - sql-mcp-network
+ ssh-tunnel:
+ image: alpine/socat
+ command: >
+ sh -c "
+ apk add --no-cache openssh-client &&
+ ssh -f -N -L 0.0.0.0:5432:db.internal.com:5432 tunnel_service@bastion.company.com \
+ -i /keys/tunnel_key \
+ -o StrictHostKeyChecking=no &&
+ socat TCP-LISTEN:5432,fork,reuseaddr TCP:localhost:5432
+ "
+ volumes:
+ - ./ssh-keys:/keys:ro
+ ports:
+ - "15432:5432"
+ networks:
+ - sql-mcp-network
 
-  sql-mcp-server:
-    build: .
-    depends_on:
-      - ssh-tunnel
-    environment:
-      - DATABASE_HOST=ssh-tunnel
-      - DATABASE_PORT=5432
-    networks:
-      - sql-mcp-network
+ sql-mcp-server:
+ build: .
+ depends_on:
+ - ssh-tunnel
+ environment:
+ - DATABASE_HOST=ssh-tunnel
+ - DATABASE_PORT=5432
+ networks:
+ - sql-mcp-network
 
 networks:
-  sql-mcp-network:
-    driver: bridge
+ sql-mcp-network:
+ driver: bridge
 ```
 
 ## Troubleshooting Common Issues

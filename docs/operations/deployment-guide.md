@@ -11,17 +11,17 @@ This guide covers production deployment strategies for the SQL MCP Server, inclu
 **Use Case**: Development, testing, and small-scale production environments.
 
 ```
-┌─────────────────┐
-│    Claude       │
-│    Desktop      │
-└─────────────────┘
-         │
-         │ MCP Protocol
-         v
-┌─────────────────┐    ┌──────────────┐
-│  SQL MCP Server │────│   Database   │
-│   (Standalone)  │    │              │
-└─────────────────┘    └──────────────┘
++-----------------+
+| Claude |
+| Desktop |
+\-----------------+
+ |
+ | MCP Protocol
+ v
++-----------------+ +--------------+
+| SQL MCP Server |----| Database |
+| (Standalone) | | |
+\-----------------+ \--------------+
 ```
 
 **Configuration**:
@@ -41,23 +41,23 @@ readonly=true
 **Use Case**: Mission-critical environments requiring redundancy.
 
 ```
-┌─────────────────┐
-│   Load Balancer │
-│   (HAProxy/Nginx)│
-└─────────────────┘
-         │
-    ┌────┴────┐
-    v         v
-┌────────┐ ┌────────┐    ┌──────────────┐
-│ MCP #1 │ │ MCP #2 │────│  Primary DB  │
-└────────┘ └────────┘    └──────────────┘
-    │         │              │
-    └─────────┼──────────────┤
-              │              │
-              v              v
-         ┌──────────────┐ ┌──────────────┐
-         │  Replica DB  │ │  Replica DB  │
-         └──────────────┘ └──────────────┘
++-----------------+
+| Load Balancer |
+| (HAProxy/Nginx)|
+\-----------------+
+ |
+ +----+----+
+ v v
++--------+ +--------+ +--------------+
+| MCP #1 | | MCP #2 |----| Primary DB |
+\--------+ \--------+ \--------------+
+ | | |
+ \---------+--------------+
+ | |
+ v v
+ +--------------+ +--------------+
+ | Replica DB | | Replica DB |
+ \--------------+ \--------------+
 ```
 
 **Features**:
@@ -94,35 +94,35 @@ CMD ["node", "dist/index.js"]
 version: '3.8'
 
 services:
-  sql-mcp-server:
-    build: .
-    environment:
-      - NODE_ENV=production
-      - CONFIG_PATH=/app/config.ini
-    volumes:
-      - ./config.ini:/app/config.ini:ro
-      - ./logs:/app/logs
-    ports:
-      - "3000:3000"
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+ sql-mcp-server:
+ build: .
+ environment:
+ - NODE_ENV=production
+ - CONFIG_PATH=/app/config.ini
+ volumes:
+ - ./config.ini:/app/config.ini:ro
+ - ./logs:/app/logs
+ ports:
+ - "3000:3000"
+ restart: unless-stopped
+ healthcheck:
+ test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+ interval: 30s
+ timeout: 10s
+ retries: 3
 
-  database:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: myapp
-      POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: secure_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+ database:
+ image: postgres:15
+ environment:
+ POSTGRES_DB: myapp
+ POSTGRES_USER: app_user
+ POSTGRES_PASSWORD: secure_password
+ volumes:
+ - postgres_data:/var/lib/postgresql/data
+ restart: unless-stopped
 
 volumes:
-  postgres_data:
+ postgres_data:
 ```
 
 #### Kubernetes Deployment
@@ -132,58 +132,58 @@ volumes:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sql-mcp-server
-  namespace: production
+ name: sql-mcp-server
+ namespace: production
 spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: sql-mcp-server
-  template:
-    metadata:
-      labels:
-        app: sql-mcp-server
-    spec:
-      containers:
-      - name: sql-mcp-server
-        image: sql-mcp-server:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-        volumeMounts:
-        - name: config
-          mountPath: /app/config.ini
-          subPath: config.ini
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 512Mi
-      volumes:
-      - name: config
-        configMap:
-          name: sql-mcp-config
+ replicas: 3
+ selector:
+ matchLabels:
+ app: sql-mcp-server
+ template:
+ metadata:
+ labels:
+ app: sql-mcp-server
+ spec:
+ containers:
+ - name: sql-mcp-server
+ image: sql-mcp-server:latest
+ ports:
+ - containerPort: 3000
+ env:
+ - name: NODE_ENV
+ value: "production"
+ - name: DB_PASSWORD
+ valueFrom:
+ secretKeyRef:
+ name: db-credentials
+ key: password
+ volumeMounts:
+ - name: config
+ mountPath: /app/config.ini
+ subPath: config.ini
+ livenessProbe:
+ httpGet:
+ path: /health
+ port: 3000
+ initialDelaySeconds: 30
+ periodSeconds: 10
+ readinessProbe:
+ httpGet:
+ path: /ready
+ port: 3000
+ initialDelaySeconds: 5
+ periodSeconds: 5
+ resources:
+ requests:
+ cpu: 100m
+ memory: 128Mi
+ limits:
+ cpu: 500m
+ memory: 512Mi
+ volumes:
+ - name: config
+ configMap:
+ name: sql-mcp-config
 ```
 
 **Service**:
@@ -191,15 +191,15 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sql-mcp-server
-  namespace: production
+ name: sql-mcp-server
+ namespace: production
 spec:
-  selector:
-    app: sql-mcp-server
-  ports:
-  - port: 80
-    targetPort: 3000
-  type: ClusterIP
+ selector:
+ app: sql-mcp-server
+ ports:
+ - port: 80
+ targetPort: 3000
+ type: ClusterIP
 ```
 
 **ConfigMap**:
@@ -207,25 +207,25 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sql-mcp-config
-  namespace: production
+ name: sql-mcp-config
+ namespace: production
 data:
-  config.ini: |
-    [database.primary]
-    type=postgresql
-    host=postgres-service
-    port=5432
-    database=production_db
-    username=readonly_user
-    readonly=true
-    
-    [security]
-    enable_readonly_mode=true
-    max_query_complexity=100
-    
-    [logging]
-    level=info
-    format=json
+ config.ini: |
+ [database.primary]
+ type=postgresql
+ host=postgres-service
+ port=5432
+ database=production_db
+ username=readonly_user
+ readonly=true
+ 
+ [security]
+ enable_readonly_mode=true
+ max_query_complexity=100
+ 
+ [logging]
+ level=info
+ format=json
 ```
 
 ## Environment Configuration
@@ -277,23 +277,23 @@ sudo ufw allow from 192.168.1.100 to any port 5432
 **Reverse Proxy Configuration (Nginx)**:
 ```nginx
 upstream sql_mcp_backend {
-    server 127.0.0.1:3000;
-    server 127.0.0.1:3001 backup;
+ server 127.0.0.1:3000;
+ server 127.0.0.1:3001 backup;
 }
 
 server {
-    listen 80;
-    server_name sql-mcp.company.com;
-    
-    location / {
-        proxy_pass http://sql_mcp_backend;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        
-        # Rate limiting
-        limit_req zone=api burst=20 nodelay;
-    }
+ listen 80;
+ server_name sql-mcp.company.com;
+ 
+ location / {
+ proxy_pass http://sql_mcp_backend;
+ proxy_set_header Host $host;
+ proxy_set_header X-Real-IP $remote_addr;
+ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+ 
+ # Rate limiting
+ limit_req zone=api burst=20 nodelay;
+ }
 }
 ```
 
@@ -366,23 +366,23 @@ export UV_THREADPOOL_SIZE=16
 ```typescript
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    version: packageInfo.version
-  });
+ res.json({
+ status: 'healthy',
+ timestamp: new Date().toISOString(),
+ uptime: process.uptime(),
+ version: packageInfo.version
+ });
 });
 
 app.get('/ready', async (req, res) => {
-  try {
-    await Promise.all(
-      databases.map(db => db.ping())
-    );
-    res.json({ status: 'ready' });
-  } catch (error) {
-    res.status(503).json({ status: 'not ready', error: error.message });
-  }
+ try {
+ await Promise.all(
+ databases.map(db => db.ping())
+ );
+ res.json({ status: 'ready' });
+ } catch (error) {
+ res.status(503).json({ status: 'not ready', error: error.message });
+ }
 });
 ```
 
@@ -396,15 +396,15 @@ const register = new promClient.Registry();
 
 // Metrics
 const queryCounter = new promClient.Counter({
-  name: 'sql_queries_total',
-  help: 'Total number of SQL queries executed',
-  labelNames: ['database', 'status']
+ name: 'sql_queries_total',
+ help: 'Total number of SQL queries executed',
+ labelNames: ['database', 'status']
 });
 
 const queryDuration = new promClient.Histogram({
-  name: 'sql_query_duration_seconds',
-  help: 'SQL query execution time',
-  labelNames: ['database']
+ name: 'sql_query_duration_seconds',
+ help: 'SQL query execution time',
+ labelNames: ['database']
 });
 
 register.registerMetric(queryCounter);
@@ -416,14 +416,14 @@ register.registerMetric(queryDuration);
 **Structured Logging**:
 ```json
 {
-  "timestamp": "2025-08-12T10:00:00.000Z",
-  "level": "info",
-  "message": "Query executed successfully",
-  "database": "production",
-  "query_hash": "abc123",
-  "execution_time_ms": 45,
-  "user": "claude_instance_1",
-  "request_id": "req-456"
+ "timestamp": "2025-08-12T10:00:00.000Z",
+ "level": "info",
+ "message": "Query executed successfully",
+ "database": "production",
+ "query_hash": "abc123",
+ "execution_time_ms": 45,
+ "user": "claude_instance_1",
+ "request_id": "req-456"
 }
 ```
 
@@ -432,14 +432,14 @@ register.registerMetric(queryDuration);
 # filebeat.yml
 filebeat.inputs:
 - type: log
-  paths:
-    - /app/logs/*.log
-  json.keys_under_root: true
-  json.add_error_key: true
+ paths:
+ - /app/logs/*.log
+ json.keys_under_root: true
+ json.add_error_key: true
 
 output.elasticsearch:
-  hosts: ["elasticsearch:9200"]
-  index: "sql-mcp-server-%{+yyyy.MM.dd}"
+ hosts: ["elasticsearch:9200"]
+ index: "sql-mcp-server-%{+yyyy.MM.dd}"
 ```
 
 ## Backup and Disaster Recovery
@@ -458,8 +458,8 @@ tar -czf "$BACKUP_DIR/logs_$DATE.tar.gz" logs/
 
 # Encrypt sensitive backups
 gpg --cipher-algo AES256 --compress-algo 1 --s2k-mode 3 \
-    --s2k-digest-algo SHA512 --s2k-count 65536 --symmetric \
-    "$BACKUP_DIR/config_$DATE.ini"
+ --s2k-digest-algo SHA512 --s2k-count 65536 --symmetric \
+ "$BACKUP_DIR/config_$DATE.ini"
 ```
 
 ### Database Backup Strategy
@@ -471,7 +471,7 @@ TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # PostgreSQL backup
 pg_dump -h db-server -U backup_user production_db \
-    | gzip > "/backups/db/production_$TIMESTAMP.sql.gz"
+ | gzip > "/backups/db/production_$TIMESTAMP.sql.gz"
 
 # Retention policy (keep 30 days)
 find /backups/db -name "*.sql.gz" -mtime +30 -delete
@@ -499,10 +499,10 @@ find /backups/db -name "*.sql.gz" -mtime +30 -delete
 ```bash
 # HAProxy configuration
 backend sql_mcp_servers
-    balance roundrobin
-    server mcp1 10.0.1.10:3000 check
-    server mcp2 10.0.1.11:3000 check
-    server mcp3 10.0.1.12:3000 check
+ balance roundrobin
+ server mcp1 10.0.1.10:3000 check
+ server mcp2 10.0.1.11:3000 check
+ server mcp3 10.0.1.12:3000 check
 ```
 
 **Auto-scaling (Kubernetes)**:
@@ -510,27 +510,27 @@ backend sql_mcp_servers
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: sql-mcp-hpa
+ name: sql-mcp-hpa
 spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: sql-mcp-server
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+ scaleTargetRef:
+ apiVersion: apps/v1
+ kind: Deployment
+ name: sql-mcp-server
+ minReplicas: 2
+ maxReplicas: 10
+ metrics:
+ - type: Resource
+ resource:
+ name: cpu
+ target:
+ type: Utilization
+ averageUtilization: 70
+ - type: Resource
+ resource:
+ name: memory
+ target:
+ type: Utilization
+ averageUtilization: 80
 ```
 
 ### Vertical Scaling
@@ -538,12 +538,12 @@ spec:
 **Resource Allocation**:
 ```yaml
 resources:
-  requests:
-    cpu: "200m"
-    memory: "256Mi"
-  limits:
-    cpu: "1000m"
-    memory: "1Gi"
+ requests:
+ cpu: "200m"
+ memory: "256Mi"
+ limits:
+ cpu: "1000m"
+ memory: "1Gi"
 ```
 
 **JVM Tuning** (if applicable):
@@ -567,13 +567,13 @@ export JAVA_OPTS="-Xms512m -Xmx2g -XX:+UseG1GC"
 #!/bin/bash
 # rolling-deploy.sh
 for server in server1 server2 server3; do
-    echo "Deploying to $server"
-    ssh $server "
-        systemctl stop sql-mcp-server
-        cp /tmp/new-version/* /opt/sql-mcp-server/
-        systemctl start sql-mcp-server
-    "
-    sleep 30  # Wait for health check
+ echo "Deploying to $server"
+ ssh $server "
+ systemctl stop sql-mcp-server
+ cp /tmp/new-version/* /opt/sql-mcp-server/
+ systemctl start sql-mcp-server
+ "
+ sleep 30 # Wait for health check
 done
 ```
 
@@ -585,9 +585,9 @@ BEGIN;
 
 -- Add new configuration table
 CREATE TABLE IF NOT EXISTS server_config (
-    key VARCHAR(100) PRIMARY KEY,
-    value TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
+ key VARCHAR(100) PRIMARY KEY,
+ value TEXT NOT NULL,
+ created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Update existing data

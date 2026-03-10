@@ -11,55 +11,55 @@ import * as path from 'path';
 
 // Mock fs operations
 jest.mock('fs', () => ({
-  readFileSync: jest.fn(),
-  writeFileSync: jest.fn(),
-  existsSync: jest.fn(),
-  mkdirSync: jest.fn(),
-  readdirSync: jest.fn(),
-  unlinkSync: jest.fn(),
-  statSync: jest.fn()
+ readFileSync: jest.fn(),
+ writeFileSync: jest.fn(),
+ existsSync: jest.fn(),
+ mkdirSync: jest.fn(),
+ readdirSync: jest.fn(),
+ unlinkSync: jest.fn(),
+ statSync: jest.fn()
 }));
 
 jest.mock('path', () => ({
-  join: jest.fn((...args: string[]) => args.join('/')),
+ join: jest.fn((...args: string[]) => args.join('/')),
 }));
 
 // Mock the logger
 jest.mock('../../src/utils/logger.js', () => ({
-  getLogger: () => ({
-    info: jest.fn(),
-    debug: jest.fn(),
-    warning: jest.fn(),
-    error: jest.fn(),
-  })
+ getLogger: () => ({
+ info: jest.fn(),
+ debug: jest.fn(),
+ warning: jest.fn(),
+ error: jest.fn(),
+ })
 }));
 
 // Create mock connection manager
 const mockConnectionManager = {
-  getConnection: jest.fn(),
-  getAdapter: jest.fn(),
-  registerDatabase: jest.fn(),
-  unregisterDatabase: jest.fn(),
-  getDatabases: jest.fn(),
-  isConnected: jest.fn(),
-  testConnection: jest.fn(),
-  disconnect: jest.fn(),
-  shutdown: jest.fn()
+ getConnection: jest.fn(),
+ getAdapter: jest.fn(),
+ registerDatabase: jest.fn(),
+ unregisterDatabase: jest.fn(),
+ getDatabases: jest.fn(),
+ isConnected: jest.fn(),
+ testConnection: jest.fn(),
+ disconnect: jest.fn(),
+ shutdown: jest.fn()
 } as unknown as ConnectionManager;
 
 // Create mock adapter
 const mockAdapter = {
-  captureSchema: jest.fn(),
-  connect: jest.fn(),
-  disconnect: jest.fn(),
-  executeQuery: jest.fn(),
-  isConnected: jest.fn(),
-  beginTransaction: jest.fn(),
-  commitTransaction: jest.fn(),
-  rollbackTransaction: jest.fn(),
-  buildExplainQuery: jest.fn(),
-  getType: () => 'postgresql',
-  getConfig: () => ({ type: 'postgresql', host: 'localhost', database: 'testdb' })
+ captureSchema: jest.fn(),
+ connect: jest.fn(),
+ disconnect: jest.fn(),
+ executeQuery: jest.fn(),
+ isConnected: jest.fn(),
+ beginTransaction: jest.fn(),
+ commitTransaction: jest.fn(),
+ rollbackTransaction: jest.fn(),
+ buildExplainQuery: jest.fn(),
+ getType: () => 'postgresql',
+ getConfig: () => ({ type: 'postgresql', host: 'localhost', database: 'testdb' })
 };
 
 // Mock file system functions
@@ -67,943 +67,945 @@ const mockFs = fs as jest.Mocked<typeof fs>;
 const mockPath = path as jest.Mocked<typeof path>;
 
 describe('SchemaManager', () => {
-  let schemaManager: SchemaManager;
-  let mockSchema: DatabaseSchema;
+ let schemaManager: SchemaManager;
+ let mockSchema: DatabaseSchema;
 
-  beforeEach(() => {
-    // Reset all mocks
-    jest.clearAllMocks();
-    
-    // Create fresh schema manager instance
-    schemaManager = new SchemaManager(mockConnectionManager, './test-schemas');
-    
-    // Create mock schema
-    mockSchema = {
-      database: 'testdb',
-      type: 'postgresql',
-      captured_at: '2023-01-01T12:00:00.000Z',
-      tables: {
-        users: {
-          name: 'users',
-          type: 'BASE TABLE',
-          comment: 'User accounts',
-          columns: [
-            {
-              name: 'id',
-              type: 'int',
-              nullable: false,
-              default: null,
-              comment: 'Primary key',
-              key: 'PRI',
-              extra: 'auto_increment',
-              max_length: null,
-              precision: null,
-              scale: null
-            },
-            {
-              name: 'name',
-              type: 'varchar',
-              nullable: false,
-              default: null,
-              comment: 'User name',
-              key: '',
-              extra: '',
-              max_length: 100,
-              precision: null,
-              scale: null
-            }
-          ]
-        }
-      },
-      views: {
-        active_users: {
-          name: 'active_users',
-          type: 'VIEW',
-          comment: 'Active users view',
-          columns: [
-            {
-              name: 'id',
-              type: 'int',
-              nullable: false,
-              default: null,
-              comment: 'User ID',
-              key: '',
-              extra: '',
-              max_length: null,
-              precision: null,
-              scale: null
-            }
-          ]
-        }
-      },
-      summary: {
-        table_count: 1,
-        view_count: 1,
-        total_columns: 3
-      }
-    };
-    
-    // Setup default mocks
-    mockFs.existsSync.mockReturnValue(false);
-    mockFs.readdirSync.mockReturnValue([] as any);
-    (mockConnectionManager.getConnection as jest.Mock).mockResolvedValue({
-      connection: { id: 'test-connection' },
-      config: { type: 'postgresql', host: 'localhost', database: 'testdb' }
-    });
-    (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(mockAdapter);
-    mockAdapter.captureSchema.mockResolvedValue(mockSchema);
-  });
+ beforeEach(() => {
+ // Reset all mocks
+ jest.clearAllMocks();
+ 
+ // Create fresh schema manager instance
+ schemaManager = new SchemaManager(mockConnectionManager, './test-schemas');
+ 
+ // Create mock schema
+ mockSchema = {
+ database: 'testdb',
+ type: 'postgresql',
+ captured_at: '2023-01-01T12:00:00.000Z',
+ tables: {
+ users: {
+ name: 'users',
+ type: 'BASE TABLE',
+ comment: 'User accounts',
+ columns: [
+ {
+ name: 'id',
+ type: 'int',
+ nullable: false,
+ default: null,
+ comment: 'Primary key',
+ key: 'PRI',
+ extra: 'auto_increment',
+ max_length: null,
+ precision: null,
+ scale: null
+ },
+ {
+ name: 'name',
+ type: 'varchar',
+ nullable: false,
+ default: null,
+ comment: 'User name',
+ key: '',
+ extra: '',
+ max_length: 100,
+ precision: null,
+ scale: null
+ }
+ ]
+ }
+ },
+ views: {
+ active_users: {
+ name: 'active_users',
+ type: 'VIEW',
+ comment: 'Active users view',
+ columns: [
+ {
+ name: 'id',
+ type: 'int',
+ nullable: false,
+ default: null,
+ comment: 'User ID',
+ key: '',
+ extra: '',
+ max_length: null,
+ precision: null,
+ scale: null
+ }
+ ]
+ }
+ },
+ summary: {
+ table_count: 1,
+ view_count: 1,
+ total_columns: 3
+ }
+ };
+ 
+ // Setup default mocks
+ mockFs.existsSync.mockReturnValue(false);
+ mockFs.readdirSync.mockReturnValue([] as any);
+ (mockConnectionManager.getConnection as jest.Mock).mockResolvedValue({
+ connection: { id: 'test-connection' },
+ config: { type: 'postgresql', host: 'localhost', database: 'testdb' }
+ });
+ (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(mockAdapter);
+ mockAdapter.captureSchema.mockResolvedValue(mockSchema);
+ });
 
-  // ============================================================================
-  // Initialization Tests
-  // ============================================================================
+ // ============================================================================
+ // Initialization Tests
+ // ============================================================================
 
-  describe('initialization', () => {
-    it('should initialize successfully without existing schema directory', async () => {
-      mockFs.existsSync.mockReturnValue(false);
-      
-      await schemaManager.initialize();
-      
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', { recursive: true });
-    });
+ describe('initialization', () => {
+ it('should initialize successfully without existing schema directory', async () => {
+ mockFs.existsSync.mockReturnValue(false);
+ 
+ await schemaManager.initialize();
+ 
+ expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', { recursive: true });
+ });
 
-    it('should initialize successfully with existing schema directory', async () => {
-      mockFs.existsSync.mockReturnValue(true);
-      
-      await schemaManager.initialize();
-      
-      expect(mockFs.mkdirSync).not.toHaveBeenCalled();
-      expect(mockFs.readdirSync).toHaveBeenCalledWith('./test-schemas');
-    });
+ it('should initialize successfully with existing schema directory', async () => {
+ mockFs.existsSync.mockReturnValue(true);
+ 
+ await schemaManager.initialize();
+ 
+ expect(mockFs.mkdirSync).not.toHaveBeenCalled();
+ expect(mockFs.readdirSync).toHaveBeenCalledWith('./test-schemas');
+ });
 
-    it('should load cached schemas during initialization', async () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['testdb.json', 'otherdb.json', 'invalid.txt'] as any);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(mockSchema));
-      
-      await schemaManager.initialize();
-      
-      expect(mockFs.readFileSync).toHaveBeenCalledTimes(2); // Only .json files
-      expect(schemaManager.hasSchema('testdb')).toBe(true);
-      expect(schemaManager.hasSchema('otherdb')).toBe(true);
-      expect(schemaManager.hasSchema('invalid')).toBe(false);
-    });
+ it('should load cached schemas during initialization', async () => {
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['testdb.json', 'otherdb.json', 'invalid.txt'] as any);
+ mockFs.readFileSync.mockReturnValue(JSON.stringify(mockSchema));
+ 
+ await schemaManager.initialize();
+ 
+ expect(mockFs.readFileSync).toHaveBeenCalledTimes(2); // Only .json files
+ expect(schemaManager.hasSchema('testdb')).toBe(true);
+ expect(schemaManager.hasSchema('otherdb')).toBe(true);
+ expect(schemaManager.hasSchema('invalid')).toBe(false);
+ });
 
-    it('should handle corrupted schema files gracefully', async () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['corrupted.json'] as any);
-      mockFs.readFileSync.mockReturnValue('invalid json');
-      
-      await schemaManager.initialize();
-      
-      expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/corrupted.json');
-      expect(schemaManager.hasSchema('corrupted')).toBe(false);
-    });
+ it('should handle corrupted schema files gracefully', async () => {
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['corrupted.json'] as any);
+ mockFs.readFileSync.mockReturnValue('invalid json');
+ 
+ await schemaManager.initialize();
+ 
+ expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/corrupted.json');
+ expect(schemaManager.hasSchema('corrupted')).toBe(false);
+ });
 
-    it('should handle invalid schema format', async () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['invalid.json'] as any);
-      mockFs.readFileSync.mockReturnValue(JSON.stringify({ invalid: 'schema' }));
-      
-      await schemaManager.initialize();
-      
-      expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/invalid.json');
-      expect(schemaManager.hasSchema('invalid')).toBe(false);
-    });
+ it('should handle invalid schema format', async () => {
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['invalid.json'] as any);
+ mockFs.readFileSync.mockReturnValue(JSON.stringify({ invalid: 'schema' }));
+ 
+ await schemaManager.initialize();
+ 
+ expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/invalid.json');
+ expect(schemaManager.hasSchema('invalid')).toBe(false);
+ });
 
-    it('should handle file system errors during loading', async () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['testdb.json'] as any);
-      mockFs.readFileSync.mockImplementation(() => {
-        throw new Error('File read error');
-      });
-      mockFs.unlinkSync.mockImplementation(() => {
-        throw new Error('File delete error');
-      });
-      
-      await expect(schemaManager.initialize()).resolves.not.toThrow();
-      expect(schemaManager.hasSchema('testdb')).toBe(false);
-    });
-  });
+ it('should handle file system errors during loading', async () => {
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['testdb.json'] as any);
+ mockFs.readFileSync.mockImplementation(() => {
+ throw new Error('File read error');
+ });
+ mockFs.unlinkSync.mockImplementation(() => {
+ throw new Error('File delete error');
+ });
+ 
+ await expect(schemaManager.initialize()).resolves.not.toThrow();
+ expect(schemaManager.hasSchema('testdb')).toBe(false);
+ });
+ });
 
-  describe('cleanup', () => {
-    it('should save all schemas and clear cache on cleanup', async () => {
-      await schemaManager.initialize();
-      
-      // Add a schema to memory
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-      
-      await schemaManager.cleanup();
-      
-      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-        './test-schemas/testdb.json',
-        JSON.stringify(mockSchema, null, 2),
-        'utf-8'
-      );
-      expect(schemaManager.hasSchema('testdb')).toBe(false);
-    });
-  });
+ describe('cleanup', () => {
+ it('should save all schemas and clear cache on cleanup', async () => {
+ await schemaManager.initialize();
+ 
+ // Add a schema to memory
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ 
+ await schemaManager.cleanup();
+ 
+ expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+ './test-schemas/testdb.json',
+ JSON.stringify(mockSchema, null, 2),
+ 'utf-8'
+ );
+ expect(schemaManager.hasSchema('testdb')).toBe(false);
+ });
+ });
 
-  // ============================================================================
-  // Schema Operations Tests
-  // ============================================================================
+ // ============================================================================
+ // Schema Operations Tests
+ // ============================================================================
 
-  describe('getSchema', () => {
-    it('should return cached schema if available', async () => {
-      await schemaManager.initialize();
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-      
-      const schema = schemaManager.getSchema('testdb');
-      expect(schema).toBe(mockSchema);
-    });
+ describe('getSchema', () => {
+ it('should return cached schema if available', async () => {
+ await schemaManager.initialize();
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ 
+ const schema = schemaManager.getSchema('testdb');
+ expect(schema).toBe(mockSchema);
+ });
 
-    it('should return null if schema not cached', async () => {
-      await schemaManager.initialize();
-      
-      const schema = schemaManager.getSchema('nonexistent');
-      expect(schema).toBeNull();
-    });
-  });
+ it('should return null if schema not cached', async () => {
+ await schemaManager.initialize();
+ 
+ const schema = schemaManager.getSchema('nonexistent');
+ expect(schema).toBeNull();
+ });
+ });
 
-  describe('hasSchema', () => {
-    it('should return true if schema is cached', async () => {
-      await schemaManager.initialize();
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-      
-      expect(schemaManager.hasSchema('testdb')).toBe(true);
-    });
+ describe('hasSchema', () => {
+ it('should return true if schema is cached', async () => {
+ await schemaManager.initialize();
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ 
+ expect(schemaManager.hasSchema('testdb')).toBe(true);
+ });
 
-    it('should return false if schema is not cached', async () => {
-      await schemaManager.initialize();
-      
-      expect(schemaManager.hasSchema('nonexistent')).toBe(false);
-    });
-  });
+ it('should return false if schema is not cached', async () => {
+ await schemaManager.initialize();
+ 
+ expect(schemaManager.hasSchema('nonexistent')).toBe(false);
+ });
+ });
 
-  describe('captureSchema', () => {
-    it('should capture and cache schema successfully', async () => {
-      await schemaManager.initialize();
-      
-      const schema = await schemaManager.captureSchema('testdb', {
-        type: 'postgresql',
-        host: 'localhost',
-        database: 'testdb'
-      } as DatabaseConfig);
-      
-      expect(mockConnectionManager.getConnection).toHaveBeenCalledWith('testdb');
-      expect(mockConnectionManager.getAdapter).toHaveBeenCalledWith('testdb');
-      expect(mockAdapter.captureSchema).toHaveBeenCalled();
-      expect(schema).toBe(mockSchema);
-      expect(schemaManager.hasSchema('testdb')).toBe(true);
-      expect(mockFs.writeFileSync).toHaveBeenCalled();
-    });
+ describe('captureSchema', () => {
+ it('should capture and cache schema successfully', async () => {
+ await schemaManager.initialize();
+ 
+ const schema = await schemaManager.captureSchema('testdb', {
+ type: 'postgresql',
+ host: 'localhost',
+ database: 'testdb'
+ } as DatabaseConfig);
+ 
+ expect(mockConnectionManager.getConnection).toHaveBeenCalledWith('testdb');
+ expect(mockConnectionManager.getAdapter).toHaveBeenCalledWith('testdb');
+ expect(mockAdapter.captureSchema).toHaveBeenCalled();
+ expect(schema).toBe(mockSchema);
+ expect(schemaManager.hasSchema('testdb')).toBe(true);
+ expect(mockFs.writeFileSync).toHaveBeenCalled();
+ });
 
-    it('should handle capture errors', async () => {
-      await schemaManager.initialize();
-      mockAdapter.captureSchema.mockRejectedValueOnce(new Error('Capture failed'));
-      
-      await expect(schemaManager.captureSchema('testdb', {
-        type: 'postgresql',
-        host: 'localhost',
-        database: 'testdb'
-      } as DatabaseConfig)).rejects.toThrow('Capture failed');
-      
-      expect(schemaManager.hasSchema('testdb')).toBe(false);
-    });
+ it('should handle capture errors', async () => {
+ await schemaManager.initialize();
+ mockAdapter.captureSchema.mockRejectedValueOnce(new Error('Capture failed'));
+ 
+ await expect(schemaManager.captureSchema('testdb', {
+ type: 'postgresql',
+ host: 'localhost',
+ database: 'testdb'
+ } as DatabaseConfig)).rejects.toThrow('Capture failed');
+ 
+ expect(schemaManager.hasSchema('testdb')).toBe(false);
+ });
 
-    it('should handle missing adapter', async () => {
-      await schemaManager.initialize();
-      (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(null);
-      
-      await expect(schemaManager.captureSchema('testdb', {
-        type: 'postgresql',
-        host: 'localhost',
-        database: 'testdb'
-      } as DatabaseConfig)).rejects.toThrow("No adapter found for database 'testdb'");
-    });
+ it('should handle missing adapter', async () => {
+ await schemaManager.initialize();
+ (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(null);
+ 
+ await expect(schemaManager.captureSchema('testdb', {
+ type: 'postgresql',
+ host: 'localhost',
+ database: 'testdb'
+ } as DatabaseConfig)).rejects.toThrow("No adapter found for database 'testdb'");
+ });
 
-    it('should emit schema-cached event', async () => {
-      await schemaManager.initialize();
-      
-      const eventSpy = jest.fn();
-      schemaManager.on('schema-cached', eventSpy);
-      
-      await schemaManager.captureSchema('testdb', {
-        type: 'postgresql',
-        host: 'localhost',
-        database: 'testdb'
-      } as DatabaseConfig);
-      
-      expect(eventSpy).toHaveBeenCalledWith('testdb');
-    });
-  });
+ it('should emit schema-cached event', async () => {
+ await schemaManager.initialize();
+ 
+ const eventSpy = jest.fn();
+ schemaManager.on('schema-cached', eventSpy);
+ 
+ await schemaManager.captureSchema('testdb', {
+ type: 'postgresql',
+ host: 'localhost',
+ database: 'testdb'
+ } as DatabaseConfig);
+ 
+ expect(eventSpy).toHaveBeenCalledWith('testdb');
+ });
+ });
 
-  describe('refreshSchema', () => {
-    it('should refresh existing schema successfully', async () => {
-      await schemaManager.initialize();
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-      mockFs.existsSync.mockReturnValue(true);
-      // Ensure unlinkSync doesn't throw an error
-      mockFs.unlinkSync.mockImplementation(() => {});
-      
-      const updatedSchema = { ...mockSchema, summary: { ...mockSchema.summary, table_count: 2 } };
-      mockAdapter.captureSchema.mockResolvedValueOnce(updatedSchema);
-      
-      const schema = await schemaManager.refreshSchema('testdb');
-      
-      expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/testdb.json');
-      expect(schema).toBe(updatedSchema);
-      expect(schemaManager.getSchema('testdb')).toBe(updatedSchema);
-    });
+ describe('refreshSchema', () => {
+ it('should refresh existing schema successfully', async () => {
+ await schemaManager.initialize();
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ mockFs.existsSync.mockReturnValue(true);
+ // Ensure unlinkSync doesn't throw an error
+ mockFs.unlinkSync.mockImplementation(() => {});
+ 
+ const updatedSchema = { ...mockSchema, summary: { ...mockSchema.summary, table_count: 2 } };
+ mockAdapter.captureSchema.mockResolvedValueOnce(updatedSchema);
+ 
+ const schema = await schemaManager.refreshSchema('testdb');
+ 
+ expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/testdb.json');
+ expect(schema).toBe(updatedSchema);
+ expect(schemaManager.getSchema('testdb')).toBe(updatedSchema);
+ });
 
-    it('should handle refresh when no cached file exists', async () => {
-      await schemaManager.initialize();
-      mockFs.existsSync.mockReturnValue(false);
-      
-      const schema = await schemaManager.refreshSchema('testdb');
-      
-      expect(mockFs.unlinkSync).not.toHaveBeenCalled();
-      expect(schema).toEqual(mockSchema); // Use toEqual instead of toBe for object comparison
-    });
+ it('should handle refresh when no cached file exists', async () => {
+ await schemaManager.initialize();
+ mockFs.existsSync.mockReturnValue(false);
+ 
+ const schema = await schemaManager.refreshSchema('testdb');
+ 
+ expect(mockFs.unlinkSync).not.toHaveBeenCalled();
+ expect(schema).toEqual(mockSchema); // Use toEqual instead of toBe for object comparison
+ });
 
-    it('should emit schema-refreshed event', async () => {
-      await schemaManager.initialize();
-      
-      const eventSpy = jest.fn();
-      schemaManager.on('schema-refreshed', eventSpy);
-      
-      await schemaManager.refreshSchema('testdb');
-      
-      expect(eventSpy).toHaveBeenCalledWith('testdb');
-    });
+ it('should emit schema-refreshed event', async () => {
+ await schemaManager.initialize();
+ 
+ const eventSpy = jest.fn();
+ schemaManager.on('schema-refreshed', eventSpy);
+ 
+ await schemaManager.refreshSchema('testdb');
+ 
+ expect(eventSpy).toHaveBeenCalledWith('testdb');
+ });
 
-    it('should handle refresh errors', async () => {
-      await schemaManager.initialize();
-      mockAdapter.captureSchema.mockRejectedValueOnce(new Error('Refresh failed'));
-      
-      await expect(schemaManager.refreshSchema('testdb')).rejects.toThrow('Refresh failed');
-    });
-  });
+ it('should handle refresh errors', async () => {
+ await schemaManager.initialize();
+ mockAdapter.captureSchema.mockRejectedValueOnce(new Error('Refresh failed'));
+ 
+ await expect(schemaManager.refreshSchema('testdb')).rejects.toThrow('Refresh failed');
+ });
+ });
 
-  // ============================================================================
-  // Schema Context Generation Tests
-  // ============================================================================
+ // ============================================================================
+ // Schema Context Generation Tests
+ // ============================================================================
 
-  describe('generateSchemaContext', () => {
-    beforeEach(async () => {
-      await schemaManager.initialize();
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-    });
+ describe('generateSchemaContext', () => {
+ beforeEach(async () => {
+ await schemaManager.initialize();
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ });
 
-    it('should generate context for entire database', () => {
-      const context = schemaManager.generateSchemaContext('testdb');
-      
-      expect(context).toContain("Database Schema for 'testdb' (postgresql):");
-      expect(context).toContain('Summary: 1 tables, 1 views, 3 total columns');
-      expect(context).toContain('**users**:');
-      expect(context).toContain('id (int, not null, key: PRI)');
-      expect(context).toContain('name (varchar(100), not null)');
-      expect(context).toContain('**active_users**:');
-    });
+ it('should generate context for entire database', () => {
+ const context = schemaManager.generateSchemaContext('testdb');
+ 
+ expect(context).toContain("Database Schema for 'testdb' (postgresql):");
+ expect(context).toContain('Summary: 1 tables, 1 views, 3 total columns');
+ expect(context).toContain('**users**:');
+ expect(context).toContain('id (int, not null, key: PRI)');
+ expect(context).toContain('name (varchar(100), not null)');
+ expect(context).toContain('**active_users**:');
+ });
 
-    it('should generate context for specific table', () => {
-      const context = schemaManager.generateSchemaContext('testdb', 'users');
-      
-      expect(context).toContain("Database Schema for 'testdb' (postgresql):");
-      expect(context).toContain('**users**:');
-      expect(context).toContain('Description: User accounts');
-      expect(context).toContain('id (int, not null, key: PRI) -- Primary key');
-      expect(context).toContain('name (varchar(100), not null) -- User name');
-      expect(context).not.toContain('**active_users**:');
-    });
+ it('should generate context for specific table', () => {
+ const context = schemaManager.generateSchemaContext('testdb', 'users');
+ 
+ expect(context).toContain("Database Schema for 'testdb' (postgresql):");
+ expect(context).toContain('**users**:');
+ expect(context).toContain('Description: User accounts');
+ expect(context).toContain('id (int, not null, key: PRI) -- Primary key');
+ expect(context).toContain('name (varchar(100), not null) -- User name');
+ expect(context).not.toContain('**active_users**:');
+ });
 
-    it('should generate context for specific view', () => {
-      const context = schemaManager.generateSchemaContext('testdb', 'active_users');
-      
-      expect(context).toContain('**active_users**:');
-      expect(context).toContain('Description: Active users view');
-      expect(context).toContain('id (int, not null) -- User ID'); // Views show full nullable information in implementation
-    });
+ it('should generate context for specific view', () => {
+ const context = schemaManager.generateSchemaContext('testdb', 'active_users');
+ 
+ expect(context).toContain('**active_users**:');
+ expect(context).toContain('Description: Active users view');
+ expect(context).toContain('id (int, not null) -- User ID'); // Views show full nullable information in implementation
+ });
 
-    it('should handle non-existent table', () => {
-      const context = schemaManager.generateSchemaContext('testdb', 'nonexistent');
-      
-      expect(context).toContain("Table 'nonexistent' not found in schema.");
-    });
+ it('should handle non-existent table', () => {
+ const context = schemaManager.generateSchemaContext('testdb', 'nonexistent');
+ 
+ expect(context).toContain("Table 'nonexistent' not found in schema.");
+ });
 
-    it('should handle non-existent database', () => {
-      const context = schemaManager.generateSchemaContext('nonexistent');
-      
-      expect(context).toBe("No schema information available for database 'nonexistent'.");
-    });
+ it('should handle non-existent database', () => {
+ const context = schemaManager.generateSchemaContext('nonexistent');
+ 
+ expect(context).toBe("No schema information available for database 'nonexistent'.");
+ });
 
-    it('should handle columns with different data types and properties', () => {
-      const complexSchema = {
-        ...mockSchema,
-        tables: {
-          complex_table: {
-            name: 'complex_table',
-            type: 'BASE TABLE',
-            comment: '',
-            columns: [
-              {
-                name: 'decimal_col',
-                type: 'decimal',
-                nullable: true,
-                default: '0.00',
-                comment: '',
-                key: '',
-                extra: '',
-                max_length: null,
-                precision: 10,
-                scale: 2
-              },
-              {
-                name: 'char_col',
-                type: 'char',
-                nullable: false,
-                default: "'A'",
-                comment: '',
-                key: '',
-                extra: '',
-                max_length: 1,
-                precision: null,
-                scale: null
-              }
-            ]
-          }
-        }
-      };
-      
-      (schemaManager as any).schemas.set('testdb', complexSchema);
-      
-      const context = schemaManager.generateSchemaContext('testdb', 'complex_table');
-      
-      expect(context).toContain('decimal_col (decimal(10,2), nullable, default: 0.00)');
-      expect(context).toContain("char_col (char(1), not null, default: 'A')");
-    });
-  });
+ it('should handle columns with different data types and properties', () => {
+ const complexSchema = {
+ ...mockSchema,
+ tables: {
+ complex_table: {
+ name: 'complex_table',
+ type: 'BASE TABLE',
+ comment: '',
+ columns: [
+ {
+ name: 'decimal_col',
+ type: 'decimal',
+ nullable: true,
+ default: '0.00',
+ comment: '',
+ key: '',
+ extra: '',
+ max_length: null,
+ precision: 10,
+ scale: 2
+ },
+ {
+ name: 'char_col',
+ type: 'char',
+ nullable: false,
+ default: "'A'",
+ comment: '',
+ key: '',
+ extra: '',
+ max_length: 1,
+ precision: null,
+ scale: null
+ }
+ ]
+ }
+ }
+ };
+ 
+ (schemaManager as any).schemas.set('testdb', complexSchema);
+ 
+ const context = schemaManager.generateSchemaContext('testdb', 'complex_table');
+ 
+ expect(context).toContain('decimal_col (decimal(10,2), nullable, default: 0.00)');
+ expect(context).toContain("char_col (char(1), not null, default: 'A')");
+ });
+ });
 
-  describe('enrichDatabaseListItems', () => {
-    it('should enrich database list items with schema information', async () => {
-      await schemaManager.initialize();
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-      
-      const items: DatabaseListItem[] = [
-        { name: 'testdb', type: 'postgresql', ssh_enabled: false, ssl_enabled: false, select_only_mode: false, schema_cached: true },
-        { name: 'otherdb', type: 'mysql', ssh_enabled: false, ssl_enabled: false, select_only_mode: false, schema_cached: false }
-      ];
-      
-      const enriched = schemaManager.enrichDatabaseListItems(items);
-      
-      expect(enriched[0]).toEqual({
-        name: 'testdb',
-        type: 'postgresql',
-        ssh_enabled: false,
-        ssl_enabled: false,
-        select_only_mode: false,
-        schema_cached: true,
-        schema_info: {
-          table_count: 1,
-          view_count: 1,
-          total_columns: 3
-        }
-      });
-      
-      expect(enriched[1]).toEqual({
-        name: 'otherdb',
-        type: 'mysql',
-        ssh_enabled: false,
-        ssl_enabled: false,
-        select_only_mode: false,
-        schema_cached: false
-      });
-    });
-  });
+ describe('enrichDatabaseListItems', () => {
+ it('should enrich database list items with schema information', async () => {
+ await schemaManager.initialize();
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ 
+ const items: DatabaseListItem[] = [
+ { name: 'testdb', type: 'postgresql', ssh_enabled: false, ssl_enabled: false, select_only_mode: false, mcp_configurable: false, schema_cached: true },
+ { name: 'otherdb', type: 'mysql', ssh_enabled: false, ssl_enabled: false, select_only_mode: false, mcp_configurable: false, schema_cached: false }
+ ];
+ 
+ const enriched = schemaManager.enrichDatabaseListItems(items);
+ 
+ expect(enriched[0]).toEqual({
+ name: 'testdb',
+ type: 'postgresql',
+ ssh_enabled: false,
+ ssl_enabled: false,
+ select_only_mode: false,
+ mcp_configurable: false,
+ schema_cached: true,
+ schema_info: {
+ table_count: 1,
+ view_count: 1,
+ total_columns: 3
+ }
+ });
 
-  // ============================================================================
-  // Schema Analysis and Statistics Tests
-  // ============================================================================
+ expect(enriched[1]).toEqual({
+ name: 'otherdb',
+ type: 'mysql',
+ ssh_enabled: false,
+ ssl_enabled: false,
+ select_only_mode: false,
+ mcp_configurable: false,
+ schema_cached: false
+ });
+ });
+ });
 
-  describe('getSchemaStatistics', () => {
-    it('should return statistics for cached schemas', async () => {
-      await schemaManager.initialize();
-      
-      const schema1 = { ...mockSchema, database: 'db1', type: 'postgresql' };
-      const schema2 = { ...mockSchema, database: 'db2', type: 'mysql', summary: { table_count: 2, view_count: 0, total_columns: 4 } };
-      
-      (schemaManager as any).schemas.set('db1', schema1);
-      (schemaManager as any).schemas.set('db2', schema2);
-      
-      const stats = schemaManager.getSchemaStatistics();
-      
-      expect(stats).toEqual({
-        totalDatabases: 2,
-        totalTables: 3,
-        totalViews: 1,
-        totalColumns: 7,
-        avgTablesPerDb: 1.5,
-        avgColumnsPerTable: 2.33,
-        schemasByType: {
-          postgresql: 1,
-          mysql: 1
-        }
-      });
-    });
+ // ============================================================================
+ // Schema Analysis and Statistics Tests
+ // ============================================================================
 
-    it('should handle empty schemas', async () => {
-      await schemaManager.initialize();
-      
-      const stats = schemaManager.getSchemaStatistics();
-      
-      expect(stats).toEqual({
-        totalDatabases: 0,
-        totalTables: 0,
-        totalViews: 0,
-        totalColumns: 0,
-        avgTablesPerDb: 0,
-        avgColumnsPerTable: 0,
-        schemasByType: {}
-      });
-    });
-  });
+ describe('getSchemaStatistics', () => {
+ it('should return statistics for cached schemas', async () => {
+ await schemaManager.initialize();
+ 
+ const schema1 = { ...mockSchema, database: 'db1', type: 'postgresql' };
+ const schema2 = { ...mockSchema, database: 'db2', type: 'mysql', summary: { table_count: 2, view_count: 0, total_columns: 4 } };
+ 
+ (schemaManager as any).schemas.set('db1', schema1);
+ (schemaManager as any).schemas.set('db2', schema2);
+ 
+ const stats = schemaManager.getSchemaStatistics();
+ 
+ expect(stats).toEqual({
+ totalDatabases: 2,
+ totalTables: 3,
+ totalViews: 1,
+ totalColumns: 7,
+ avgTablesPerDb: 1.5,
+ avgColumnsPerTable: 2.33,
+ schemasByType: {
+ postgresql: 1,
+ mysql: 1
+ }
+ });
+ });
 
-  describe('findTables', () => {
-    beforeEach(async () => {
-      await schemaManager.initialize();
-      
-      const schema1 = {
-        ...mockSchema,
-        database: 'db1',
-        tables: {
-          user_accounts: { name: 'user_accounts', type: 'BASE TABLE', comment: '', columns: [{} as any, {} as any] },
-          user_profiles: { name: 'user_profiles', type: 'BASE TABLE', comment: '', columns: [{} as any] }
-        },
-        views: {
-          user_stats: { name: 'user_stats', type: 'VIEW', comment: '', columns: [{} as any] }
-        }
-      };
-      
-      const schema2 = {
-        ...mockSchema,
-        database: 'db2',
-        tables: {
-          products: { name: 'products', type: 'BASE TABLE', comment: '', columns: [{} as any, {} as any, {} as any] }
-        },
-        views: {}
-      };
-      
-      (schemaManager as any).schemas.set('db1', schema1);
-      (schemaManager as any).schemas.set('db2', schema2);
-    });
+ it('should handle empty schemas', async () => {
+ await schemaManager.initialize();
+ 
+ const stats = schemaManager.getSchemaStatistics();
+ 
+ expect(stats).toEqual({
+ totalDatabases: 0,
+ totalTables: 0,
+ totalViews: 0,
+ totalColumns: 0,
+ avgTablesPerDb: 0,
+ avgColumnsPerTable: 0,
+ schemasByType: {}
+ });
+ });
+ });
 
-    it('should find tables matching string pattern', () => {
-      const results = schemaManager.findTables('user*');
-      
-      expect(results).toHaveLength(3);
-      expect(results[0]).toEqual({
-        database: 'db1',
-        table: 'user_accounts',
-        type: 'table',
-        columns: 2
-      });
-      expect(results[1]).toEqual({
-        database: 'db1',
-        table: 'user_profiles',
-        type: 'table',
-        columns: 1
-      });
-      expect(results[2]).toEqual({
-        database: 'db1',
-        table: 'user_stats',
-        type: 'view',
-        columns: 1
-      });
-    });
+ describe('findTables', () => {
+ beforeEach(async () => {
+ await schemaManager.initialize();
+ 
+ const schema1 = {
+ ...mockSchema,
+ database: 'db1',
+ tables: {
+ user_accounts: { name: 'user_accounts', type: 'BASE TABLE', comment: '', columns: [{} as any, {} as any] },
+ user_profiles: { name: 'user_profiles', type: 'BASE TABLE', comment: '', columns: [{} as any] }
+ },
+ views: {
+ user_stats: { name: 'user_stats', type: 'VIEW', comment: '', columns: [{} as any] }
+ }
+ };
+ 
+ const schema2 = {
+ ...mockSchema,
+ database: 'db2',
+ tables: {
+ products: { name: 'products', type: 'BASE TABLE', comment: '', columns: [{} as any, {} as any, {} as any] }
+ },
+ views: {}
+ };
+ 
+ (schemaManager as any).schemas.set('db1', schema1);
+ (schemaManager as any).schemas.set('db2', schema2);
+ });
 
-    it('should find tables matching regex pattern', () => {
-      const results = schemaManager.findTables(/^user_/);
-      
-      expect(results).toHaveLength(3);
-      expect(results.map(r => r.table)).toEqual(['user_accounts', 'user_profiles', 'user_stats']);
-    });
+ it('should find tables matching string pattern', () => {
+ const results = schemaManager.findTables('user*');
+ 
+ expect(results).toHaveLength(3);
+ expect(results[0]).toEqual({
+ database: 'db1',
+ table: 'user_accounts',
+ type: 'table',
+ columns: 2
+ });
+ expect(results[1]).toEqual({
+ database: 'db1',
+ table: 'user_profiles',
+ type: 'table',
+ columns: 1
+ });
+ expect(results[2]).toEqual({
+ database: 'db1',
+ table: 'user_stats',
+ type: 'view',
+ columns: 1
+ });
+ });
 
-    it('should return empty array if no matches', () => {
-      const results = schemaManager.findTables('nonexistent*');
-      
-      expect(results).toHaveLength(0);
-    });
+ it('should find tables matching regex pattern', () => {
+ const results = schemaManager.findTables(/^user_/);
+ 
+ expect(results).toHaveLength(3);
+ expect(results.map(r => r.table)).toEqual(['user_accounts', 'user_profiles', 'user_stats']);
+ });
 
-    it('should sort results by database and table name', () => {
-      const results = schemaManager.findTables('*');
-      
-      expect(results).toHaveLength(4);
-      expect(results.map(r => `${r.database}.${r.table}`)).toEqual([
-        'db1.user_accounts',
-        'db1.user_profiles',
-        'db1.user_stats',
-        'db2.products'
-      ]);
-    });
-  });
+ it('should return empty array if no matches', () => {
+ const results = schemaManager.findTables('nonexistent*');
+ 
+ expect(results).toHaveLength(0);
+ });
 
-  // ============================================================================
-  // Cache Information Tests
-  // ============================================================================
+ it('should sort results by database and table name', () => {
+ const results = schemaManager.findTables('*');
+ 
+ expect(results).toHaveLength(4);
+ expect(results.map(r => `${r.database}.${r.table}`)).toEqual([
+ 'db1.user_accounts',
+ 'db1.user_profiles',
+ 'db1.user_stats',
+ 'db2.products'
+ ]);
+ });
+ });
 
-  describe('getCacheInfo', () => {
-    it('should return cache information', async () => {
-      await schemaManager.initialize();
-      (schemaManager as any).schemas.set('testdb', mockSchema);
-      
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['testdb.json', 'otherdb.json'] as any);
-      mockFs.statSync.mockReturnValue({ size: 1024 } as any);
-      
-      const info = schemaManager.getCacheInfo();
-      
-      expect(info).toEqual({
-        schemasInMemory: 1,
-        schemaPath: './test-schemas',
-        filesOnDisk: 2,
-        totalSizeBytes: 2048
-      });
-    });
+ // ============================================================================
+ // Cache Information Tests
+ // ============================================================================
 
-    it('should handle missing schema directory', async () => {
-      await schemaManager.initialize();
-      mockFs.existsSync.mockReturnValue(false);
-      
-      const info = schemaManager.getCacheInfo();
-      
-      expect(info).toEqual({
-        schemasInMemory: 0,
-        schemaPath: './test-schemas',
-        filesOnDisk: 0,
-        totalSizeBytes: 0
-      });
-    });
+ describe('getCacheInfo', () => {
+ it('should return cache information', async () => {
+ await schemaManager.initialize();
+ (schemaManager as any).schemas.set('testdb', mockSchema);
+ 
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['testdb.json', 'otherdb.json'] as any);
+ mockFs.statSync.mockReturnValue({ size: 1024 } as any);
+ 
+ const info = schemaManager.getCacheInfo();
+ 
+ expect(info).toEqual({
+ schemasInMemory: 1,
+ schemaPath: './test-schemas',
+ filesOnDisk: 2,
+ totalSizeBytes: 2048
+ });
+ });
 
-    it('should handle file stat errors', async () => {
-      await schemaManager.initialize();
-      
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['testdb.json'] as any);
-      mockFs.statSync.mockImplementation(() => {
-        throw new Error('Stat error');
-      });
-      
-      const info = schemaManager.getCacheInfo();
-      
-      expect(info.filesOnDisk).toBe(1);
-      expect(info.totalSizeBytes).toBe(0);
-    });
-  });
+ it('should handle missing schema directory', async () => {
+ await schemaManager.initialize();
+ mockFs.existsSync.mockReturnValue(false);
+ 
+ const info = schemaManager.getCacheInfo();
+ 
+ expect(info).toEqual({
+ schemasInMemory: 0,
+ schemaPath: './test-schemas',
+ filesOnDisk: 0,
+ totalSizeBytes: 0
+ });
+ });
 
-  describe('cleanupOldSchemas', () => {
-    it('should remove old schema files', async () => {
-      await schemaManager.initialize();
-      
-      const oldDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // 8 days ago
-      const recentDate = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1 hour ago
-      
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['old.json', 'recent.json', 'not-schema.txt'] as any);
-      mockFs.statSync
-        .mockReturnValueOnce({ mtime: oldDate } as any)
-        .mockReturnValueOnce({ mtime: recentDate } as any);
-      mockFs.unlinkSync.mockImplementation(() => {}); // Don't throw errors for this test
-      
-      (schemaManager as any).schemas.set('old', mockSchema);
-      (schemaManager as any).schemas.set('recent', mockSchema);
-      
-      const result = await schemaManager.cleanupOldSchemas(24 * 7); // 7 days
-      
-      expect(result.removed).toBe(1);
-      expect(result.errors).toEqual([]);
-      expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/old.json');
-      expect(mockFs.unlinkSync).not.toHaveBeenCalledWith('./test-schemas/recent.json');
-      expect(schemaManager.hasSchema('old')).toBe(false);
-      expect(schemaManager.hasSchema('recent')).toBe(true);
-    });
+ it('should handle file stat errors', async () => {
+ await schemaManager.initialize();
+ 
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['testdb.json'] as any);
+ mockFs.statSync.mockImplementation(() => {
+ throw new Error('Stat error');
+ });
+ 
+ const info = schemaManager.getCacheInfo();
+ 
+ expect(info.filesOnDisk).toBe(1);
+ expect(info.totalSizeBytes).toBe(0);
+ });
+ });
 
-    it('should handle cleanup errors', async () => {
-      await schemaManager.initialize();
-      
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['error.json'] as any);
-      mockFs.statSync.mockImplementation(() => {
-        throw new Error('Stat error');
-      });
-      
-      const result = await schemaManager.cleanupOldSchemas();
-      
-      expect(result.removed).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain('Error processing error.json');
-    });
+ describe('cleanupOldSchemas', () => {
+ it('should remove old schema files', async () => {
+ await schemaManager.initialize();
+ 
+ const oldDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // 8 days ago
+ const recentDate = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1 hour ago
+ 
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['old.json', 'recent.json', 'not-schema.txt'] as any);
+ mockFs.statSync
+ .mockReturnValueOnce({ mtime: oldDate } as any)
+ .mockReturnValueOnce({ mtime: recentDate } as any);
+ mockFs.unlinkSync.mockImplementation(() => {}); // Don't throw errors for this test
+ 
+ (schemaManager as any).schemas.set('old', mockSchema);
+ (schemaManager as any).schemas.set('recent', mockSchema);
+ 
+ const result = await schemaManager.cleanupOldSchemas(24 * 7); // 7 days
+ 
+ expect(result.removed).toBe(1);
+ expect(result.errors).toEqual([]);
+ expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/old.json');
+ expect(mockFs.unlinkSync).not.toHaveBeenCalledWith('./test-schemas/recent.json');
+ expect(schemaManager.hasSchema('old')).toBe(false);
+ expect(schemaManager.hasSchema('recent')).toBe(true);
+ });
 
-    it('should handle missing schema directory', async () => {
-      await schemaManager.initialize();
-      
-      mockFs.existsSync.mockReturnValue(false);
-      
-      const result = await schemaManager.cleanupOldSchemas();
-      
-      expect(result.removed).toBe(0);
-      expect(result.errors).toEqual([]);
-    });
+ it('should handle cleanup errors', async () => {
+ await schemaManager.initialize();
+ 
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['error.json'] as any);
+ mockFs.statSync.mockImplementation(() => {
+ throw new Error('Stat error');
+ });
+ 
+ const result = await schemaManager.cleanupOldSchemas();
+ 
+ expect(result.removed).toBe(0);
+ expect(result.errors).toHaveLength(1);
+ expect(result.errors[0]).toContain('Error processing error.json');
+ });
 
-    it('should handle general cleanup errors', async () => {
-      await schemaManager.initialize();
-      
-      mockFs.existsSync.mockImplementation(() => {
-        throw new Error('Directory error');
-      });
-      
-      const result = await schemaManager.cleanupOldSchemas();
-      
-      expect(result.removed).toBe(0);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toContain('Error during cleanup');
-    });
-  });
+ it('should handle missing schema directory', async () => {
+ await schemaManager.initialize();
+ 
+ mockFs.existsSync.mockReturnValue(false);
+ 
+ const result = await schemaManager.cleanupOldSchemas();
+ 
+ expect(result.removed).toBe(0);
+ expect(result.errors).toEqual([]);
+ });
 
-  // ============================================================================
-  // File Operations Error Handling
-  // ============================================================================
+ it('should handle general cleanup errors', async () => {
+ await schemaManager.initialize();
+ 
+ mockFs.existsSync.mockImplementation(() => {
+ throw new Error('Directory error');
+ });
+ 
+ const result = await schemaManager.cleanupOldSchemas();
+ 
+ expect(result.removed).toBe(0);
+ expect(result.errors).toHaveLength(1);
+ expect(result.errors[0]).toContain('Error during cleanup');
+ });
+ });
 
-  describe('file operations error handling', () => {
-    it('should handle schema save errors', async () => {
-      await schemaManager.initialize();
-      
-      mockFs.writeFileSync.mockImplementation(() => {
-        throw new Error('Write error');
-      });
-      
-      await expect(schemaManager.captureSchema('testdb', {
-        type: 'postgresql',
-        host: 'localhost',
-        database: 'testdb'
-      } as DatabaseConfig)).rejects.toThrow('Write error');
-    });
+ // ============================================================================
+ // File Operations Error Handling
+ // ============================================================================
 
-    it('should handle cleanup errors gracefully during save all', async () => {
-      await schemaManager.initialize();
-      
-      (schemaManager as any).schemas.set('db1', mockSchema);
-      (schemaManager as any).schemas.set('db2', mockSchema);
-      
-      mockFs.writeFileSync
-        .mockImplementationOnce(() => {
-          throw new Error('Write error for db1');
-        })
-        .mockImplementationOnce(() => {
-          // Success for db2
-        });
-      
-      // Should not throw despite error in one save operation
-      await expect(schemaManager.cleanup()).resolves.not.toThrow();
-    });
+ describe('file operations error handling', () => {
+ it('should handle schema save errors', async () => {
+ await schemaManager.initialize();
+ 
+ mockFs.writeFileSync.mockImplementation(() => {
+ throw new Error('Write error');
+ });
+ 
+ await expect(schemaManager.captureSchema('testdb', {
+ type: 'postgresql',
+ host: 'localhost',
+ database: 'testdb'
+ } as DatabaseConfig)).rejects.toThrow('Write error');
+ });
 
-    it('should handle directory creation errors', async () => {
-      mockFs.existsSync.mockReturnValue(false);
-      mockFs.mkdirSync.mockImplementation(() => {
-        throw new Error('Directory creation failed');
-      });
-      
-      // Should not throw error during initialization - implementation handles this gracefully
-      await expect(schemaManager.initialize()).rejects.toThrow('Directory creation failed');
-    });
-  });
+ it('should handle cleanup errors gracefully during save all', async () => {
+ await schemaManager.initialize();
+ 
+ (schemaManager as any).schemas.set('db1', mockSchema);
+ (schemaManager as any).schemas.set('db2', mockSchema);
+ 
+ mockFs.writeFileSync
+ .mockImplementationOnce(() => {
+ throw new Error('Write error for db1');
+ })
+ .mockImplementationOnce(() => {
+ // Success for db2
+ });
+ 
+ // Should not throw despite error in one save operation
+ await expect(schemaManager.cleanup()).resolves.not.toThrow();
+ });
 
-  // ============================================================================
-  // Edge Cases and Integration Tests
-  // ============================================================================
+ it('should handle directory creation errors', async () => {
+ mockFs.existsSync.mockReturnValue(false);
+ mockFs.mkdirSync.mockImplementation(() => {
+ throw new Error('Directory creation failed');
+ });
+ 
+ // Should not throw error during initialization - implementation handles this gracefully
+ await expect(schemaManager.initialize()).rejects.toThrow('Directory creation failed');
+ });
+ });
 
-  describe('edge cases', () => {
-    beforeEach(async () => {
-      // Reset mocks to default non-throwing behavior for edge case tests
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.mkdirSync.mockReturnValue(undefined);
-      mockFs.unlinkSync.mockImplementation(() => {});
-      mockFs.writeFileSync.mockImplementation(() => {});
-      
-      await schemaManager.initialize();
-    });
+ // ============================================================================
+ // Edge Cases and Integration Tests
+ // ============================================================================
 
-    it('should handle empty schema tables and views', async () => {
-      const emptySchema = {
-        ...mockSchema,
-        tables: {},
-        views: {},
-        summary: { table_count: 0, view_count: 0, total_columns: 0 }
-      };
-      
-      (schemaManager as any).schemas.set('empty', emptySchema);
-      
-      const context = schemaManager.generateSchemaContext('empty');
-      expect(context).toContain('Summary: 0 tables, 0 views, 0 total columns');
-      expect(context).not.toContain('TABLES:');
-      expect(context).not.toContain('VIEWS:');
-    });
+ describe('edge cases', () => {
+ beforeEach(async () => {
+ // Reset mocks to default non-throwing behavior for edge case tests
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.mkdirSync.mockReturnValue(undefined);
+ mockFs.unlinkSync.mockImplementation(() => {});
+ mockFs.writeFileSync.mockImplementation(() => {});
+ 
+ await schemaManager.initialize();
+ });
 
-    it('should handle schema with only tables (no views)', async () => {
-      const tablesOnlySchema = {
-        ...mockSchema,
-        views: {},
-        summary: { ...mockSchema.summary, view_count: 0, total_columns: 2 }
-      };
-      
-      (schemaManager as any).schemas.set('tablesonly', tablesOnlySchema);
-      
-      const context = schemaManager.generateSchemaContext('tablesonly');
-      expect(context).toContain('TABLES:');
-      expect(context).not.toContain('VIEWS:');
-    });
+ it('should handle empty schema tables and views', async () => {
+ const emptySchema = {
+ ...mockSchema,
+ tables: {},
+ views: {},
+ summary: { table_count: 0, view_count: 0, total_columns: 0 }
+ };
+ 
+ (schemaManager as any).schemas.set('empty', emptySchema);
+ 
+ const context = schemaManager.generateSchemaContext('empty');
+ expect(context).toContain('Summary: 0 tables, 0 views, 0 total columns');
+ expect(context).not.toContain('TABLES:');
+ expect(context).not.toContain('VIEWS:');
+ });
 
-    it('should handle schema with only views (no tables)', async () => {
-      const viewsOnlySchema = {
-        ...mockSchema,
-        tables: {},
-        summary: { table_count: 0, view_count: 1, total_columns: 1 }
-      };
-      
-      (schemaManager as any).schemas.set('viewsonly', viewsOnlySchema);
-      
-      const context = schemaManager.generateSchemaContext('viewsonly');
-      expect(context).not.toContain('TABLES:');
-      expect(context).toContain('VIEWS:');
-    });
+ it('should handle schema with only tables (no views)', async () => {
+ const tablesOnlySchema = {
+ ...mockSchema,
+ views: {},
+ summary: { ...mockSchema.summary, view_count: 0, total_columns: 2 }
+ };
+ 
+ (schemaManager as any).schemas.set('tablesonly', tablesOnlySchema);
+ 
+ const context = schemaManager.generateSchemaContext('tablesonly');
+ expect(context).toContain('TABLES:');
+ expect(context).not.toContain('VIEWS:');
+ });
 
-    it('should handle columns with minimal information', async () => {
-      const minimalSchema = {
-        ...mockSchema,
-        tables: {
-          minimal_table: {
-            name: 'minimal_table',
-            type: 'BASE TABLE',
-            comment: '',
-            columns: [
-              {
-                name: 'simple_col',
-                type: 'text',
-                nullable: true,
-                default: null,
-                comment: '',
-                key: '',
-                extra: '',
-                max_length: null,
-                precision: null,
-                scale: null
-              }
-            ]
-          }
-        }
-      };
-      
-      (schemaManager as any).schemas.set('minimal', minimalSchema);
-      
-      const context = schemaManager.generateSchemaContext('minimal', 'minimal_table');
-      expect(context).toContain('simple_col (text, nullable)');
-    });
+ it('should handle schema with only views (no tables)', async () => {
+ const viewsOnlySchema = {
+ ...mockSchema,
+ tables: {},
+ summary: { table_count: 0, view_count: 1, total_columns: 1 }
+ };
+ 
+ (schemaManager as any).schemas.set('viewsonly', viewsOnlySchema);
+ 
+ const context = schemaManager.generateSchemaContext('viewsonly');
+ expect(context).not.toContain('TABLES:');
+ expect(context).toContain('VIEWS:');
+ });
 
-    it('should handle concurrent schema operations', async () => {
-      // Simulate concurrent capture operations
-      const promises = [
-        schemaManager.captureSchema('db1', { type: 'postgresql' } as DatabaseConfig),
-        schemaManager.captureSchema('db2', { type: 'mysql' } as DatabaseConfig),
-        schemaManager.captureSchema('db3', { type: 'sqlite' } as DatabaseConfig)
-      ];
-      
-      const results = await Promise.all(promises);
-      
-      expect(results).toHaveLength(3);
-      expect(schemaManager.hasSchema('db1')).toBe(true);
-      expect(schemaManager.hasSchema('db2')).toBe(true);
-      expect(schemaManager.hasSchema('db3')).toBe(true);
-    });
+ it('should handle columns with minimal information', async () => {
+ const minimalSchema = {
+ ...mockSchema,
+ tables: {
+ minimal_table: {
+ name: 'minimal_table',
+ type: 'BASE TABLE',
+ comment: '',
+ columns: [
+ {
+ name: 'simple_col',
+ type: 'text',
+ nullable: true,
+ default: null,
+ comment: '',
+ key: '',
+ extra: '',
+ max_length: null,
+ precision: null,
+ scale: null
+ }
+ ]
+ }
+ }
+ };
+ 
+ (schemaManager as any).schemas.set('minimal', minimalSchema);
+ 
+ const context = schemaManager.generateSchemaContext('minimal', 'minimal_table');
+ expect(context).toContain('simple_col (text, nullable)');
+ });
 
-    it('should handle schema validation with missing required fields', async () => {
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.readdirSync.mockReturnValue(['invalid-schema.json'] as any);
-      
-      // Schema missing required summary field
-      const invalidSchema = {
-        database: 'testdb',
-        type: 'postgresql',
-        captured_at: '2023-01-01T12:00:00.000Z',
-        tables: {},
-        views: {}
-        // missing summary field
-      };
-      
-      mockFs.readFileSync.mockReturnValue(JSON.stringify(invalidSchema));
-      
-      await schemaManager.initialize();
-      
-      expect(schemaManager.hasSchema('invalid-schema')).toBe(false);
-      expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/invalid-schema.json');
-    });
-  });
+ it('should handle concurrent schema operations', async () => {
+ // Simulate concurrent capture operations
+ const promises = [
+ schemaManager.captureSchema('db1', { type: 'postgresql' } as DatabaseConfig),
+ schemaManager.captureSchema('db2', { type: 'mysql' } as DatabaseConfig),
+ schemaManager.captureSchema('db3', { type: 'sqlite' } as DatabaseConfig)
+ ];
+ 
+ const results = await Promise.all(promises);
+ 
+ expect(results).toHaveLength(3);
+ expect(schemaManager.hasSchema('db1')).toBe(true);
+ expect(schemaManager.hasSchema('db2')).toBe(true);
+ expect(schemaManager.hasSchema('db3')).toBe(true);
+ });
 
-  // ============================================================================
-  // Event Handling Tests
-  // ============================================================================
+ it('should handle schema validation with missing required fields', async () => {
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.readdirSync.mockReturnValue(['invalid-schema.json'] as any);
+ 
+ // Schema missing required summary field
+ const invalidSchema = {
+ database: 'testdb',
+ type: 'postgresql',
+ captured_at: '2023-01-01T12:00:00.000Z',
+ tables: {},
+ views: {}
+ // missing summary field
+ };
+ 
+ mockFs.readFileSync.mockReturnValue(JSON.stringify(invalidSchema));
+ 
+ await schemaManager.initialize();
+ 
+ expect(schemaManager.hasSchema('invalid-schema')).toBe(false);
+ expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/invalid-schema.json');
+ });
+ });
 
-  describe('event handling', () => {
-    beforeEach(async () => {
-      // Reset mocks to default non-throwing behavior
-      mockFs.existsSync.mockReturnValue(true);
-      mockFs.mkdirSync.mockReturnValue(undefined);
-      mockFs.unlinkSync.mockImplementation(() => {});
-      mockFs.writeFileSync.mockImplementation(() => {});
-      
-      await schemaManager.initialize();
-    });
+ // ============================================================================
+ // Event Handling Tests
+ // ============================================================================
 
-    it('should emit events in correct sequence', async () => {
-      const events: string[] = [];
-      schemaManager.on('schema-cached', () => events.push('cached'));
-      schemaManager.on('schema-refreshed', () => events.push('refreshed'));
-      
-      await schemaManager.captureSchema('testdb', {
-        type: 'postgresql'
-      } as DatabaseConfig);
-      
-      await schemaManager.refreshSchema('testdb');
-      
-      expect(events).toEqual(['cached', 'refreshed']);
-    });
+ describe('event handling', () => {
+ beforeEach(async () => {
+ // Reset mocks to default non-throwing behavior
+ mockFs.existsSync.mockReturnValue(true);
+ mockFs.mkdirSync.mockReturnValue(undefined);
+ mockFs.unlinkSync.mockImplementation(() => {});
+ mockFs.writeFileSync.mockImplementation(() => {});
+ 
+ await schemaManager.initialize();
+ });
 
-    it('should handle event listener errors gracefully', async () => {
-      schemaManager.on('schema-cached', () => {
-        throw new Error('Event listener error');
-      });
-      
-      // The SchemaManager implementation should either:
-      // 1. Gracefully handle listener errors and continue operation, or
-      // 2. Let the error propagate (which is also valid behavior)
-      
-      let captureResult;
-      let captureError;
-      
-      try {
-        captureResult = await schemaManager.captureSchema('testdb', {
-          type: 'postgresql'
-        } as DatabaseConfig);
-      } catch (error) {
-        captureError = error;
-      }
-      
-      // Either outcome is acceptable:
-      // - The operation succeeds despite the listener error (graceful handling)
-      // - The operation fails with the listener error (error propagation)
-      if (captureError) {
-        expect((captureError as Error).message).toBe('Event listener error');
-      } else {
-        expect(captureResult).toBeDefined();
-      }
-    });
-  });
+ it('should emit events in correct sequence', async () => {
+ const events: string[] = [];
+ schemaManager.on('schema-cached', () => events.push('cached'));
+ schemaManager.on('schema-refreshed', () => events.push('refreshed'));
+ 
+ await schemaManager.captureSchema('testdb', {
+ type: 'postgresql'
+ } as DatabaseConfig);
+ 
+ await schemaManager.refreshSchema('testdb');
+ 
+ expect(events).toEqual(['cached', 'refreshed']);
+ });
+
+ it('should handle event listener errors gracefully', async () => {
+ schemaManager.on('schema-cached', () => {
+ throw new Error('Event listener error');
+ });
+ 
+ // The SchemaManager implementation should either:
+ // 1. Gracefully handle listener errors and continue operation, or
+ // 2. Let the error propagate (which is also valid behavior)
+ 
+ let captureResult;
+ let captureError;
+ 
+ try {
+ captureResult = await schemaManager.captureSchema('testdb', {
+ type: 'postgresql'
+ } as DatabaseConfig);
+ } catch (error) {
+ captureError = error;
+ }
+ 
+ // Either outcome is acceptable:
+ // - The operation succeeds despite the listener error (graceful handling)
+ // - The operation fails with the listener error (error propagation)
+ if (captureError) {
+ expect((captureError as Error).message).toBe('Event listener error');
+ } else {
+ expect(captureResult).toBeDefined();
+ }
+ });
+ });
 });

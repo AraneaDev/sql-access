@@ -130,7 +130,7 @@ host=sqlserver.company.com
 database=SecureDB
 username=app_user
 password=secure_password
-encrypt=true  # Enables SSL/TLS
+encrypt=true # Enables SSL/TLS
 ```
 
 The SQL Server adapter automatically configures:
@@ -145,9 +145,9 @@ For production environments with valid certificates:
 ```javascript
 // Advanced SSL configuration (handled internally)
 options: {
-  encrypt: true,
-  trustServerCertificate: false,  // Validate certificates
-  enableArithAbort: true
+ encrypt: true,
+ trustServerCertificate: false, // Validate certificates
+ enableArithAbort: true
 }
 ```
 
@@ -207,7 +207,7 @@ select_only=true
 ```ini
 [database.gcp_sqlserver]
 type=mssql
-host=10.x.x.x  # Private IP
+host=10.x.x.x # Private IP
 port=1433
 database=application_db
 username=sqlserver_user
@@ -229,9 +229,9 @@ The SQL Server adapter provides:
 Configuration is handled automatically:
 ```javascript
 pool: {
-  max: 10,                    // Maximum connections
-  min: 0,                     // Minimum connections
-  idleTimeoutMillis: 30000    // Idle connection timeout
+ max: 10, // Maximum connections
+ min: 0, // Minimum connections
+ idleTimeoutMillis: 30000 // Idle connection timeout
 }
 ```
 
@@ -248,10 +248,10 @@ UPDATE STATISTICS table_name;
 
 -- Monitor query performance
 SELECT 
-    qs.sql_handle,
-    qs.execution_count,
-    qs.total_elapsed_time / qs.execution_count as avg_elapsed_time,
-    qt.text
+ qs.sql_handle,
+ qs.execution_count,
+ qs.total_elapsed_time / qs.execution_count as avg_elapsed_time,
+ qt.text
 FROM sys.dm_exec_query_stats qs
 CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) qt
 ORDER BY avg_elapsed_time DESC;
@@ -262,12 +262,12 @@ ORDER BY avg_elapsed_time DESC;
 ```sql
 -- Find missing indexes
 SELECT 
-    migs.avg_total_user_cost * (migs.avg_user_impact / 100.0) * (migs.user_seeks + migs.user_scans) AS improvement_measure,
-    'CREATE INDEX [IX_' + OBJECT_NAME(mid.object_id) + '_' + REPLACE(REPLACE(REPLACE(ISNULL(mid.equality_columns,''), ', ', '_'), '[', ''), ']', '') + ']'
-    + ' ON ' + mid.statement + ' (' + ISNULL(mid.equality_columns,'')
-    + CASE WHEN mid.inequality_columns IS NOT NULL THEN ',' + mid.inequality_columns ELSE '' END + ')'
-    + ISNULL(' INCLUDE (' + mid.included_columns + ')', '') AS create_index_statement,
-    migs.*, mid.database_id, mid.object_id
+ migs.avg_total_user_cost * (migs.avg_user_impact / 100.0) * (migs.user_seeks + migs.user_scans) AS improvement_measure,
+ 'CREATE INDEX [IX_' + OBJECT_NAME(mid.object_id) + '_' + REPLACE(REPLACE(REPLACE(ISNULL(mid.equality_columns,''), ', ', '_'), '[', ''), ']', '') + ']'
+ + ' ON ' + mid.statement + ' (' + ISNULL(mid.equality_columns,'')
+ + CASE WHEN mid.inequality_columns IS NOT NULL THEN ',' + mid.inequality_columns ELSE '' END + ')'
+ + ISNULL(' INCLUDE (' + mid.included_columns + ')', '') AS create_index_statement,
+ migs.*, mid.database_id, mid.object_id
 FROM sys.dm_db_missing_index_groups mig
 INNER JOIN sys.dm_db_missing_index_group_stats migs ON migs.group_handle = mig.index_group_handle
 INNER JOIN sys.dm_db_missing_index_details mid ON mig.index_handle = mid.index_handle
@@ -309,11 +309,11 @@ Implement row-level security for sensitive data:
 CREATE SCHEMA Security;
 
 CREATE FUNCTION Security.fn_securitypredicate(@UserId int)
-    RETURNS TABLE
+ RETURNS TABLE
 WITH SCHEMABINDING
 AS
-    RETURN SELECT 1 AS fn_securitypredicate_result
-    WHERE @UserId = USER_ID() OR USER_NAME() = 'claude_readonly';
+ RETURN SELECT 1 AS fn_securitypredicate_result
+ WHERE @UserId = USER_ID() OR USER_NAME() = 'claude_readonly';
 
 CREATE SECURITY POLICY CustomerFilter
 ADD FILTER PREDICATE Security.fn_securitypredicate(user_id) ON dbo.customers,
@@ -330,7 +330,7 @@ Protect sensitive data:
 ALTER TABLE customers
 ALTER COLUMN email ADD MASKED WITH (FUNCTION = 'email()');
 
-ALTER TABLE customers  
+ALTER TABLE customers 
 ALTER COLUMN phone ADD MASKED WITH (FUNCTION = 'partial(1,"XXX-XXX-",4)');
 
 -- Grant unmask permission
@@ -369,17 +369,17 @@ The adapter handles all SQL Server data types:
 ```sql
 -- Recursive hierarchy
 WITH EmployeeHierarchy AS (
-    -- Anchor member: top-level managers
-    SELECT employee_id, name, manager_id, 0 as level
-    FROM employees
-    WHERE manager_id IS NULL
-    
-    UNION ALL
-    
-    -- Recursive member: direct reports
-    SELECT e.employee_id, e.name, e.manager_id, eh.level + 1
-    FROM employees e
-    INNER JOIN EmployeeHierarchy eh ON e.manager_id = eh.employee_id
+ -- Anchor member: top-level managers
+ SELECT employee_id, name, manager_id, 0 as level
+ FROM employees
+ WHERE manager_id IS NULL
+ 
+ UNION ALL
+ 
+ -- Recursive member: direct reports
+ SELECT e.employee_id, e.name, e.manager_id, eh.level + 1
+ FROM employees e
+ INNER JOIN EmployeeHierarchy eh ON e.manager_id = eh.employee_id
 )
 SELECT * FROM EmployeeHierarchy
 ORDER BY level, name;
@@ -390,12 +390,12 @@ ORDER BY level, name;
 ```sql
 -- Advanced analytics with window functions
 SELECT 
-    customer_id,
-    order_date,
-    total_amount,
-    SUM(total_amount) OVER (PARTITION BY customer_id ORDER BY order_date) as running_total,
-    LAG(total_amount) OVER (PARTITION BY customer_id ORDER BY order_date) as previous_order,
-    ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total_amount DESC) as order_rank
+ customer_id,
+ order_date,
+ total_amount,
+ SUM(total_amount) OVER (PARTITION BY customer_id ORDER BY order_date) as running_total,
+ LAG(total_amount) OVER (PARTITION BY customer_id ORDER BY order_date) as previous_order,
+ ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY total_amount DESC) as order_rank
 FROM orders;
 ```
 
@@ -404,22 +404,22 @@ FROM orders;
 ```sql
 -- JSON querying
 SELECT 
-    customer_id,
-    JSON_VALUE(preferences, '$.theme') as preferred_theme,
-    JSON_QUERY(preferences, '$.notifications') as notification_settings
+ customer_id,
+ JSON_VALUE(preferences, '$.theme') as preferred_theme,
+ JSON_QUERY(preferences, '$.notifications') as notification_settings
 FROM customer_profiles
 WHERE JSON_VALUE(preferences, '$.active') = 'true';
 
 -- JSON aggregation
 SELECT 
-    category,
-    (SELECT 
-        product_id, 
-        name, 
-        price 
-     FROM products p 
-     WHERE p.category_id = c.id 
-     FOR JSON PATH) as products_json
+ category,
+ (SELECT 
+ product_id, 
+ name, 
+ price 
+ FROM products p 
+ WHERE p.category_id = c.id 
+ FOR JSON PATH) as products_json
 FROM categories c;
 ```
 
@@ -443,26 +443,26 @@ WHERE employee_id = 123;
 ```sql
 -- Current active connections
 SELECT 
-    session_id,
-    login_time,
-    host_name,
-    program_name,
-    login_name,
-    status,
-    cpu_time,
-    memory_usage,
-    reads,
-    writes
+ session_id,
+ login_time,
+ host_name,
+ program_name,
+ login_name,
+ status,
+ cpu_time,
+ memory_usage,
+ reads,
+ writes
 FROM sys.dm_exec_sessions
 WHERE is_user_process = 1
 ORDER BY cpu_time DESC;
 
 -- Database size information
 SELECT 
-    DB_NAME() as database_name,
-    SUM(CASE WHEN type = 0 THEN size END) * 8 / 1024 as data_size_mb,
-    SUM(CASE WHEN type = 1 THEN size END) * 8 / 1024 as log_size_mb,
-    SUM(size) * 8 / 1024 as total_size_mb
+ DB_NAME() as database_name,
+ SUM(CASE WHEN type = 0 THEN size END) * 8 / 1024 as data_size_mb,
+ SUM(CASE WHEN type = 1 THEN size END) * 8 / 1024 as log_size_mb,
+ SUM(size) * 8 / 1024 as total_size_mb
 FROM sys.database_files;
 ```
 
@@ -483,11 +483,11 @@ const connections = await adapter.getActiveConnections(connection);
 ```sql
 -- Identify performance bottlenecks
 SELECT 
-    wait_type,
-    wait_time_ms,
-    waiting_tasks_count,
-    signal_wait_time_ms,
-    wait_time_ms - signal_wait_time_ms as resource_wait_time_ms
+ wait_type,
+ wait_time_ms,
+ waiting_tasks_count,
+ signal_wait_time_ms,
+ wait_time_ms - signal_wait_time_ms as resource_wait_time_ms
 FROM sys.dm_os_wait_stats
 WHERE wait_time_ms > 1000
 ORDER BY wait_time_ms DESC;
@@ -560,19 +560,19 @@ Error: Timeout: Request failed to complete in 30000ms
 ```sql
 -- Monitor blocking
 SELECT 
-    blocking_session_id,
-    session_id,
-    wait_type,
-    wait_time,
-    wait_resource
+ blocking_session_id,
+ session_id,
+ wait_type,
+ wait_time,
+ wait_resource
 FROM sys.dm_exec_requests
 WHERE blocking_session_id <> 0;
 
 -- Deadlock information
 SELECT 
-    session_id,
-    deadlock_priority,
-    transaction_isolation_level
+ session_id,
+ deadlock_priority,
+ transaction_isolation_level
 FROM sys.dm_exec_sessions
 WHERE session_id IN (SELECT session_id FROM sys.dm_exec_requests WHERE blocking_session_id <> 0);
 ```
@@ -639,11 +639,11 @@ select_only=true
 ```sql
 -- Sales performance dashboard
 SELECT 
-    DATENAME(month, order_date) + ' ' + CAST(YEAR(order_date) AS VARCHAR) as month_year,
-    COUNT(*) as total_orders,
-    SUM(total_amount) as revenue,
-    AVG(total_amount) as avg_order_value,
-    COUNT(DISTINCT customer_id) as unique_customers
+ DATENAME(month, order_date) + ' ' + CAST(YEAR(order_date) AS VARCHAR) as month_year,
+ COUNT(*) as total_orders,
+ SUM(total_amount) as revenue,
+ AVG(total_amount) as avg_order_value,
+ COUNT(DISTINCT customer_id) as unique_customers
 FROM orders
 WHERE order_date >= DATEADD(month, -12, GETDATE())
 GROUP BY YEAR(order_date), MONTH(order_date), DATENAME(month, order_date)
@@ -655,28 +655,28 @@ ORDER BY YEAR(order_date) DESC, MONTH(order_date) DESC;
 ```sql
 -- Customer cohort analysis
 WITH FirstPurchase AS (
-    SELECT 
-        customer_id,
-        MIN(order_date) as first_purchase_date,
-        YEAR(MIN(order_date)) as cohort_year,
-        MONTH(MIN(order_date)) as cohort_month
-    FROM orders
-    GROUP BY customer_id
+ SELECT 
+ customer_id,
+ MIN(order_date) as first_purchase_date,
+ YEAR(MIN(order_date)) as cohort_year,
+ MONTH(MIN(order_date)) as cohort_month
+ FROM orders
+ GROUP BY customer_id
 ),
 CustomerMonths AS (
-    SELECT 
-        fp.customer_id,
-        fp.cohort_year,
-        fp.cohort_month,
-        DATEDIFF(month, fp.first_purchase_date, o.order_date) as months_since_first
-    FROM FirstPurchase fp
-    JOIN orders o ON fp.customer_id = o.customer_id
+ SELECT 
+ fp.customer_id,
+ fp.cohort_year,
+ fp.cohort_month,
+ DATEDIFF(month, fp.first_purchase_date, o.order_date) as months_since_first
+ FROM FirstPurchase fp
+ JOIN orders o ON fp.customer_id = o.customer_id
 )
 SELECT 
-    cohort_year,
-    cohort_month,
-    months_since_first,
-    COUNT(DISTINCT customer_id) as customers
+ cohort_year,
+ cohort_month,
+ months_since_first,
+ COUNT(DISTINCT customer_id) as customers
 FROM CustomerMonths
 GROUP BY cohort_year, cohort_month, months_since_first
 ORDER BY cohort_year, cohort_month, months_since_first;

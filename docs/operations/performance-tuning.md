@@ -7,24 +7,24 @@ This comprehensive guide covers performance optimization strategies for the SQL 
 ## Performance Architecture
 
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│     Client      │────│   Load Balancer  │────│   MCP Cluster   │
-│   (Claude)      │    │  (Connection     │    │   (Optimized)   │
-└─────────────────┘    │   Pooling)       │    └─────────────────┘
-                       └──────────────────┘           │
-                                                      │
-        ┌─────────────────┐    ┌─────────────────┐    │
-        │  Query Cache    │────│  Connection     │────┘
-        │   (Redis)       │    │    Pool         │
-        └─────────────────┘    └─────────────────┘
-                                        │
-        ┌─────────────────────────────────┴─────────────────┐
-        │              Database Cluster                     │
-        │  ┌─────────┐  ┌─────────┐  ┌─────────┐           │
-        │  │Primary  │──│Replica 1│  │Replica 2│           │
-        │  │ (Write) │  │ (Read)  │  │ (Read)  │           │
-        │  └─────────┘  └─────────┘  └─────────┘           │
-        └───────────────────────────────────────────────────┘
++-----------------+ +------------------+ +-----------------+
+| Client |----| Load Balancer |----| MCP Cluster |
+| (Claude) | | (Connection | | (Optimized) |
+\-----------------+ | Pooling) | \-----------------+
+ \------------------+ |
+ |
+ +-----------------+ +-----------------+ |
+ | Query Cache |----| Connection |----+
+ | (Redis) | | Pool |
+ \-----------------+ \-----------------+
+ |
+ +---------------------------------+-----------------+
+ | Database Cluster |
+ | +---------+ +---------+ +---------+ |
+ | |Primary |--|Replica 1| |Replica 2| |
+ | | (Write) | | (Read) | | (Read) | |
+ | \---------+ \---------+ \---------+ |
+ \---------------------------------------------------+
 ```
 
 ## Query Performance Optimization
@@ -34,81 +34,81 @@ This comprehensive guide covers performance optimization strategies for the SQL 
 ```typescript
 // Query performance analyzer
 export class QueryPerformanceAnalyzer {
-  private slowQueryThreshold: number = 1000; // ms
-  private complexityThreshold: number = 100;
-  
-  async analyzeQuery(
-    database: string, 
-    query: string, 
-    executionTime: number
-  ): Promise<QueryAnalysis> {
-    const analysis: QueryAnalysis = {
-      query_hash: this.hashQuery(query),
-      execution_time: executionTime,
-      complexity_score: await this.calculateComplexity(query),
-      recommendations: []
-    };
+ private slowQueryThreshold: number = 1000; // ms
+ private complexityThreshold: number = 100;
+ 
+ async analyzeQuery(
+ database: string, 
+ query: string, 
+ executionTime: number
+ ): Promise<QueryAnalysis> {
+ const analysis: QueryAnalysis = {
+ query_hash: this.hashQuery(query),
+ execution_time: executionTime,
+ complexity_score: await this.calculateComplexity(query),
+ recommendations: []
+ };
 
-    // Performance recommendations
-    if (executionTime > this.slowQueryThreshold) {
-      analysis.recommendations.push('Consider query optimization or indexing');
-    }
+ // Performance recommendations
+ if (executionTime > this.slowQueryThreshold) {
+ analysis.recommendations.push('Consider query optimization or indexing');
+ }
 
-    if (analysis.complexity_score > this.complexityThreshold) {
-      analysis.recommendations.push('Query complexity exceeds threshold');
-    }
+ if (analysis.complexity_score > this.complexityThreshold) {
+ analysis.recommendations.push('Query complexity exceeds threshold');
+ }
 
-    // Specific optimization suggestions
-    analysis.recommendations.push(...this.getOptimizationSuggestions(query));
+ // Specific optimization suggestions
+ analysis.recommendations.push(...this.getOptimizationSuggestions(query));
 
-    return analysis;
-  }
+ return analysis;
+ }
 
-  private getOptimizationSuggestions(query: string): string[] {
-    const suggestions: string[] = [];
-    const upperQuery = query.toUpperCase();
+ private getOptimizationSuggestions(query: string): string[] {
+ const suggestions: string[] = [];
+ const upperQuery = query.toUpperCase();
 
-    // Check for common anti-patterns
-    if (upperQuery.includes('SELECT *')) {
-      suggestions.push('Avoid SELECT * - specify required columns');
-    }
+ // Check for common anti-patterns
+ if (upperQuery.includes('SELECT *')) {
+ suggestions.push('Avoid SELECT * - specify required columns');
+ }
 
-    if (upperQuery.includes('LIKE \'%')) {
-      suggestions.push('Leading wildcards prevent index usage');
-    }
+ if (upperQuery.includes('LIKE \'%')) {
+ suggestions.push('Leading wildcards prevent index usage');
+ }
 
-    if (upperQuery.includes('ORDER BY') && !upperQuery.includes('LIMIT')) {
-      suggestions.push('Consider adding LIMIT to ORDER BY queries');
-    }
+ if (upperQuery.includes('ORDER BY') && !upperQuery.includes('LIMIT')) {
+ suggestions.push('Consider adding LIMIT to ORDER BY queries');
+ }
 
-    if ((upperQuery.match(/JOIN/g) || []).length > 3) {
-      suggestions.push('Complex joins detected - consider query restructuring');
-    }
+ if ((upperQuery.match(/JOIN/g) || []).length > 3) {
+ suggestions.push('Complex joins detected - consider query restructuring');
+ }
 
-    if (upperQuery.includes('DISTINCT') && upperQuery.includes('ORDER BY')) {
-      suggestions.push('DISTINCT with ORDER BY may be inefficient');
-    }
+ if (upperQuery.includes('DISTINCT') && upperQuery.includes('ORDER BY')) {
+ suggestions.push('DISTINCT with ORDER BY may be inefficient');
+ }
 
-    return suggestions;
-  }
+ return suggestions;
+ }
 
-  private async calculateComplexity(query: string): Promise<number> {
-    let score = 0;
-    const upperQuery = query.toUpperCase();
+ private async calculateComplexity(query: string): Promise<number> {
+ let score = 0;
+ const upperQuery = query.toUpperCase();
 
-    // Base complexity factors
-    score += (upperQuery.match(/SELECT/g) || []).length * 1;
-    score += (upperQuery.match(/FROM/g) || []).length * 2;
-    score += (upperQuery.match(/JOIN/g) || []).length * 5;
-    score += (upperQuery.match(/WHERE/g) || []).length * 2;
-    score += (upperQuery.match(/GROUP BY/g) || []).length * 3;
-    score += (upperQuery.match(/ORDER BY/g) || []).length * 2;
-    score += (upperQuery.match(/HAVING/g) || []).length * 4;
-    score += (upperQuery.match(/UNION/g) || []).length * 6;
-    score += (upperQuery.match(/SUBQUERY|EXISTS|IN \(/gi) || []).length * 8;
+ // Base complexity factors
+ score += (upperQuery.match(/SELECT/g) || []).length * 1;
+ score += (upperQuery.match(/FROM/g) || []).length * 2;
+ score += (upperQuery.match(/JOIN/g) || []).length * 5;
+ score += (upperQuery.match(/WHERE/g) || []).length * 2;
+ score += (upperQuery.match(/GROUP BY/g) || []).length * 3;
+ score += (upperQuery.match(/ORDER BY/g) || []).length * 2;
+ score += (upperQuery.match(/HAVING/g) || []).length * 4;
+ score += (upperQuery.match(/UNION/g) || []).length * 6;
+ score += (upperQuery.match(/SUBQUERY|EXISTS|IN \(/gi) || []).length * 8;
 
-    return score;
-  }
+ return score;
+ }
 }
 ```
 
@@ -117,83 +117,83 @@ export class QueryPerformanceAnalyzer {
 ```typescript
 // Redis-based query cache
 export class QueryCache {
-  private redis: Redis;
-  private defaultTTL: number = 300; // 5 minutes
-  
-  constructor(redisConfig: RedisConfig) {
-    this.redis = new Redis(redisConfig);
-  }
+ private redis: Redis;
+ private defaultTTL: number = 300; // 5 minutes
+ 
+ constructor(redisConfig: RedisConfig) {
+ this.redis = new Redis(redisConfig);
+ }
 
-  async get(queryHash: string): Promise<QueryResult | null> {
-    try {
-      const cached = await this.redis.get(`query:${queryHash}`);
-      if (cached) {
-        const result = JSON.parse(cached);
-        // Update hit metrics
-        queryMetrics.cacheHits.inc({ status: 'hit' });
-        return result;
-      }
-      
-      queryMetrics.cacheHits.inc({ status: 'miss' });
-      return null;
-    } catch (error) {
-      logger.error('Cache retrieval error', { error, queryHash });
-      return null;
-    }
-  }
+ async get(queryHash: string): Promise<QueryResult | null> {
+ try {
+ const cached = await this.redis.get(`query:${queryHash}`);
+ if (cached) {
+ const result = JSON.parse(cached);
+ // Update hit metrics
+ queryMetrics.cacheHits.inc({ status: 'hit' });
+ return result;
+ }
+ 
+ queryMetrics.cacheHits.inc({ status: 'miss' });
+ return null;
+ } catch (error) {
+ logger.error('Cache retrieval error', { error, queryHash });
+ return null;
+ }
+ }
 
-  async set(
-    queryHash: string, 
-    result: QueryResult, 
-    ttl: number = this.defaultTTL
-  ): Promise<void> {
-    try {
-      await this.redis.setex(
-        `query:${queryHash}`, 
-        ttl, 
-        JSON.stringify(result)
-      );
-      
-      queryMetrics.cacheOps.inc({ operation: 'set' });
-    } catch (error) {
-      logger.error('Cache storage error', { error, queryHash });
-    }
-  }
+ async set(
+ queryHash: string, 
+ result: QueryResult, 
+ ttl: number = this.defaultTTL
+ ): Promise<void> {
+ try {
+ await this.redis.setex(
+ `query:${queryHash}`, 
+ ttl, 
+ JSON.stringify(result)
+ );
+ 
+ queryMetrics.cacheOps.inc({ operation: 'set' });
+ } catch (error) {
+ logger.error('Cache storage error', { error, queryHash });
+ }
+ }
 
-  async invalidate(pattern: string): Promise<void> {
-    try {
-      const keys = await this.redis.keys(`query:${pattern}`);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-        queryMetrics.cacheOps.inc({ operation: 'invalidate' });
-      }
-    } catch (error) {
-      logger.error('Cache invalidation error', { error, pattern });
-    }
-  }
+ async invalidate(pattern: string): Promise<void> {
+ try {
+ const keys = await this.redis.keys(`query:${pattern}`);
+ if (keys.length > 0) {
+ await this.redis.del(...keys);
+ queryMetrics.cacheOps.inc({ operation: 'invalidate' });
+ }
+ } catch (error) {
+ logger.error('Cache invalidation error', { error, pattern });
+ }
+ }
 
-  // Smart TTL based on query characteristics
-  calculateTTL(query: string, complexity: number): number {
-    const baseTime = this.defaultTTL;
-    
-    // Longer cache for complex, read-only queries
-    if (complexity > 50 && this.isReadOnlyQuery(query)) {
-      return baseTime * 4; // 20 minutes
-    }
-    
-    // Shorter cache for simple queries
-    if (complexity < 10) {
-      return baseTime / 2; // 2.5 minutes
-    }
-    
-    return baseTime;
-  }
+ // Smart TTL based on query characteristics
+ calculateTTL(query: string, complexity: number): number {
+ const baseTime = this.defaultTTL;
+ 
+ // Longer cache for complex, read-only queries
+ if (complexity > 50 && this.isReadOnlyQuery(query)) {
+ return baseTime * 4; // 20 minutes
+ }
+ 
+ // Shorter cache for simple queries
+ if (complexity < 10) {
+ return baseTime / 2; // 2.5 minutes
+ }
+ 
+ return baseTime;
+ }
 
-  private isReadOnlyQuery(query: string): boolean {
-    const upperQuery = query.trim().toUpperCase();
-    return upperQuery.startsWith('SELECT') && 
-           !upperQuery.includes('FOR UPDATE');
-  }
+ private isReadOnlyQuery(query: string): boolean {
+ const upperQuery = query.trim().toUpperCase();
+ return upperQuery.startsWith('SELECT') && 
+ !upperQuery.includes('FOR UPDATE');
+ }
 }
 ```
 
@@ -202,102 +202,102 @@ export class QueryCache {
 ```typescript
 // Read replica load balancer (continued)
 export class ReadReplicaLoadBalancer {
-  private readPools: Map<string, Pool[]> = new Map();
-  private currentIndex = new Map<string, number>();
-  private healthStatus = new Map<string, boolean[]>();
+ private readPools: Map<string, Pool[]> = new Map();
+ private currentIndex = new Map<string, number>();
+ private healthStatus = new Map<string, boolean[]>();
 
-  addReadReplica(database: string, pool: Pool): void {
-    if (!this.readPools.has(database)) {
-      this.readPools.set(database, []);
-      this.healthStatus.set(database, []);
-      this.currentIndex.set(database, 0);
-    }
+ addReadReplica(database: string, pool: Pool): void {
+ if (!this.readPools.has(database)) {
+ this.readPools.set(database, []);
+ this.healthStatus.set(database, []);
+ this.currentIndex.set(database, 0);
+ }
 
-    const pools = this.readPools.get(database)!;
-    const health = this.healthStatus.get(database)!;
-    
-    pools.push(pool);
-    health.push(true);
+ const pools = this.readPools.get(database)!;
+ const health = this.healthStatus.get(database)!;
+ 
+ pools.push(pool);
+ health.push(true);
 
-    // Start health monitoring for this replica
-    this.startHealthMonitoring(database, pools.length - 1);
-  }
+ // Start health monitoring for this replica
+ this.startHealthMonitoring(database, pools.length - 1);
+ }
 
-  async getConnection(database: string): Promise<Connection> {
-    const pools = this.readPools.get(database);
-    if (!pools || pools.length === 0) {
-      throw new Error(`No read replicas available for database: ${database}`);
-    }
+ async getConnection(database: string): Promise<Connection> {
+ const pools = this.readPools.get(database);
+ if (!pools || pools.length === 0) {
+ throw new Error(`No read replicas available for database: ${database}`);
+ }
 
-    // Try to get healthy connection using round-robin
-    let attempts = 0;
-    while (attempts < pools.length) {
-      const index = this.getNextHealthyIndex(database);
-      if (index === -1) {
-        throw new Error(`No healthy read replicas for database: ${database}`);
-      }
+ // Try to get healthy connection using round-robin
+ let attempts = 0;
+ while (attempts < pools.length) {
+ const index = this.getNextHealthyIndex(database);
+ if (index === -1) {
+ throw new Error(`No healthy read replicas for database: ${database}`);
+ }
 
-      try {
-        const connection = await pools[index].acquire();
-        connectionMetrics.active.inc({ 
-          database: `${database}_replica_${index}` 
-        });
-        return connection;
-      } catch (error) {
-        logger.warn('Failed to acquire connection from replica', { 
-          database, 
-          replica: index, 
-          error 
-        });
-        
-        // Mark replica as unhealthy
-        this.healthStatus.get(database)![index] = false;
-        attempts++;
-      }
-    }
+ try {
+ const connection = await pools[index].acquire();
+ connectionMetrics.active.inc({ 
+ database: `${database}_replica_${index}` 
+ });
+ return connection;
+ } catch (error) {
+ logger.warn('Failed to acquire connection from replica', { 
+ database, 
+ replica: index, 
+ error 
+ });
+ 
+ // Mark replica as unhealthy
+ this.healthStatus.get(database)![index] = false;
+ attempts++;
+ }
+ }
 
-    throw new Error(`All read replicas unhealthy for database: ${database}`);
-  }
+ throw new Error(`All read replicas unhealthy for database: ${database}`);
+ }
 
-  private getNextHealthyIndex(database: string): number {
-    const health = this.healthStatus.get(database)!;
-    const currentIdx = this.currentIndex.get(database)!;
-    
-    // Find next healthy replica using round-robin
-    for (let i = 0; i < health.length; i++) {
-      const index = (currentIdx + i) % health.length;
-      if (health[index]) {
-        this.currentIndex.set(database, (index + 1) % health.length);
-        return index;
-      }
-    }
-    
-    return -1; // No healthy replicas
-  }
+ private getNextHealthyIndex(database: string): number {
+ const health = this.healthStatus.get(database)!;
+ const currentIdx = this.currentIndex.get(database)!;
+ 
+ // Find next healthy replica using round-robin
+ for (let i = 0; i < health.length; i++) {
+ const index = (currentIdx + i) % health.length;
+ if (health[index]) {
+ this.currentIndex.set(database, (index + 1) % health.length);
+ return index;
+ }
+ }
+ 
+ return -1; // No healthy replicas
+ }
 
-  private startHealthMonitoring(database: string, replicaIndex: number): void {
-    const pools = this.readPools.get(database)!;
-    const pool = pools[replicaIndex];
-    
-    setInterval(async () => {
-      try {
-        const connection = await pool.acquire();
-        await connection.query('SELECT 1');
-        await pool.release(connection);
-        
-        // Mark as healthy
-        this.healthStatus.get(database)![replicaIndex] = true;
-      } catch (error) {
-        // Mark as unhealthy
-        this.healthStatus.get(database)![replicaIndex] = false;
-        logger.warn('Read replica health check failed', { 
-          database, 
-          replica: replicaIndex, 
-          error 
-        });
-      }
-    }, 30000); // Check every 30 seconds
-  }
+ private startHealthMonitoring(database: string, replicaIndex: number): void {
+ const pools = this.readPools.get(database)!;
+ const pool = pools[replicaIndex];
+ 
+ setInterval(async () => {
+ try {
+ const connection = await pool.acquire();
+ await connection.query('SELECT 1');
+ await pool.release(connection);
+ 
+ // Mark as healthy
+ this.healthStatus.get(database)![replicaIndex] = true;
+ } catch (error) {
+ // Mark as unhealthy
+ this.healthStatus.get(database)![replicaIndex] = false;
+ logger.warn('Read replica health check failed', { 
+ database, 
+ replica: replicaIndex, 
+ error 
+ });
+ }
+ }, 30000); // Check every 30 seconds
+ }
 }
 ```
 
@@ -308,174 +308,174 @@ export class ReadReplicaLoadBalancer {
 ```typescript
 // Memory management utilities
 export class MemoryManager {
-  private gcMetrics = new Map<string, number>();
-  private heapSnapshots: HeapSnapshot[] = [];
-  private maxSnapshots = 10;
+ private gcMetrics = new Map<string, number>();
+ private heapSnapshots: HeapSnapshot[] = [];
+ private maxSnapshots = 10;
 
-  constructor() {
-    this.setupGCMonitoring();
-    this.setupMemoryAlerts();
-  }
+ constructor() {
+ this.setupGCMonitoring();
+ this.setupMemoryAlerts();
+ }
 
-  private setupGCMonitoring(): void {
-    // Monitor garbage collection
-    if (global.gc) {
-      const originalGC = global.gc;
-      global.gc = () => {
-        const start = process.hrtime();
-        originalGC();
-        const [seconds, nanoseconds] = process.hrtime(start);
-        const gcTime = seconds * 1000 + nanoseconds / 1e6;
-        
-        this.gcMetrics.set('lastGcTime', gcTime);
-        systemMetrics.gc.inc({ type: 'manual' });
-        
-        logger.debug('Manual GC completed', { gcTime });
-      };
-    }
+ private setupGCMonitoring(): void {
+ // Monitor garbage collection
+ if (global.gc) {
+ const originalGC = global.gc;
+ global.gc = () => {
+ const start = process.hrtime();
+ originalGC();
+ const [seconds, nanoseconds] = process.hrtime(start);
+ const gcTime = seconds * 1000 + nanoseconds / 1e6;
+ 
+ this.gcMetrics.set('lastGcTime', gcTime);
+ systemMetrics.gc.inc({ type: 'manual' });
+ 
+ logger.debug('Manual GC completed', { gcTime });
+ };
+ }
 
-    // Automatic GC monitoring with v8 hooks
-    const v8 = require('v8');
-    if (v8.getHeapStatistics) {
-      setInterval(() => {
-        const stats = v8.getHeapStatistics();
-        
-        systemMetrics.memory.set(
-          { type: 'heapUsed' }, 
-          stats.used_heap_size
-        );
-        systemMetrics.memory.set(
-          { type: 'heapTotal' }, 
-          stats.total_heap_size
-        );
-        systemMetrics.memory.set(
-          { type: 'heapAvailable' }, 
-          stats.total_available_size
-        );
-        
-        // Check for memory pressure
-        const heapUsedPercent = stats.used_heap_size / stats.heap_size_limit;
-        if (heapUsedPercent > 0.9) {
-          this.handleMemoryPressure();
-        }
-      }, 5000);
-    }
-  }
+ // Automatic GC monitoring with v8 hooks
+ const v8 = require('v8');
+ if (v8.getHeapStatistics) {
+ setInterval(() => {
+ const stats = v8.getHeapStatistics();
+ 
+ systemMetrics.memory.set(
+ { type: 'heapUsed' }, 
+ stats.used_heap_size
+ );
+ systemMetrics.memory.set(
+ { type: 'heapTotal' }, 
+ stats.total_heap_size
+ );
+ systemMetrics.memory.set(
+ { type: 'heapAvailable' }, 
+ stats.total_available_size
+ );
+ 
+ // Check for memory pressure
+ const heapUsedPercent = stats.used_heap_size / stats.heap_size_limit;
+ if (heapUsedPercent > 0.9) {
+ this.handleMemoryPressure();
+ }
+ }, 5000);
+ }
+ }
 
-  private setupMemoryAlerts(): void {
-    setInterval(() => {
-      const memUsage = process.memoryUsage();
-      const heapPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
-      
-      if (heapPercent > 85) {
-        logger.warn('High memory usage detected', { 
-          heapPercent: heapPercent.toFixed(2),
-          heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
-          heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024)
-        });
-        
-        // Trigger optimization strategies
-        this.optimizeMemoryUsage();
-      }
-    }, 10000);
-  }
+ private setupMemoryAlerts(): void {
+ setInterval(() => {
+ const memUsage = process.memoryUsage();
+ const heapPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+ 
+ if (heapPercent > 85) {
+ logger.warn('High memory usage detected', { 
+ heapPercent: heapPercent.toFixed(2),
+ heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+ heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024)
+ });
+ 
+ // Trigger optimization strategies
+ this.optimizeMemoryUsage();
+ }
+ }, 10000);
+ }
 
-  private handleMemoryPressure(): void {
-    logger.warn('Memory pressure detected, triggering optimizations');
-    
-    // Clear caches
-    this.clearCaches();
-    
-    // Force garbage collection if available
-    if (global.gc) {
-      global.gc();
-    }
-    
-    // Reduce connection pool sizes temporarily
-    this.reduceConnectionPools();
-  }
+ private handleMemoryPressure(): void {
+ logger.warn('Memory pressure detected, triggering optimizations');
+ 
+ // Clear caches
+ this.clearCaches();
+ 
+ // Force garbage collection if available
+ if (global.gc) {
+ global.gc();
+ }
+ 
+ // Reduce connection pool sizes temporarily
+ this.reduceConnectionPools();
+ }
 
-  private optimizeMemoryUsage(): void {
-    // Clear query result caches older than 5 minutes
-    this.clearExpiredCaches();
-    
-    // Optimize prepared statement cache
-    this.optimizePreparedStatements();
-    
-    // Clear old heap snapshots
-    if (this.heapSnapshots.length > this.maxSnapshots / 2) {
-      this.heapSnapshots = this.heapSnapshots.slice(-this.maxSnapshots / 2);
-    }
-  }
+ private optimizeMemoryUsage(): void {
+ // Clear query result caches older than 5 minutes
+ this.clearExpiredCaches();
+ 
+ // Optimize prepared statement cache
+ this.optimizePreparedStatements();
+ 
+ // Clear old heap snapshots
+ if (this.heapSnapshots.length > this.maxSnapshots / 2) {
+ this.heapSnapshots = this.heapSnapshots.slice(-this.maxSnapshots / 2);
+ }
+ }
 
-  async takeHeapSnapshot(): Promise<string> {
-    const v8 = require('v8');
-    const fs = require('fs').promises;
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `heap-${timestamp}.heapsnapshot`;
-    const filepath = `./logs/${filename}`;
-    
-    try {
-      const snapshot = v8.getHeapSnapshot();
-      const chunks: Buffer[] = [];
-      
-      for await (const chunk of snapshot) {
-        chunks.push(chunk);
-      }
-      
-      await fs.writeFile(filepath, Buffer.concat(chunks));
-      
-      this.heapSnapshots.push({
-        timestamp: new Date(),
-        filename,
-        size: Buffer.concat(chunks).length
-      });
-      
-      // Clean old snapshots
-      if (this.heapSnapshots.length > this.maxSnapshots) {
-        const oldSnapshot = this.heapSnapshots.shift()!;
-        try {
-          await fs.unlink(`./logs/${oldSnapshot.filename}`);
-        } catch (error) {
-          logger.warn('Failed to delete old heap snapshot', { error });
-        }
-      }
-      
-      logger.info('Heap snapshot taken', { filename, filepath });
-      return filepath;
-    } catch (error) {
-      logger.error('Failed to take heap snapshot', { error });
-      throw error;
-    }
-  }
+ async takeHeapSnapshot(): Promise<string> {
+ const v8 = require('v8');
+ const fs = require('fs').promises;
+ 
+ const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+ const filename = `heap-${timestamp}.heapsnapshot`;
+ const filepath = `./logs/${filename}`;
+ 
+ try {
+ const snapshot = v8.getHeapSnapshot();
+ const chunks: Buffer[] = [];
+ 
+ for await (const chunk of snapshot) {
+ chunks.push(chunk);
+ }
+ 
+ await fs.writeFile(filepath, Buffer.concat(chunks));
+ 
+ this.heapSnapshots.push({
+ timestamp: new Date(),
+ filename,
+ size: Buffer.concat(chunks).length
+ });
+ 
+ // Clean old snapshots
+ if (this.heapSnapshots.length > this.maxSnapshots) {
+ const oldSnapshot = this.heapSnapshots.shift()!;
+ try {
+ await fs.unlink(`./logs/${oldSnapshot.filename}`);
+ } catch (error) {
+ logger.warn('Failed to delete old heap snapshot', { error });
+ }
+ }
+ 
+ logger.info('Heap snapshot taken', { filename, filepath });
+ return filepath;
+ } catch (error) {
+ logger.error('Failed to take heap snapshot', { error });
+ throw error;
+ }
+ }
 
-  getMemoryStats(): MemoryStats {
-    const memUsage = process.memoryUsage();
-    const v8 = require('v8');
-    const heapStats = v8.getHeapStatistics();
-    
-    return {
-      process: {
-        rss: memUsage.rss,
-        heapTotal: memUsage.heapTotal,
-        heapUsed: memUsage.heapUsed,
-        external: memUsage.external,
-        arrayBuffers: memUsage.arrayBuffers
-      },
-      v8: {
-        totalHeapSize: heapStats.total_heap_size,
-        totalHeapSizeExecutable: heapStats.total_heap_size_executable,
-        totalPhysicalSize: heapStats.total_physical_size,
-        totalAvailableSize: heapStats.total_available_size,
-        usedHeapSize: heapStats.used_heap_size,
-        heapSizeLimit: heapStats.heap_size_limit
-      },
-      gc: {
-        lastGcTime: this.gcMetrics.get('lastGcTime') || 0
-      }
-    };
-  }
+ getMemoryStats(): MemoryStats {
+ const memUsage = process.memoryUsage();
+ const v8 = require('v8');
+ const heapStats = v8.getHeapStatistics();
+ 
+ return {
+ process: {
+ rss: memUsage.rss,
+ heapTotal: memUsage.heapTotal,
+ heapUsed: memUsage.heapUsed,
+ external: memUsage.external,
+ arrayBuffers: memUsage.arrayBuffers
+ },
+ v8: {
+ totalHeapSize: heapStats.total_heap_size,
+ totalHeapSizeExecutable: heapStats.total_heap_size_executable,
+ totalPhysicalSize: heapStats.total_physical_size,
+ totalAvailableSize: heapStats.total_available_size,
+ usedHeapSize: heapStats.used_heap_size,
+ heapSizeLimit: heapStats.heap_size_limit
+ },
+ gc: {
+ lastGcTime: this.gcMetrics.get('lastGcTime') || 0
+ }
+ };
+ }
 }
 ```
 
@@ -484,105 +484,105 @@ export class MemoryManager {
 ```typescript
 // Optimized result streaming
 export class ResultStreamOptimizer {
-  private chunkSize: number = 1000;
-  private maxBufferSize: number = 10 * 1024 * 1024; // 10MB
-  
-  async streamLargeResult(
-    query: string, 
-    connection: Connection
-  ): Promise<Readable> {
-    const stream = new Readable({
-      objectMode: true,
-      highWaterMark: this.chunkSize
-    });
+ private chunkSize: number = 1000;
+ private maxBufferSize: number = 10 * 1024 * 1024; // 10MB
+ 
+ async streamLargeResult(
+ query: string, 
+ connection: Connection
+ ): Promise<Readable> {
+ const stream = new Readable({
+ objectMode: true,
+ highWaterMark: this.chunkSize
+ });
 
-    let totalSize = 0;
-    let rowCount = 0;
-    
-    try {
-      const cursor = connection.query(query).stream();
-      
-      cursor.on('data', (row: any) => {
-        const rowSize = this.estimateRowSize(row);
-        
-        // Check buffer limits
-        if (totalSize + rowSize > this.maxBufferSize) {
-          logger.warn('Result size exceeds buffer limit', { 
-            totalSize, 
-            maxBufferSize: this.maxBufferSize 
-          });
-          cursor.pause();
-          
-          // Implement backpressure
-          stream.once('drain', () => {
-            cursor.resume();
-          });
-        }
-        
-        totalSize += rowSize;
-        rowCount++;
-        
-        stream.push({
-          data: row,
-          metadata: {
-            rowNumber: rowCount,
-            estimatedSize: rowSize
-          }
-        });
-      });
+ let totalSize = 0;
+ let rowCount = 0;
+ 
+ try {
+ const cursor = connection.query(query).stream();
+ 
+ cursor.on('data', (row: any) => {
+ const rowSize = this.estimateRowSize(row);
+ 
+ // Check buffer limits
+ if (totalSize + rowSize > this.maxBufferSize) {
+ logger.warn('Result size exceeds buffer limit', { 
+ totalSize, 
+ maxBufferSize: this.maxBufferSize 
+ });
+ cursor.pause();
+ 
+ // Implement backpressure
+ stream.once('drain', () => {
+ cursor.resume();
+ });
+ }
+ 
+ totalSize += rowSize;
+ rowCount++;
+ 
+ stream.push({
+ data: row,
+ metadata: {
+ rowNumber: rowCount,
+ estimatedSize: rowSize
+ }
+ });
+ });
 
-      cursor.on('end', () => {
-        stream.push(null); // End stream
-        logger.info('Result stream completed', { 
-          rowCount, 
-          totalSize 
-        });
-      });
+ cursor.on('end', () => {
+ stream.push(null); // End stream
+ logger.info('Result stream completed', { 
+ rowCount, 
+ totalSize 
+ });
+ });
 
-      cursor.on('error', (error: Error) => {
-        stream.emit('error', error);
-      });
+ cursor.on('error', (error: Error) => {
+ stream.emit('error', error);
+ });
 
-    } catch (error) {
-      stream.emit('error', error);
-    }
+ } catch (error) {
+ stream.emit('error', error);
+ }
 
-    return stream;
-  }
+ return stream;
+ }
 
-  private estimateRowSize(row: any): number {
-    return JSON.stringify(row).length * 2; // Rough UTF-16 estimate
-  }
+ private estimateRowSize(row: any): number {
+ return JSON.stringify(row).length * 2; // Rough UTF-16 estimate
+ }
 
-  // Batch processing for large operations
-  async processBatch<T>(
-    items: T[], 
-    processor: (batch: T[]) => Promise<void>,
-    batchSize: number = 100
-  ): Promise<void> {
-    const totalBatches = Math.ceil(items.length / batchSize);
-    
-    for (let i = 0; i < totalBatches; i++) {
-      const start = i * batchSize;
-      const end = Math.min(start + batchSize, items.length);
-      const batch = items.slice(start, end);
-      
-      try {
-        await processor(batch);
-        
-        // Allow event loop to process other tasks
-        await new Promise(resolve => setImmediate(resolve));
-        
-      } catch (error) {
-        logger.error('Batch processing error', { 
-          batch: i + 1, 
-          totalBatches, 
-          error 
-        });
-        throw error;
-      }
-    }
-  }
+ // Batch processing for large operations
+ async processBatch<T>(
+ items: T[], 
+ processor: (batch: T[]) => Promise<void>,
+ batchSize: number = 100
+ ): Promise<void> {
+ const totalBatches = Math.ceil(items.length / batchSize);
+ 
+ for (let i = 0; i < totalBatches; i++) {
+ const start = i * batchSize;
+ const end = Math.min(start + batchSize, items.length);
+ const batch = items.slice(start, end);
+ 
+ try {
+ await processor(batch);
+ 
+ // Allow event loop to process other tasks
+ await new Promise(resolve => setImmediate(resolve));
+ 
+ } catch (error) {
+ logger.error('Batch processing error', { 
+ batch: i + 1, 
+ totalBatches, 
+ error 
+ });
+ throw error;
+ }
+ }
+ }
 }
 ```
 
@@ -659,13 +659,13 @@ FROM node:18-alpine AS runtime
 
 # Security: Run as non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S sql-mcp -u 1001 -G nodejs
+ adduser -S sql-mcp -u 1001 -G nodejs
 
 # System optimizations
 RUN apk add --no-cache \
-    dumb-init \
-    tini && \
-    rm -rf /var/cache/apk/*
+ dumb-init \
+ tini && \
+ rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
@@ -680,7 +680,7 @@ ENV UV_THREADPOOL_SIZE=16
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD node healthcheck.js
+ CMD node healthcheck.js
 
 USER sql-mcp
 EXPOSE 3000
@@ -741,152 +741,152 @@ SET GLOBAL interactive_timeout = 600;
 ```typescript
 // Performance benchmark suite
 export class PerformanceBenchmark {
-  private results: BenchmarkResult[] = [];
-  
-  async runBenchmarkSuite(): Promise<BenchmarkReport> {
-    const report: BenchmarkReport = {
-      timestamp: new Date(),
-      results: [],
-      summary: {
-        totalTests: 0,
-        passed: 0,
-        failed: 0,
-        averageResponseTime: 0
-      }
-    };
+ private results: BenchmarkResult[] = [];
+ 
+ async runBenchmarkSuite(): Promise<BenchmarkReport> {
+ const report: BenchmarkReport = {
+ timestamp: new Date(),
+ results: [],
+ summary: {
+ totalTests: 0,
+ passed: 0,
+ failed: 0,
+ averageResponseTime: 0
+ }
+ };
 
-    // Query performance tests
-    await this.benchmarkQueryPerformance(report);
-    
-    // Connection pool tests
-    await this.benchmarkConnectionPool(report);
-    
-    // Memory usage tests
-    await this.benchmarkMemoryUsage(report);
-    
-    // Concurrent load tests
-    await this.benchmarkConcurrentLoad(report);
-    
-    this.generateReport(report);
-    return report;
-  }
+ // Query performance tests
+ await this.benchmarkQueryPerformance(report);
+ 
+ // Connection pool tests
+ await this.benchmarkConnectionPool(report);
+ 
+ // Memory usage tests
+ await this.benchmarkMemoryUsage(report);
+ 
+ // Concurrent load tests
+ await this.benchmarkConcurrentLoad(report);
+ 
+ this.generateReport(report);
+ return report;
+ }
 
-  private async benchmarkQueryPerformance(report: BenchmarkReport): Promise<void> {
-    const testQueries = [
-      { name: 'Simple SELECT', query: 'SELECT 1', expectedTime: 10 },
-      { name: 'Complex JOIN', query: 'SELECT * FROM users u JOIN orders o ON u.id = o.user_id LIMIT 100', expectedTime: 100 },
-      { name: 'Aggregation', query: 'SELECT COUNT(*), AVG(amount) FROM orders GROUP BY status', expectedTime: 200 }
-    ];
+ private async benchmarkQueryPerformance(report: BenchmarkReport): Promise<void> {
+ const testQueries = [
+ { name: 'Simple SELECT', query: 'SELECT 1', expectedTime: 10 },
+ { name: 'Complex JOIN', query: 'SELECT * FROM users u JOIN orders o ON u.id = o.user_id LIMIT 100', expectedTime: 100 },
+ { name: 'Aggregation', query: 'SELECT COUNT(*), AVG(amount) FROM orders GROUP BY status', expectedTime: 200 }
+ ];
 
-    for (const test of testQueries) {
-      const start = process.hrtime();
-      
-      try {
-        await this.executeQuery(test.query);
-        const [seconds, nanoseconds] = process.hrtime(start);
-        const executionTime = seconds * 1000 + nanoseconds / 1e6;
-        
-        const result: BenchmarkResult = {
-          name: test.name,
-          category: 'query_performance',
-          executionTime,
-          success: executionTime <= test.expectedTime,
-          expectedTime: test.expectedTime,
-          metadata: { query: test.query }
-        };
-        
-        report.results.push(result);
-        report.summary.totalTests++;
-        
-        if (result.success) {
-          report.summary.passed++;
-        } else {
-          report.summary.failed++;
-        }
-        
-      } catch (error) {
-        report.results.push({
-          name: test.name,
-          category: 'query_performance',
-          executionTime: -1,
-          success: false,
-          error: error.message,
-          expectedTime: test.expectedTime
-        });
-        
-        report.summary.totalTests++;
-        report.summary.failed++;
-      }
-    }
-  }
+ for (const test of testQueries) {
+ const start = process.hrtime();
+ 
+ try {
+ await this.executeQuery(test.query);
+ const [seconds, nanoseconds] = process.hrtime(start);
+ const executionTime = seconds * 1000 + nanoseconds / 1e6;
+ 
+ const result: BenchmarkResult = {
+ name: test.name,
+ category: 'query_performance',
+ executionTime,
+ success: executionTime <= test.expectedTime,
+ expectedTime: test.expectedTime,
+ metadata: { query: test.query }
+ };
+ 
+ report.results.push(result);
+ report.summary.totalTests++;
+ 
+ if (result.success) {
+ report.summary.passed++;
+ } else {
+ report.summary.failed++;
+ }
+ 
+ } catch (error) {
+ report.results.push({
+ name: test.name,
+ category: 'query_performance',
+ executionTime: -1,
+ success: false,
+ error: error.message,
+ expectedTime: test.expectedTime
+ });
+ 
+ report.summary.totalTests++;
+ report.summary.failed++;
+ }
+ }
+ }
 
-  private async benchmarkConcurrentLoad(report: BenchmarkReport): Promise<void> {
-    const concurrencyLevels = [10, 50, 100, 200];
-    const testQuery = 'SELECT * FROM users LIMIT 10';
-    
-    for (const concurrency of concurrencyLevels) {
-      const promises: Promise<number>[] = [];
-      const startTime = process.hrtime();
-      
-      // Create concurrent requests
-      for (let i = 0; i < concurrency; i++) {
-        promises.push(this.timeQuery(testQuery));
-      }
-      
-      try {
-        const results = await Promise.all(promises);
-        const [totalSeconds, totalNanos] = process.hrtime(startTime);
-        const totalTime = totalSeconds * 1000 + totalNanos / 1e6;
-        
-        const avgResponseTime = results.reduce((sum, time) => sum + time, 0) / results.length;
-        const throughput = (concurrency / totalTime) * 1000; // requests per second
-        
-        report.results.push({
-          name: `Concurrent Load (${concurrency} requests)`,
-          category: 'load_testing',
-          executionTime: totalTime,
-          success: avgResponseTime < 1000, // 1 second threshold
-          metadata: {
-            concurrency,
-            avgResponseTime,
-            throughput,
-            minTime: Math.min(...results),
-            maxTime: Math.max(...results)
-          }
-        });
-        
-      } catch (error) {
-        report.results.push({
-          name: `Concurrent Load (${concurrency} requests)`,
-          category: 'load_testing',
-          executionTime: -1,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-  }
+ private async benchmarkConcurrentLoad(report: BenchmarkReport): Promise<void> {
+ const concurrencyLevels = [10, 50, 100, 200];
+ const testQuery = 'SELECT * FROM users LIMIT 10';
+ 
+ for (const concurrency of concurrencyLevels) {
+ const promises: Promise<number>[] = [];
+ const startTime = process.hrtime();
+ 
+ // Create concurrent requests
+ for (let i = 0; i < concurrency; i++) {
+ promises.push(this.timeQuery(testQuery));
+ }
+ 
+ try {
+ const results = await Promise.all(promises);
+ const [totalSeconds, totalNanos] = process.hrtime(startTime);
+ const totalTime = totalSeconds * 1000 + totalNanos / 1e6;
+ 
+ const avgResponseTime = results.reduce((sum, time) => sum + time, 0) / results.length;
+ const throughput = (concurrency / totalTime) * 1000; // requests per second
+ 
+ report.results.push({
+ name: `Concurrent Load (${concurrency} requests)`,
+ category: 'load_testing',
+ executionTime: totalTime,
+ success: avgResponseTime < 1000, // 1 second threshold
+ metadata: {
+ concurrency,
+ avgResponseTime,
+ throughput,
+ minTime: Math.min(...results),
+ maxTime: Math.max(...results)
+ }
+ });
+ 
+ } catch (error) {
+ report.results.push({
+ name: `Concurrent Load (${concurrency} requests)`,
+ category: 'load_testing',
+ executionTime: -1,
+ success: false,
+ error: error.message
+ });
+ }
+ }
+ }
 
-  private generateReport(report: BenchmarkReport): void {
-    const totalTime = report.results.reduce((sum, r) => sum + (r.executionTime > 0 ? r.executionTime : 0), 0);
-    report.summary.averageResponseTime = totalTime / report.results.filter(r => r.executionTime > 0).length;
-    
-    // Log summary
-    logger.info('Performance benchmark completed', {
-      totalTests: report.summary.totalTests,
-      passed: report.summary.passed,
-      failed: report.summary.failed,
-      successRate: (report.summary.passed / report.summary.totalTests * 100).toFixed(2) + '%',
-      averageResponseTime: report.summary.averageResponseTime.toFixed(2) + 'ms'
-    });
+ private generateReport(report: BenchmarkReport): void {
+ const totalTime = report.results.reduce((sum, r) => sum + (r.executionTime > 0 ? r.executionTime : 0), 0);
+ report.summary.averageResponseTime = totalTime / report.results.filter(r => r.executionTime > 0).length;
+ 
+ // Log summary
+ logger.info('Performance benchmark completed', {
+ totalTests: report.summary.totalTests,
+ passed: report.summary.passed,
+ failed: report.summary.failed,
+ successRate: (report.summary.passed / report.summary.totalTests * 100).toFixed(2) + '%',
+ averageResponseTime: report.summary.averageResponseTime.toFixed(2) + 'ms'
+ });
 
-    // Save detailed report
-    const fs = require('fs').promises;
-    const reportPath = `./logs/benchmark-${Date.now()}.json`;
-    fs.writeFile(reportPath, JSON.stringify(report, null, 2))
-      .then(() => logger.info('Benchmark report saved', { reportPath }))
-      .catch(error => logger.error('Failed to save benchmark report', { error }));
-  }
+ // Save detailed report
+ const fs = require('fs').promises;
+ const reportPath = `./logs/benchmark-${Date.now()}.json`;
+ fs.writeFile(reportPath, JSON.stringify(report, null, 2))
+ .then(() => logger.info('Benchmark report saved', { reportPath }))
+ .catch(error => logger.error('Failed to save benchmark report', { error }));
+ }
 }
 ```
 

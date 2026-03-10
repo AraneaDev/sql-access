@@ -6,14 +6,14 @@ This directory contains simple, minimal examples for getting started with SQL MC
 
 ```
 basic-setup/
-├── README.md                    # This file
-├── simple-sqlite.ini           # Minimal SQLite configuration
-├── single-postgresql.ini       # Basic PostgreSQL setup
-├── single-mysql.ini            # Basic MySQL configuration
-├── multiple-databases.ini      # Multiple database example
-├── docker-compose-demo.yml     # Quick Docker demo setup
-├── claude-desktop-config.json  # Claude Desktop integration
-└── test-queries.sql            # Sample test queries
+|-- README.md # This file
+|-- simple-sqlite.ini # Minimal SQLite configuration
+|-- single-postgresql.ini # Basic PostgreSQL setup
+|-- single-mysql.ini # Basic MySQL configuration
+|-- multiple-databases.ini # Multiple database example
+|-- docker-compose-demo.yml # Quick Docker demo setup
+|-- claude-desktop-config.json # Claude Desktop integration
+\-- test-queries.sql # Sample test queries
 ```
 
 ## Quick Start Options

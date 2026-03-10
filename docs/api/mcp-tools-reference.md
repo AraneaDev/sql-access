@@ -2,13 +2,14 @@
 
 This document provides comprehensive documentation for all MCP tools exposed by the SQL MCP Server. These tools enable Claude Desktop to interact with your configured databases securely and efficiently.
 
-## 🔧 Feature Status
+## Feature Status
 
-- ✅ **Implemented**: Core query execution, SSH tunneling, SELECT-only security, batch operations, database listing, schema management, connection testing
-- 🚧 **Basic Implementation**: Performance analysis (basic recommendations only)
-- 📋 **Planned**: Advanced performance analysis with detailed index recommendations, configuration templates, enhanced schema relationship mapping
+- **Implemented**: Core query execution, SSH tunneling, SELECT-only security, batch operations, database listing, schema management, connection testing
+- **Implemented**: Dynamic database configuration management via MCP tools
+- **Basic Implementation**: Performance analysis (basic recommendations only)
+- **Planned**: Advanced performance analysis with detailed index recommendations, configuration templates, enhanced schema relationship mapping
 
-## 🗄️ Available Tools
+## Available Tools
 
 ### `sql_query`
 Execute a single SQL query on a configured database with automatic schema awareness and security enforcement.
@@ -16,9 +17,9 @@ Execute a single SQL query on a configured database with automatic schema awaren
 #### Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `database` | `string` | ✅ | Database name from configuration |
-| `query` | `string` | ✅ | SQL query to execute |
-| `params` | `string[]` | ❌ | Optional query parameters for prepared statements |
+| `database` | `string` | | Database name from configuration |
+| `query` | `string` | | SQL query to execute |
+| `params` | `string[]` | | Optional query parameters for prepared statements |
 
 #### Features
 - **Security Validation**: Automatic query validation for SELECT-only mode
@@ -30,20 +31,20 @@ Execute a single SQL query on a configured database with automatic schema awaren
 #### Example Usage
 ```sql
 -- Simple SELECT query
-SELECT u.name, u.email, COUNT(o.id) as order_count 
-FROM users u 
-LEFT JOIN orders o ON u.id = o.user_id 
+SELECT u.name, u.email, COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
 WHERE u.created_at > '2024-01-01'
-GROUP BY u.id, u.name, u.email 
-ORDER BY order_count DESC 
+GROUP BY u.id, u.name, u.email
+ORDER BY order_count DESC
 LIMIT 10
 ```
 
 #### Response Format
-- ✅ Success response with formatted table
-- 📊 Row count and execution time
-- 🔒 Security mode indicators (SSH tunnel, SELECT-only)
-- 📋 Structured results with column headers
+- Success response with formatted table
+- Row count and execution time
+- Security mode indicators (SSH tunnel, SELECT-only)
+- Structured results with column headers
 
 #### Security Considerations
 - In SELECT-only mode, only SELECT, WITH, SHOW, EXPLAIN, and DESCRIBE statements are allowed
@@ -58,16 +59,16 @@ Execute multiple SQL queries in batch for improved performance with optional tra
 #### Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `database` | `string` | ✅ | Database name from configuration |
-| `queries` | `object[]` | ✅ | Array of SQL queries to execute |
-| `transaction` | `boolean` | ❌ | Execute all queries in a single transaction (default: false) |
+| `database` | `string` | | Database name from configuration |
+| `queries` | `object[]` | | Array of SQL queries to execute |
+| `transaction` | `boolean` | | Execute all queries in a single transaction (default: false) |
 
 #### Query Object Structure
 ```typescript
 {
-  query: string;        // SQL query to execute
-  params?: string[];    // Optional query parameters
-  label?: string;       // Optional label for identification
+ query: string; // SQL query to execute
+ params?: string[]; // Optional query parameters
+ label?: string; // Optional label for identification
 }
 ```
 
@@ -81,31 +82,31 @@ Execute multiple SQL queries in batch for improved performance with optional tra
 #### Example Usage
 ```json
 {
-  "database": "analytics",
-  "queries": [
-    {
-      "query": "SELECT COUNT(*) as total_users FROM users",
-      "label": "User Count"
-    },
-    {
-      "query": "SELECT COUNT(*) as total_orders FROM orders WHERE created_at > ?",
-      "params": ["2024-01-01"],
-      "label": "Recent Orders"
-    },
-    {
-      "query": "SELECT AVG(order_total) as avg_order_value FROM orders",
-      "label": "Average Order Value"
-    }
-  ],
-  "transaction": false
+ "database": "analytics",
+ "queries": [
+ {
+ "query": "SELECT COUNT(*) as total_users FROM users",
+ "label": "User Count"
+ },
+ {
+ "query": "SELECT COUNT(*) as total_orders FROM orders WHERE created_at > ?",
+ "params": ["2024-01-01"],
+ "label": "Recent Orders"
+ },
+ {
+ "query": "SELECT AVG(order_total) as avg_order_value FROM orders",
+ "label": "Average Order Value"
+ }
+ ],
+ "transaction": false
 }
 ```
 
 #### Response Format
-- 🚀 **Execution Summary**: Total time, query counts, success/failure rates
-- 📊 **Individual Results**: Success status, data, and timing for each query
-- 🔄 **Transaction Status**: Whether transaction was used and its outcome
-- 🛡️ **Security Indicators**: SELECT-only mode, SSH tunnel status
+- **Execution Summary**: Total time, query counts, success/failure rates
+- **Individual Results**: Success status, data, and timing for each query
+- **Transaction Status**: Whether transaction was used and its outcome
+- **Security Indicators**: SELECT-only mode, SSH tunnel status
 
 #### Limitations
 - Maximum batch size is configurable (default: 10 queries)
@@ -120,8 +121,8 @@ Analyze query performance and provide optimization recommendations using databas
 #### Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `database` | `string` | ✅ | Database name from configuration |
-| `query` | `string` | ✅ | SQL query to analyze |
+| `database` | `string` | | Database name from configuration |
+| `query` | `string` | | SQL query to analyze |
 
 #### Features
 - **Execution Plan Analysis**: Database-specific EXPLAIN query execution
@@ -135,15 +136,15 @@ SELECT u.name, u.email, p.title, p.created_at
 FROM users u
 JOIN posts p ON u.id = p.user_id
 WHERE u.status = 'active'
-  AND p.created_at > CURRENT_DATE - INTERVAL '30 days'
+ AND p.created_at > CURRENT_DATE - INTERVAL '30 days'
 ORDER BY p.created_at DESC
 ```
 
 #### Response Format
-- ⏱️ **Execution Times**: Query execution time and explain analysis time (in milliseconds)
-- 📊 **Query Results**: Row count and column count from actual execution
-- 🛠️ **Execution Plan**: Raw database execution plan output
-- 💡 **Performance Recommendations**: Basic optimization suggestions (generic recommendations)
+- [TIME] **Execution Times**: Query execution time and explain analysis time (in milliseconds)
+- **Query Results**: Row count and column count from actual execution
+- **Execution Plan**: Raw database execution plan output
+- **Performance Recommendations**: Basic optimization suggestions (generic recommendations)
 
 #### Current Recommendations Include
 - Query execution time analysis
@@ -171,30 +172,32 @@ No parameters required.
 
 #### Response Format
 ```
-📋 Configured Databases:
+ Configured Databases:
 
-🗄️ **production** (postgresql)
-   📍 db.company.com:5432
-   🔒 SSH tunnel enabled
-   🛡️ SSL enabled
-   🛡️ Security: SELECT-only mode (production safe)
-      ✅ Allows: SELECT, WITH, SHOW, EXPLAIN, DESCRIBE
-      🚫 Blocks: INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
-   📊 Schema: 45 tables, 1,247 columns
+ **production** (postgresql)
+ db.company.com:5432
+ SSH tunnel enabled
+ SSL enabled
+ Security: SELECT-only mode (production safe)
+ Allows: SELECT, WITH, SHOW, EXPLAIN, DESCRIBE
+ Blocks: INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
+ Schema: 45 tables, 1,247 columns
+ MCP configurable: no (manual config only)
 
-🗄️ **analytics** (mysql)
-   📍 analytics.company.com:3306
-   🛡️ SSL enabled
-   ⚠️ Security: Full access mode (use with caution)
-   📊 Schema: 12 tables, 89 columns
+ **analytics** (mysql)
+ analytics.company.com:3306
+ SSL enabled
+ Security: Full access mode (use with caution)
+ Schema: 12 tables, 89 columns
+ MCP configurable: yes
 
-🔒 **Global Security Limits:**
-   • Max JOINs: 10
-   • Max Subqueries: 5
-   • Max UNIONs: 3
-   • Max GROUP BYs: 5
-   • Max Complexity Score: 100
-   • Max Query Length: 10000
+ **Global Security Limits:**
+ - Max JOINs: 10
+ - Max Subqueries: 5
+ - Max UNIONs: 3
+ - Max GROUP BYs: 5
+ - Max Complexity Score: 100
+ - Max Query Length: 10000
 ```
 
 ---
@@ -205,8 +208,8 @@ Retrieve detailed schema information for a database including tables, columns, a
 #### Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `database` | `string` | ✅ | Database name to get schema for |
-| `table` | `string` | ❌ | Optional: Get schema for specific table only |
+| `database` | `string` | | Database name to get schema for |
+| `table` | `string` | | Optional: Get schema for specific table only |
 
 #### Features
 - **Complete Schema**: Tables, views, columns, data types
@@ -218,59 +221,59 @@ Retrieve detailed schema information for a database including tables, columns, a
 #### Response Format
 For complete database schema:
 ```
-📊 **Database Schema: production** (postgresql)
+ **Database Schema: production** (postgresql)
 
-🗂️ **Tables (45)**
+ **Tables (45)**
 
-📋 **users**
-   └── id: bigint (PK, NOT NULL, AUTO_INCREMENT)
-   └── name: varchar(255) (NOT NULL)
-   └── email: varchar(255) (UNIQUE, NOT NULL)
-   └── created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
-   └── updated_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
+ **users**
+ \-- id: bigint (PK, NOT NULL, AUTO_INCREMENT)
+ \-- name: varchar(255) (NOT NULL)
+ \-- email: varchar(255) (UNIQUE, NOT NULL)
+ \-- created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
+ \-- updated_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
 
-📋 **posts**
-   └── id: bigint (PK, NOT NULL, AUTO_INCREMENT)
-   └── user_id: bigint (FK → users.id, NOT NULL)
-   └── title: varchar(500) (NOT NULL)
-   └── content: text
-   └── published: boolean (NOT NULL, DEFAULT: false)
-   └── created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
+ **posts**
+ \-- id: bigint (PK, NOT NULL, AUTO_INCREMENT)
+ \-- user_id: bigint (FK -> users.id, NOT NULL)
+ \-- title: varchar(500) (NOT NULL)
+ \-- content: text
+ \-- published: boolean (NOT NULL, DEFAULT: false)
+ \-- created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
 
-🔍 **Views (8)**
+ **Views (8)**
 ... [additional tables and views]
 
-📈 **Summary**
-   • Tables: 45
-   • Views: 8
-   • Total Columns: 1,247
-   • Foreign Keys: 23
+ **Summary**
+ - Tables: 45
+ - Views: 8
+ - Total Columns: 1,247
+ - Foreign Keys: 23
 ```
 
 For single table:
 ```
-📋 **Table: users** (production)
+ **Table: users** (production)
 
 **Columns:**
-├── id: bigint (PRIMARY KEY, NOT NULL, AUTO_INCREMENT)
-├── name: varchar(255) (NOT NULL)
-├── email: varchar(255) (UNIQUE, NOT NULL)
-├── status: enum('active','inactive','suspended') (NOT NULL, DEFAULT: 'active')
-├── created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
-└── updated_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
+|-- id: bigint (PRIMARY KEY, NOT NULL, AUTO_INCREMENT)
+|-- name: varchar(255) (NOT NULL)
+|-- email: varchar(255) (UNIQUE, NOT NULL)
+|-- status: enum('active','inactive','suspended') (NOT NULL, DEFAULT: 'active')
+|-- created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
+\-- updated_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
 
 **Indexes:**
-├── PRIMARY KEY (id)
-├── UNIQUE KEY uk_users_email (email)
-└── KEY idx_users_status (status)
+|-- PRIMARY KEY (id)
+|-- UNIQUE KEY uk_users_email (email)
+\-- KEY idx_users_status (status)
 
 **Foreign Keys:**
-└── No foreign key relationships
+\-- No foreign key relationships
 
 **Referenced By:**
-├── posts.user_id → users.id
-├── orders.user_id → users.id
-└── user_sessions.user_id → users.id
+|-- posts.user_id -> users.id
+|-- orders.user_id -> users.id
+\-- user_sessions.user_id -> users.id
 ```
 
 ---
@@ -281,7 +284,7 @@ Test connectivity to a database, establish SSH tunnels if needed, and capture sc
 #### Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `database` | `string` | ✅ | Database name to test |
+| `database` | `string` | | Database name to test |
 
 #### Features
 - **Connection Validation**: Full connection test including authentication
@@ -293,15 +296,15 @@ Test connectivity to a database, establish SSH tunnels if needed, and capture sc
 #### Response Format
 **Successful Connection:**
 ```
-✅ Connection successful to production
-🔒 SSH tunnel established
-🛡️ SELECT-only mode active
-📊 Schema captured: 45 tables, 1,247 columns
+ Connection successful to production
+ SSH tunnel established
+ SELECT-only mode active
+ Schema captured: 45 tables, 1,247 columns
 ```
 
 **Failed Connection:**
 ```
-❌ Connection failed to production: Connection timeout after 30000ms
+ Connection failed to production: Connection timeout after 30000ms
 
 Troubleshooting:
 - Verify database host and port are correct
@@ -324,7 +327,7 @@ Refresh cached schema information for a database after structural changes.
 #### Parameters
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `database` | `string` | ✅ | Database name to refresh schema for |
+| `database` | `string` | | Database name to refresh schema for |
 
 #### Features
 - **Force Refresh**: Bypasses cache and re-captures schema
@@ -334,13 +337,13 @@ Refresh cached schema information for a database after structural changes.
 
 #### Response Format
 ```
-✅ Schema refreshed for production
-📊 Captured: 45 tables, 1,247 columns
+ Schema refreshed for production
+ Captured: 45 tables, 1,247 columns
 
 **Changes Detected:**
-• 2 new tables added
-• 1 table modified (new columns)
-• 3 new indexes created
+- 2 new tables added
+- 1 table modified (new columns)
+- 3 new indexes created
 ```
 
 #### When to Use
@@ -351,7 +354,249 @@ Refresh cached schema information for a database after structural changes.
 
 ---
 
-## 🔒 Security Model
+### `sql_add_database`
+Add a new database configuration at runtime. The new database will be MCP-configurable by default.
+
+#### Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | `string` | | Unique name for the database |
+| `type` | `string` | | Database type: mysql, postgresql, postgres, sqlite, mssql, sqlserver |
+| `host` | `string` | | Database host (not needed for SQLite) |
+| `port` | `number` | | Database port (uses default for type if omitted) |
+| `database` | `string` | | Database name on the server |
+| `username` | `string` | | Database username |
+| `password` | `string` | | Database password |
+| `file` | `string` | | File path (SQLite only) |
+| `ssl` | `boolean` | | Enable SSL (default: false) |
+| `select_only` | `boolean` | | Restrict to SELECT queries only (default: true) |
+| `ssh_host` | `string` | | SSH tunnel host |
+| `ssh_port` | `number` | | SSH tunnel port (default: 22) |
+| `ssh_username` | `string` | | SSH username |
+| `ssh_password` | `string` | | SSH password |
+| `ssh_private_key` | `string` | | SSH private key path |
+
+#### Features
+- **Always MCP-Configurable**: Sets mcp_configurable=true on created databases
+- **Safe Defaults**: Defaults to select_only=true for safety
+- **Persistent**: Persists to config.ini automatically
+- **Immediate Registration**: Registers database with connection manager immediately
+
+#### Example Usage
+```json
+{
+ "tool": "sql_add_database",
+ "arguments": {
+ "name": "analytics",
+ "type": "postgresql",
+ "host": "analytics-db.company.com",
+ "port": 5432,
+ "database": "analytics",
+ "username": "readonly_user",
+ "password": "secure_password",
+ "ssl": true,
+ "select_only": true
+ }
+}
+```
+
+#### Response Format
+```
+ Database 'analytics' added successfully (type: postgresql)
+ MCP configurable: yes (can be locked via sql_set_mcp_configurable)
+ SELECT-only: yes
+Use sql_test_connection to verify connectivity.
+```
+
+---
+
+### `sql_update_database`
+Update settings on an existing database. Only works on databases with mcp_configurable=true.
+
+#### Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `database` | `string` | | Database name to update |
+| `host` | `string` | | New host |
+| `port` | `number` | | New port |
+| `database_name` | `string` | | New database name on server |
+| `username` | `string` | | New username |
+| `password` | `string` | | New password |
+| `file` | `string` | | New file path (SQLite) |
+| `ssl` | `boolean` | | Enable/disable SSL |
+| `select_only` | `boolean` | | Enable/disable SELECT-only mode |
+| `ssh_host` | `string` | | SSH tunnel host |
+| `ssh_port` | `number` | | SSH tunnel port |
+| `ssh_username` | `string` | | SSH username |
+| `ssh_password` | `string` | | SSH password |
+| `ssh_private_key` | `string` | | SSH private key path |
+
+#### Features
+- **MCP-Configurable Only**: Only works on databases where mcp_configurable=true
+- **Clear Error on Lock**: Refuses with clear error if database is locked (mcp_configurable=false)
+- **Immediate Effect**: Re-registers database with connection manager to apply changes
+- **Persistent**: Persists changes to config.ini
+
+#### Security
+Refuses to modify databases that are not MCP-configurable. Manually-configured databases are protected by default.
+
+#### Example Usage
+```json
+{
+ "tool": "sql_update_database",
+ "arguments": {
+ "database": "analytics",
+ "host": "new-analytics-db.company.com",
+ "ssl": true
+ }
+}
+```
+
+#### Response Format
+```
+ Database 'analytics' updated successfully
+ Changed fields: host, ssl
+Use sql_test_connection to verify connectivity with new settings.
+```
+
+---
+
+### `sql_remove_database`
+Remove a database configuration. Only works on databases with mcp_configurable=true.
+
+#### Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `database` | `string` | | Database name to remove |
+
+#### Features
+- **MCP-Configurable Only**: Only works on databases where mcp_configurable=true
+- **Full Cleanup**: Disconnects active connections and SSH tunnels
+- **Persistent**: Removes from in-memory config and persists to config.ini
+- **Irreversible**: Cannot be undone (database must be re-added)
+
+#### Example Usage
+```json
+{
+ "tool": "sql_remove_database",
+ "arguments": {
+ "database": "old_analytics"
+ }
+}
+```
+
+#### Response Format
+```
+ Database 'old_analytics' removed successfully
+Connection closed and configuration saved.
+```
+
+---
+
+### `sql_get_config`
+Get the current configuration of a database. Passwords and SSH credentials are always redacted in the output.
+
+#### Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `database` | `string` | | Database name to get config for |
+
+#### Features
+- **Always Allowed**: Permitted regardless of mcp_configurable setting
+- **Credential Redaction**: Automatically redacts: password, ssh_password, ssh_private_key, ssh_passphrase
+- **MCP Status**: Shows mcp_configurable status
+- **Full Overview**: Shows all connection and security settings
+
+#### Example Usage
+```json
+{
+ "tool": "sql_get_config",
+ "arguments": {
+ "database": "production"
+ }
+}
+```
+
+#### Response Format
+```
+ Configuration for 'production':
+
+ type: postgresql
+ host: db.company.com
+ port: 5432
+ database: production_db
+ username: readonly_user
+ password: ***REDACTED***
+ ssl: true
+ select_only: true
+ timeout: 30000
+
+ MCP configurable: no
+```
+
+---
+
+### `sql_set_mcp_configurable`
+Lock a database from MCP configuration changes. This is a one-way operation -- once locked, only manual editing of config.ini can re-enable MCP configuration access.
+
+#### Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `database` | `string` | | Database name |
+| `enabled` | `boolean` | | Must be false. Setting to true is rejected for security. |
+
+#### Features
+- **One-Way Lock**: Can ONLY set mcp_configurable to false (lock)
+- **Security Enforced**: Setting enabled=true returns an error with instructions for manual unlocking
+- **AI-Proof**: Prevents AI from re-enabling its own configuration access after a human locks it
+- **Immediate Persistence**: Persists immediately to config.ini
+
+#### Security
+This one-way lock is a critical security feature. It ensures that once a human decides to lock a database from MCP changes, no AI agent can reverse that decision. Only a human with file system access can unlock it.
+
+#### Example Usage
+
+**Locking a database:**
+```json
+{
+ "tool": "sql_set_mcp_configurable",
+ "arguments": {
+ "database": "production",
+ "enabled": false
+ }
+}
+```
+
+**Response:**
+```
+ Database 'production' is now locked from MCP configuration changes.
+To re-enable MCP configuration, manually set mcp_configurable=true in config.ini.
+```
+
+**Attempting to unlock (rejected):**
+```json
+{
+ "tool": "sql_set_mcp_configurable",
+ "arguments": {
+ "database": "production",
+ "enabled": true
+ }
+}
+```
+
+**Response (error):**
+```
+ Cannot enable MCP configurability via MCP tools.
+For security, setting mcp_configurable=true must be done by manually editing config.ini.
+This prevents an AI from re-enabling its own configuration access after a human locks it.
+
+To unlock, add this to config.ini under [database.production]:
+mcp_configurable=true
+```
+
+---
+
+## Security Model
 
 ### SELECT-Only Mode
 When `select_only=true` in database configuration:
@@ -392,7 +637,7 @@ The system automatically detects and blocks:
 
 ---
 
-## 🚀 Performance Features
+## Performance Features
 
 ### Result Set Management
 - **Row Limiting**: Configurable maximum rows per query (default: 1,000)
@@ -414,13 +659,13 @@ The system automatically detects and blocks:
 
 ---
 
-## 🔧 Error Handling
+## Error Handling
 
 ### Common Error Responses
 
 #### Connection Errors
 ```
-❌ Connection failed to database: Connection timeout
+ Connection failed to database: Connection timeout
 Troubleshooting:
 - Verify host and port configuration
 - Check network connectivity
@@ -430,7 +675,7 @@ Troubleshooting:
 
 #### Security Violations
 ```
-❌ Query blocked: INSERT is not allowed in SELECT-only mode
+ Query blocked: INSERT is not allowed in SELECT-only mode
 Security Information:
 This database is configured with SELECT-only mode for safety.
 Only SELECT, WITH, SHOW, EXPLAIN, and DESCRIBE statements are allowed.
@@ -438,7 +683,7 @@ Only SELECT, WITH, SHOW, EXPLAIN, and DESCRIBE statements are allowed.
 
 #### Query Complexity Errors
 ```
-❌ Query complexity exceeds limits: 15 JOINs (max: 10)
+ Query complexity exceeds limits: 15 JOINs (max: 10)
 Suggestions:
 - Break complex queries into smaller parts
 - Use temporary tables for intermediate results
@@ -447,7 +692,7 @@ Suggestions:
 
 #### SSH Tunnel Errors
 ```
-❌ SSH tunnel failed: Authentication failed
+ SSH tunnel failed: Authentication failed
 Troubleshooting:
 - Verify SSH credentials
 - Check SSH key permissions
@@ -457,67 +702,127 @@ Troubleshooting:
 
 ---
 
-## 📊 Usage Examples
+## Usage Examples
 
 ### Basic Query Execution
 ```json
 {
-  "tool": "sql_query",
-  "arguments": {
-    "database": "production",
-    "query": "SELECT COUNT(*) as user_count FROM users WHERE status = 'active'"
-  }
+ "tool": "sql_query",
+ "arguments": {
+ "database": "production",
+ "query": "SELECT COUNT(*) as user_count FROM users WHERE status = 'active'"
+ }
 }
 ```
 
 ### Batch Analytics Query
 ```json
 {
-  "tool": "sql_batch_query",
-  "arguments": {
-    "database": "analytics",
-    "queries": [
-      {
-        "query": "SELECT DATE(created_at) as date, COUNT(*) as signups FROM users WHERE created_at >= ? GROUP BY DATE(created_at) ORDER BY date",
-        "params": ["2024-01-01"],
-        "label": "Daily Signups"
-      },
-      {
-        "query": "SELECT COUNT(*) as active_users FROM users WHERE last_login >= ? AND status = 'active'",
-        "params": ["2024-07-01"],
-        "label": "Active Users Last Month"
-      }
-    ],
-    "transaction": false
-  }
+ "tool": "sql_batch_query",
+ "arguments": {
+ "database": "analytics",
+ "queries": [
+ {
+ "query": "SELECT DATE(created_at) as date, COUNT(*) as signups FROM users WHERE created_at >= ? GROUP BY DATE(created_at) ORDER BY date",
+ "params": ["2024-01-01"],
+ "label": "Daily Signups"
+ },
+ {
+ "query": "SELECT COUNT(*) as active_users FROM users WHERE last_login >= ? AND status = 'active'",
+ "params": ["2024-07-01"],
+ "label": "Active Users Last Month"
+ }
+ ],
+ "transaction": false
+ }
 }
 ```
 
 ### Performance Analysis
 ```json
 {
-  "tool": "sql_analyze_performance",
-  "arguments": {
-    "database": "production",
-    "query": "SELECT u.name, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.created_at > '2024-01-01' GROUP BY u.id, u.name HAVING COUNT(o.id) > 10 ORDER BY order_count DESC"
-  }
+ "tool": "sql_analyze_performance",
+ "arguments": {
+ "database": "production",
+ "query": "SELECT u.name, COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id = o.user_id WHERE u.created_at > '2024-01-01' GROUP BY u.id, u.name HAVING COUNT(o.id) > 10 ORDER BY order_count DESC"
+ }
 }
 ```
 
 ### Schema Exploration
 ```json
 {
-  "tool": "sql_get_schema",
-  "arguments": {
-    "database": "production",
-    "table": "users"
-  }
+ "tool": "sql_get_schema",
+ "arguments": {
+ "database": "production",
+ "table": "users"
+ }
+}
+```
+
+### Add a New Database at Runtime
+```json
+{
+ "tool": "sql_add_database",
+ "arguments": {
+ "name": "staging",
+ "type": "postgresql",
+ "host": "staging-db.company.com",
+ "port": 5432,
+ "database": "staging",
+ "username": "app_user",
+ "password": "staging_password",
+ "select_only": true
+ }
+}
+```
+
+### Update Database Configuration
+```json
+{
+ "tool": "sql_update_database",
+ "arguments": {
+ "database": "staging",
+ "host": "new-staging-db.company.com",
+ "port": 5433
+ }
+}
+```
+
+### Remove a Database
+```json
+{
+ "tool": "sql_remove_database",
+ "arguments": {
+ "database": "staging"
+ }
+}
+```
+
+### View Database Configuration
+```json
+{
+ "tool": "sql_get_config",
+ "arguments": {
+ "database": "production"
+ }
+}
+```
+
+### Lock a Database from MCP Changes
+```json
+{
+ "tool": "sql_set_mcp_configurable",
+ "arguments": {
+ "database": "production",
+ "enabled": false
+ }
 }
 ```
 
 ---
 
-## 🔍 Best Practices
+## Best Practices
 
 ### Query Writing
 1. **Use Parameterized Queries**: Always use parameter binding for dynamic values

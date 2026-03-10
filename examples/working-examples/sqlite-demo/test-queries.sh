@@ -3,24 +3,24 @@
 
 set -e
 
-echo "🧪 Testing SQL MCP Server functionality..."
+echo "[TEST] Testing SQL MCP Server functionality..."
 
 # Check if server is running
 if [ ! -f "server.pid" ]; then
-    echo "❌ Server not running"
+    echo "[ERROR] Server not running"
     echo "   Start server with ./start-server.sh first"
     exit 1
 fi
 
 SERVER_PID=$(cat server.pid)
 if ! ps -p $SERVER_PID > /dev/null 2>&1; then
-    echo "❌ Server process not found"
+    echo "[ERROR] Server process not found"
     echo "   Start server with ./start-server.sh first"
     rm -f server.pid
     exit 1
 fi
 
-echo "✅ Server running (PID: $SERVER_PID)"
+echo "[OK] Server running (PID: $SERVER_PID)"
 
 # Test MCP protocol - List tools
 echo "1. Testing MCP protocol - List tools..."
@@ -28,9 +28,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"sql_query"* ]]; then
-    echo "✅ MCP protocol working - tools listed"
+    echo "[OK] MCP protocol working - tools listed"
 else
-    echo "❌ MCP protocol test failed"
+    echo "[ERROR] MCP protocol test failed"
     echo "   Result: $RESULT"
 fi
 
@@ -40,9 +40,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"demo"* ]]; then
-    echo "✅ Database list working - demo database found"
+    echo "[OK] Database list working - demo database found"
 else
-    echo "❌ Database list test failed"
+    echo "[ERROR] Database list test failed"
     echo "   Result: $RESULT"
 fi
 
@@ -52,9 +52,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"users"* ]] && [[ "$RESULT" == *"orders"* ]]; then
-    echo "✅ Schema retrieval working - tables found"
+    echo "[OK] Schema retrieval working - tables found"
 else
-    echo "❌ Schema retrieval test failed"
+    echo "[ERROR] Schema retrieval test failed"
     echo "   Result: $RESULT"
 fi
 
@@ -67,9 +67,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"user_count"* ]] && [[ "$RESULT" == *"8"* ]]; then
-    echo "   ✅ User count query successful"
+    echo "   [OK] User count query successful"
 else
-    echo "   ❌ User count query failed"
+    echo "   [ERROR] User count query failed"
 fi
 
 # Query 2: Department summary  
@@ -78,9 +78,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"Engineering"* ]] || [[ "$RESULT" == *"user_count"* ]]; then
-    echo "   ✅ Department summary query successful"
+    echo "   [OK] Department summary query successful"
 else
-    echo "   ❌ Department summary query failed"
+    echo "   [ERROR] Department summary query failed"
 fi
 
 # Query 3: Order analytics
@@ -89,9 +89,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"order_count"* ]] && [[ "$RESULT" == *"total_amount"* ]]; then
-    echo "   ✅ Order analytics query successful"
+    echo "   [OK] Order analytics query successful"
 else
-    echo "   ❌ Order analytics query failed"
+    echo "   [ERROR] Order analytics query failed"
 fi
 
 # Query 4: Complex join
@@ -100,9 +100,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"name"* ]] && [[ "$RESULT" == *"orders"* ]]; then
-    echo "   ✅ Complex join query successful"
+    echo "   [OK] Complex join query successful"
 else
-    echo "   ❌ Complex join query failed"
+    echo "   [ERROR] Complex join query failed"
 fi
 
 # Query 5: Error handling test
@@ -111,9 +111,9 @@ MCP_REQUEST='{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"sql
 RESULT=$(echo "$MCP_REQUEST" | timeout 10 sql-server --test 2>/dev/null || echo "TIMEOUT")
 
 if [[ "$RESULT" == *"error"* ]] || [[ "$RESULT" == *"syntax"* ]]; then
-    echo "   ✅ Error handling working correctly"
+    echo "   [OK] Error handling working correctly"
 else
-    echo "   ❌ Error handling test failed"
+    echo "   [ERROR] Error handling test failed"
 fi
 
 # Performance test
@@ -126,16 +126,16 @@ END_TIME=$(date +%s%N)
 DURATION=$(( (END_TIME - START_TIME) / 1000000 ))  # Convert to milliseconds
 
 if [[ "$RESULT" == *"customer_name"* ]]; then
-    echo "✅ Performance test completed in ${DURATION}ms"
+    echo "[OK] Performance test completed in ${DURATION}ms"
     if [ $DURATION -lt 1000 ]; then
-        echo "   🚀 Excellent performance (< 1000ms)"
+        echo "   [FAST] Excellent performance (< 1000ms)"
     elif [ $DURATION -lt 5000 ]; then
-        echo "   ⚡ Good performance (< 5000ms)"
+        echo "   [GOOD] Good performance (< 5000ms)"
     else
-        echo "   ⚠️  Slow performance (> 5000ms)"
+        echo "   [WARN] Slow performance (> 5000ms)"
     fi
 else
-    echo "❌ Performance test failed"
+    echo "[ERROR] Performance test failed"
 fi
 
 # Database integrity check
@@ -144,26 +144,26 @@ USER_COUNT=$(sqlite3 demo.db "SELECT COUNT(*) FROM users;")
 ORDER_COUNT=$(sqlite3 demo.db "SELECT COUNT(*) FROM orders;") 
 DEPT_COUNT=$(sqlite3 demo.db "SELECT COUNT(*) FROM departments;")
 
-echo "✅ Database integrity verified:"
-echo "   👥 Users: $USER_COUNT"
-echo "   🛒 Orders: $ORDER_COUNT"
-echo "   🏢 Departments: $DEPT_COUNT"
+echo "[OK] Database integrity verified:"
+echo "   Users: $USER_COUNT"
+echo "   Orders: $ORDER_COUNT"
+echo "   Departments: $DEPT_COUNT"
 
 # Summary
 echo ""
-echo "📊 Test Summary"
+echo "[SUMMARY] Test Summary"
 echo "==============="
-echo "✅ MCP protocol communication"
-echo "✅ Database connectivity"  
-echo "✅ Schema operations"
-echo "✅ Query execution"
-echo "✅ Error handling"
-echo "✅ Performance within limits"
-echo "✅ Database integrity maintained"
+echo "[OK] MCP protocol communication"
+echo "[OK] Database connectivity"  
+echo "[OK] Schema operations"
+echo "[OK] Query execution"
+echo "[OK] Error handling"
+echo "[OK] Performance within limits"
+echo "[OK] Database integrity maintained"
 echo ""
-echo "🎉 All tests passed! The demo is working correctly."
+echo "[SUCCESS] All tests passed! The demo is working correctly."
 echo ""
-echo "💡 Try these queries in Claude:"
+echo "[TIP] Try these queries in Claude:"
 echo '   "What databases do you have access to?"'
 echo '   "Show me all users and their departments"'
 echo '   "What are the total sales by department?"'

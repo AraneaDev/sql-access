@@ -114,7 +114,7 @@ type=mysql
 host=myserver.mysql.database.azure.com
 port=3306
 database=production_db
-username=adminuser@myserver  # Azure format required
+username=adminuser@myserver # Azure format required
 password=complex_password123!
 ssl=true
 select_only=true
@@ -143,7 +143,7 @@ timeout=30000
 ```ini
 [database.gcp_mysql]
 type=mysql
-host=10.x.x.x  # Private IP or public IP
+host=10.x.x.x # Private IP or public IP
 port=3306
 database=application_db
 username=mysql_user
@@ -173,7 +173,7 @@ SET GLOBAL long_query_time = 2;
 
 -- Optimize for read-heavy workloads
 SET GLOBAL innodb_buffer_pool_size = 1073741824; -- 1GB
-SET GLOBAL query_cache_size = 67108864;          -- 64MB
+SET GLOBAL query_cache_size = 67108864; -- 64MB
 ```
 
 ### Schema Optimization
@@ -215,7 +215,7 @@ database=sensitive_data
 username=claude_readonly
 password=${MYSQL_READONLY_PASSWORD}
 ssl=true
-select_only=true  # Enforces read-only at application level
+select_only=true # Enforces read-only at application level
 timeout=15000
 ```
 
@@ -343,8 +343,8 @@ FROM INFORMATION_SCHEMA.PROCESSLIST;
 
 -- Check database sizes
 SELECT 
-  table_schema,
-  ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) AS 'DB Size in MB'
+ table_schema,
+ ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) AS 'DB Size in MB'
 FROM information_schema.tables 
 GROUP BY table_schema;
 ```
@@ -359,9 +359,9 @@ SET GLOBAL performance_schema = ON;
 
 -- Monitor slow queries
 SELECT 
-  query,
-  exec_count,
-  avg_timer_wait/1000000000000 as avg_time_sec
+ query,
+ exec_count,
+ avg_timer_wait/1000000000000 as avg_time_sec
 FROM performance_schema.events_statements_summary_by_digest
 ORDER BY avg_timer_wait DESC
 LIMIT 10;
@@ -382,8 +382,8 @@ While the MCP server only reads data, consider:
 ```sql
 -- User analytics
 SELECT 
-  DATE(created_at) as date,
-  COUNT(*) as new_users
+ DATE(created_at) as date,
+ COUNT(*) as new_users
 FROM users 
 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 GROUP BY DATE(created_at)
@@ -391,8 +391,8 @@ ORDER BY date;
 
 -- Sales summary
 SELECT 
-  p.name as product_name,
-  SUM(oi.quantity * oi.price) as revenue
+ p.name as product_name,
+ SUM(oi.quantity * oi.price) as revenue
 FROM order_items oi
 JOIN products p ON oi.product_id = p.id
 JOIN orders o ON oi.order_id = o.id
@@ -406,16 +406,16 @@ ORDER BY revenue DESC;
 ```sql
 -- Customer lifetime value with window functions
 SELECT 
-  customer_id,
-  total_spent,
-  ROW_NUMBER() OVER (ORDER BY total_spent DESC) as spending_rank,
-  NTILE(10) OVER (ORDER BY total_spent) as decile
+ customer_id,
+ total_spent,
+ ROW_NUMBER() OVER (ORDER BY total_spent DESC) as spending_rank,
+ NTILE(10) OVER (ORDER BY total_spent) as decile
 FROM (
-  SELECT 
-    customer_id,
-    SUM(total_amount) as total_spent
-  FROM orders
-  GROUP BY customer_id
+ SELECT 
+ customer_id,
+ SUM(total_amount) as total_spent
+ FROM orders
+ GROUP BY customer_id
 ) customer_totals;
 ```
 

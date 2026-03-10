@@ -14,24 +14,24 @@ This advanced tutorial demonstrates how to configure and manage multiple databas
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Multi-Database Architecture                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────┐    ┌─────────────────────────────────────┐     │
-│  │   Claude    │────│        SQL MCP Server              │     │
-│  │             │    │    (Single Instance)               │     │
-│  └─────────────┘    └─────────────────────────────────────┘     │
-│                                 │                               │
-│       ┌─────────────────────────┼─────────────────────────┐     │
-│       │                         │                         │     │
-│       v                         v                         v     │
-│  ┌─────────┐              ┌─────────┐              ┌─────────┐   │
-│  │ Postgres│              │  MySQL  │              │ SQLite  │   │
-│  │ (Users) │              │(Orders) │              │(Cache)  │   │
-│  └─────────┘              └─────────┘              └─────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
++-------------------------------------------------------------------+
+| Multi-Database Architecture                                       |
++-------------------------------------------------------------------+
+|                                                                   |
+|  +--------------+  +--------------------------------------+       |
+|  | Claude       |----| SQL MCP Server                     |       |
+|  |              |  | (Single Instance)                    |       |
+|  +--------------+  +--------------------------------------+       |
+|                              |                                    |
+|          +-------------------+-------------------+                |
+|          |                   |                   |                |
+|          v                   v                   v                |
+|     +---------+         +---------+         +---------+           |
+|     | Postgres|         | MySQL   |         | SQLite  |           |
+|     | (Users) |         |(Orders) |         |(Cache)  |           |
+|     +---------+         +---------+         +---------+           |
+|                                                                   |
++-------------------------------------------------------------------+
 ```
 
 ## Configuration Patterns
@@ -74,7 +74,7 @@ timeout=10000
 [database.cache]
 type=sqlite
 file=./data/analytics_cache.sqlite
-select_only=false  # Allow writes for caching
+select_only=false # Allow writes for caching
 
 # Analytics data warehouse
 [database.analytics]
@@ -100,7 +100,7 @@ max_query_length=15000
 max_rows=2000
 max_batch_size=8
 query_timeout=45000
-connection_pool_size=3  # Per database
+connection_pool_size=3 # Per database
 ```
 
 ### 2. Environment-Based Configuration
@@ -224,31 +224,31 @@ connection_pool_size=2
 ```sql
 -- Query user data from PostgreSQL
 SELECT 
-  user_id,
-  email,
-  registration_date,
-  user_tier,
-  total_spent
+ user_id,
+ email,
+ registration_date,
+ user_tier,
+ total_spent
 FROM users 
 WHERE user_tier IN ('gold', 'platinum')
-  AND registration_date >= '2024-01-01'
+ AND registration_date >= '2024-01-01'
 ORDER BY total_spent DESC
 LIMIT 100;
 ```
 
 Then correlate with order data from MySQL:
 ```sql
--- Query order data from MySQL  
+-- Query order data from MySQL 
 SELECT 
-  user_id,
-  COUNT(*) as order_count,
-  SUM(total_amount) as total_spent,
-  AVG(total_amount) as avg_order_value,
-  MAX(order_date) as last_order_date
+ user_id,
+ COUNT(*) as order_count,
+ SUM(total_amount) as total_spent,
+ AVG(total_amount) as avg_order_value,
+ MAX(order_date) as last_order_date
 FROM orders 
-WHERE user_id IN (12345, 67890, 11223, 44556)  -- IDs from previous query
-  AND order_status = 'completed'
-  AND order_date >= '2024-01-01'
+WHERE user_id IN (12345, 67890, 11223, 44556) -- IDs from previous query
+ AND order_status = 'completed'
+ AND order_date >= '2024-01-01'
 GROUP BY user_id
 ORDER BY total_spent DESC;
 ```
@@ -264,38 +264,38 @@ WHERE total_lifetime_value > 10000;
 
 -- Step 2: Use results to query orders database
 SELECT 
-  user_id,
-  product_category,
-  SUM(quantity) as total_quantity,
-  SUM(total_amount) as category_spend
+ user_id,
+ product_category,
+ SUM(quantity) as total_quantity,
+ SUM(total_amount) as category_spend
 FROM orders 
-WHERE user_id IN (1001, 1002, 1003)  -- From step 1
+WHERE user_id IN (1001, 1002, 1003) -- From step 1
 GROUP BY user_id, product_category;
 
 -- Step 3: Cache results in SQLite for future analysis
 INSERT INTO cache.customer_analysis 
-VALUES (...);  -- Combined results
+VALUES (...); -- Combined results
 ```
 
 **Pattern 2: Parallel Data Gathering**
 ```sql
 -- Query A: User demographics (PostgreSQL)
 SELECT 
-  COUNT(*) as total_users,
-  COUNT(CASE WHEN user_tier = 'premium' THEN 1 END) as premium_users,
-  AVG(EXTRACT(YEAR FROM AGE(birth_date))) as avg_age
+ COUNT(*) as total_users,
+ COUNT(CASE WHEN user_tier = 'premium' THEN 1 END) as premium_users,
+ AVG(EXTRACT(YEAR FROM AGE(birth_date))) as avg_age
 FROM users 
 WHERE status = 'active';
 
 -- Query B: Order metrics (MySQL) - Run simultaneously
 SELECT 
-  COUNT(*) as total_orders,
-  SUM(total_amount) as total_revenue,
-  AVG(total_amount) as avg_order_value,
-  COUNT(DISTINCT user_id) as unique_customers
+ COUNT(*) as total_orders,
+ SUM(total_amount) as total_revenue,
+ AVG(total_amount) as avg_order_value,
+ COUNT(DISTINCT user_id) as unique_customers
 FROM orders 
 WHERE order_date >= '2024-01-01'
-  AND order_status = 'completed';
+ AND order_status = 'completed';
 ```
 
 ### 3. Caching Strategies
@@ -305,7 +305,7 @@ WHERE order_date >= '2024-01-01'
 -- Check cache first (SQLite)
 SELECT * FROM cache.user_order_summary 
 WHERE user_id = 12345 
-  AND cache_timestamp > datetime('now', '-1 hour');
+ AND cache_timestamp > datetime('now', '-1 hour');
 
 -- If not in cache, query source databases and cache result
 -- (This would be handled by application logic in practice)
@@ -320,25 +320,25 @@ VALUES (12345, 15, 2450.75, 163.38, datetime('now'));
 
 ### 1. Functional Naming
 ```ini
-[database.user_management]      # Clear functional purpose
-[database.order_processing]     # Business domain focus
-[database.inventory_tracking]   # Specific responsibility
-[database.analytics_warehouse]  # Data purpose
-[database.session_cache]        # Technical function
+[database.user_management] # Clear functional purpose
+[database.order_processing] # Business domain focus
+[database.inventory_tracking] # Specific responsibility
+[database.analytics_warehouse] # Data purpose
+[database.session_cache] # Technical function
 ```
 
 ### 2. Environment Naming
 ```ini
-[database.users_dev]           # Development environment
-[database.users_staging]       # Staging environment
-[database.users_prod_primary]  # Production primary
-[database.users_prod_replica]  # Production replica
+[database.users_dev] # Development environment
+[database.users_staging] # Staging environment
+[database.users_prod_primary] # Production primary
+[database.users_prod_replica] # Production replica
 ```
 
 ### 3. Geographic Naming
 ```ini
-[database.orders_us_east]      # Geographic region
-[database.orders_eu_west]      # European region
+[database.orders_us_east] # Geographic region
+[database.orders_eu_west] # European region
 [database.orders_asia_pacific] # APAC region
 ```
 
@@ -350,14 +350,14 @@ VALUES (12345, 15, 2450.75, 163.38, datetime('now'));
 ```ini
 [extension]
 # Formula: (Number of CPU cores) * 2 + Number of databases
-connection_pool_size=4  # For 8-core system with 4 databases
+connection_pool_size=4 # For 8-core system with 4 databases
 
 # Per-database overrides for different workloads
 [database.high_volume_orders]
-connection_pool_size=6  # Higher for heavy-use database
+connection_pool_size=6 # Higher for heavy-use database
 
 [database.archive_data]
-connection_pool_size=1  # Lower for rarely-used database
+connection_pool_size=1 # Lower for rarely-used database
 ```
 
 ### 2. Query Routing Optimization
@@ -385,25 +385,25 @@ host=users-replica.com
 ```sql
 -- Batch 1: Get user segments from users database
 SELECT 
-  user_id, 
-  user_tier, 
-  registration_date,
-  location_region
+ user_id, 
+ user_tier, 
+ registration_date,
+ location_region
 FROM users 
 WHERE registration_date >= '2024-01-01'
-  AND status = 'active'
+ AND status = 'active'
 ORDER BY user_id;
 
 -- Batch 2: Get aggregated order data for user segments
 SELECT 
-  user_id,
-  COUNT(*) as order_count,
-  SUM(total_amount) as total_spent,
-  COUNT(DISTINCT product_category) as category_diversity,
-  MAX(order_date) as last_order
+ user_id,
+ COUNT(*) as order_count,
+ SUM(total_amount) as total_spent,
+ COUNT(DISTINCT product_category) as category_diversity,
+ MAX(order_date) as last_order
 FROM orders 
-WHERE user_id BETWEEN 1000 AND 2000  -- Process in chunks
-  AND order_status = 'completed'
+WHERE user_id BETWEEN 1000 AND 2000 -- Process in chunks
+ AND order_status = 'completed'
 GROUP BY user_id;
 
 -- Batch 3: Update analytics cache with combined results
@@ -422,7 +422,7 @@ WHERE user_id = 12345;
 
 DELETE FROM cache.user_analytics 
 WHERE user_id = 12345 
-   OR cache_timestamp < datetime('now', '-2 hours');
+ OR cache_timestamp < datetime('now', '-2 hours');
 ```
 
 ### 2. Scheduled Synchronization
@@ -436,15 +436,15 @@ WHERE cache_timestamp < datetime('now', '-24 hours');
 -- Rebuild cache for active users
 INSERT OR REPLACE INTO cache.user_order_summary 
 SELECT 
-  u.user_id,
-  COUNT(o.order_id) as order_count,
-  COALESCE(SUM(o.total_amount), 0) as total_spent,
-  COALESCE(AVG(o.total_amount), 0) as avg_order_value,
-  datetime('now') as cache_timestamp
+ u.user_id,
+ COUNT(o.order_id) as order_count,
+ COALESCE(SUM(o.total_amount), 0) as total_spent,
+ COALESCE(AVG(o.total_amount), 0) as avg_order_value,
+ datetime('now') as cache_timestamp
 FROM users u
 LEFT JOIN orders o ON u.user_id = o.user_id 
 WHERE u.status = 'active'
-  AND u.last_login >= datetime('now', '-30 days')
+ AND u.last_login >= datetime('now', '-30 days')
 GROUP BY u.user_id;
 ```
 
@@ -456,21 +456,21 @@ GROUP BY u.user_id;
 ```sql
 -- Test PostgreSQL connection
 SELECT 'users_db' as database_name, 
-       'postgresql' as type, 
-       version() as version,
-       now() as timestamp;
+ 'postgresql' as type, 
+ version() as version,
+ now() as timestamp;
 
--- Test MySQL connection  
+-- Test MySQL connection 
 SELECT 'orders_db' as database_name,
-       'mysql' as type,
-       @@version as version,
-       now() as timestamp;
+ 'mysql' as type,
+ @@version as version,
+ now() as timestamp;
 
 -- Test SQLite connection
 SELECT 'cache_db' as database_name,
-       'sqlite' as type, 
-       sqlite_version() as version,
-       datetime('now') as timestamp;
+ 'sqlite' as type, 
+ sqlite_version() as version,
+ datetime('now') as timestamp;
 ```
 
 ### 2. Performance Metrics per Database
@@ -483,7 +483,7 @@ SELECT 'cache_db' as database_name,
 -- Example metrics to track:
 -- - Average query time per database
 -- - Query count per database
--- - Error rates per database  
+-- - Error rates per database 
 -- - Connection pool utilization
 -- - Cache hit rates
 ```
@@ -501,7 +501,7 @@ type=postgresql
 select_only=true
 timeout=10000
 
-# Medium security for order data  
+# Medium security for order data 
 [database.orders]
 type=mysql
 # ... connection details
@@ -542,8 +542,8 @@ ssl=false
 **Diagnostic queries**:
 ```sql
 -- Check if all databases are accessible
-SELECT 1 as test FROM users LIMIT 1;     -- PostgreSQL
-SELECT 1 as test FROM orders LIMIT 1;    -- MySQL  
+SELECT 1 as test FROM users LIMIT 1; -- PostgreSQL
+SELECT 1 as test FROM orders LIMIT 1; -- MySQL 
 SELECT 1 as test FROM cache.metadata LIMIT 1; -- SQLite
 ```
 
@@ -565,7 +565,7 @@ SELECT 1 as test FROM cache.metadata LIMIT 1; -- SQLite
 
 -- Check for:
 -- - Uneven load distribution
--- - Slow queries on specific databases  
+-- - Slow queries on specific databases 
 -- - Network latency between databases
 -- - Cache miss rates
 ```
@@ -610,7 +610,7 @@ SELECT product_id, name, category, current_stock
 FROM products 
 WHERE status = 'active';
 
--- Product analytics (MySQL)  
+-- Product analytics (MySQL) 
 SELECT product_id, total_sales, avg_rating, review_count
 FROM product_metrics
 WHERE last_updated >= '2024-01-01';
@@ -629,7 +629,7 @@ database=tenant_acme
 # ... configuration
 
 [database.tenant_globex]
-type=postgresql  
+type=postgresql 
 host=tenant-db.internal
 database=tenant_globex
 # ... configuration
@@ -649,20 +649,20 @@ database=multi_tenant_analytics
 ```sql
 -- Operational data (PostgreSQL)
 SELECT 
-  user_id,
-  current_subscription_tier,
-  account_status,
-  last_login
+ user_id,
+ current_subscription_tier,
+ account_status,
+ last_login
 FROM users 
 WHERE status = 'active';
 
 -- Historical analysis (Data Lake via specialized connector)
 -- Note: This would require custom connector implementation
 SELECT 
-  user_id,
-  session_count,
-  total_page_views,
-  avg_session_duration
+ user_id,
+ session_count,
+ total_page_views,
+ avg_session_duration
 FROM user_behavior_lake
 WHERE date_partition >= '2024-01-01';
 ```

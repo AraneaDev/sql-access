@@ -2,31 +2,31 @@
 
 The SQL MCP Server follows a layered, modular architecture designed for security, performance, and maintainability. This document provides a comprehensive overview of the system design, component interactions, and architectural decisions.
 
-## 🏗️ High-Level Architecture
+## High-Level Architecture
 
 ```mermaid
 graph TB
-    Claude[Claude Desktop] --> MCP[MCP Protocol Layer]
-    MCP --> Server[SQLMCPServer]
-    Server --> Security[SecurityManager]
-    Server --> Connection[ConnectionManager]
-    Server --> Schema[SchemaManager]
-    Server --> SSH[SSHTunnelManager]
-    
-    Connection --> Adapters[Database Adapters]
-    Adapters --> PostgreSQL[(PostgreSQL)]
-    Adapters --> MySQL[(MySQL)]
-    Adapters --> SQLite[(SQLite)]
-    Adapters --> MSSQL[(SQL Server)]
-    
-    SSH --> Bastion[SSH Bastion Host]
-    Bastion --> RemoteDB[(Remote Database)]
-    
-    Security --> Audit[Audit Logs]
-    Schema --> Cache[Schema Cache]
+ Claude[Claude Desktop] --> MCP[MCP Protocol Layer]
+ MCP --> Server[SQLMCPServer]
+ Server --> Security[SecurityManager]
+ Server --> Connection[ConnectionManager]
+ Server --> Schema[SchemaManager]
+ Server --> SSH[SSHTunnelManager]
+ 
+ Connection --> Adapters[Database Adapters]
+ Adapters --> PostgreSQL[(PostgreSQL)]
+ Adapters --> MySQL[(MySQL)]
+ Adapters --> SQLite[(SQLite)]
+ Adapters --> MSSQL[(SQL Server)]
+ 
+ SSH --> Bastion[SSH Bastion Host]
+ Bastion --> RemoteDB[(Remote Database)]
+ 
+ Security --> Audit[Audit Logs]
+ Schema --> Cache[Schema Cache]
 ```
 
-## 🏛️ Architectural Layers
+## Architectural Layers
 
 ### 1. Protocol Layer
 **Responsibility**: MCP protocol communication and message handling
@@ -84,7 +84,7 @@ graph TB
 - Error classes and handlers
 - TypeScript type definitions
 
-## 🔄 Component Interactions
+## Component Interactions
 
 ### Request Flow
 1. **Claude Desktop** sends MCP request via stdio
@@ -100,23 +100,23 @@ graph TB
 
 ```mermaid
 graph LR
-    SQLMCPServer --> ConnectionManager
-    SQLMCPServer --> SecurityManager
-    SQLMCPServer --> SchemaManager
-    SQLMCPServer --> SSHTunnelManager
-    
-    ConnectionManager --> AdapterFactory
-    ConnectionManager --> SSHTunnelManager
-    
-    SchemaManager --> ConnectionManager
-    
-    AdapterFactory --> PostgreSQLAdapter
-    AdapterFactory --> MySQLAdapter
-    AdapterFactory --> SQLiteAdapter
-    AdapterFactory --> MSSQLAdapter
+ SQLMCPServer --> ConnectionManager
+ SQLMCPServer --> SecurityManager
+ SQLMCPServer --> SchemaManager
+ SQLMCPServer --> SSHTunnelManager
+ 
+ ConnectionManager --> AdapterFactory
+ ConnectionManager --> SSHTunnelManager
+ 
+ SchemaManager --> ConnectionManager
+ 
+ AdapterFactory --> PostgreSQLAdapter
+ AdapterFactory --> MySQLAdapter
+ AdapterFactory --> SQLiteAdapter
+ AdapterFactory --> MSSQLAdapter
 ```
 
-## 🛡️ Security Architecture
+## Security Architecture
 
 ### Defense in Depth
 The system implements multiple layers of security:
@@ -132,32 +132,32 @@ The system implements multiple layers of security:
 
 ```mermaid
 graph TB
-    Query[SQL Query] --> Validation[Query Validation]
-    Validation --> Complexity[Complexity Analysis]
-    Complexity --> Keywords[Keyword Filtering]
-    Keywords --> SelectOnly[SELECT-Only Check]
-    SelectOnly --> Patterns[Dangerous Pattern Detection]
-    Patterns --> Execution[Query Execution]
-    
-    Validation --> AuditLog[Audit Logging]
-    Complexity --> AuditLog
-    Keywords --> AuditLog
-    SelectOnly --> AuditLog
+ Query[SQL Query] --> Validation[Query Validation]
+ Validation --> Complexity[Complexity Analysis]
+ Complexity --> Keywords[Keyword Filtering]
+ Keywords --> SelectOnly[SELECT-Only Check]
+ SelectOnly --> Patterns[Dangerous Pattern Detection]
+ Patterns --> Execution[Query Execution]
+ 
+ Validation --> AuditLog[Audit Logging]
+ Complexity --> AuditLog
+ Keywords --> AuditLog
+ SelectOnly --> AuditLog
 ```
 
-## 🗄️ Database Adapter Pattern
+## Database Adapter Pattern
 
 ### Adapter Interface
 All database adapters implement a common interface for consistent behavior:
 
 ```typescript
 interface DatabaseAdapter {
-  connect(): Promise<DatabaseConnection>
-  disconnect(connection: DatabaseConnection): Promise<void>
-  executeQuery(connection: DatabaseConnection, query: string, params?: unknown[]): Promise<QueryResult>
-  captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema>
-  buildExplainQuery(query: string): string
-  isConnected(connection: DatabaseConnection): boolean
+ connect(): Promise<DatabaseConnection>
+ disconnect(connection: DatabaseConnection): Promise<void>
+ executeQuery(connection: DatabaseConnection, query: string, params?: unknown[]): Promise<QueryResult>
+ captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema>
+ buildExplainQuery(query: string): string
+ isConnected(connection: DatabaseConnection): boolean
 }
 ```
 
@@ -176,25 +176,25 @@ The `AdapterFactory` provides:
 - Error handling standardization
 - Type safety across all adapters
 
-## 🔌 Connection Management
+## Connection Management
 
 ### Connection Lifecycle
 ```mermaid
 sequenceDiagram
-    participant C as Client
-    participant CM as ConnectionManager
-    participant SSH as SSHTunnelManager
-    participant A as DatabaseAdapter
-    participant DB as Database
-    
-    C->>CM: Request Connection
-    CM->>SSH: Create Tunnel (if needed)
-    SSH->>CM: Tunnel Ready
-    CM->>A: Create Adapter
-    A->>DB: Connect
-    DB->>A: Connection Established
-    A->>CM: Connection Ready
-    CM->>C: Connection Available
+ participant C as Client
+ participant CM as ConnectionManager
+ participant SSH as SSHTunnelManager
+ participant A as DatabaseAdapter
+ participant DB as Database
+ 
+ C->>CM: Request Connection
+ CM->>SSH: Create Tunnel (if needed)
+ SSH->>CM: Tunnel Ready
+ CM->>A: Create Adapter
+ A->>DB: Connect
+ DB->>A: Connection Established
+ A->>CM: Connection Ready
+ CM->>C: Connection Available
 ```
 
 ### Connection Pooling Strategy
@@ -210,16 +210,16 @@ For secure remote database access:
 - **Port Management**: Automatic local port assignment
 - **Tunnel Monitoring**: Health checks and automatic reconnection
 
-## 📊 Schema Management
+## Schema Management
 
 ### Schema Caching Strategy
 ```mermaid
 graph LR
-    Request[Schema Request] --> Cache{Cache Hit?}
-    Cache -->|Yes| Return[Return Cached Schema]
-    Cache -->|No| Capture[Capture Schema]
-    Capture --> Store[Store in Cache]
-    Store --> Return
+ Request[Schema Request] --> Cache{Cache Hit?}
+ Cache -->|Yes| Return[Return Cached Schema]
+ Cache -->|No| Capture[Capture Schema]
+ Capture --> Store[Store in Cache]
+ Store --> Return
 ```
 
 ### Schema Discovery Process
@@ -235,17 +235,17 @@ graph LR
 - **Memory Management**: Efficient schema storage and retrieval
 - **Compression**: Schema data compression for large databases
 
-## 🎯 Performance Architecture
+## Performance Architecture
 
 ### Query Execution Pipeline
 ```mermaid
 graph LR
-    Query[SQL Query] --> Parse[Parse & Validate]
-    Parse --> Cache[Connection Cache]
-    Cache --> Execute[Execute Query]
-    Execute --> Format[Format Results]
-    Format --> Limit[Apply Limits]
-    Limit --> Return[Return Results]
+ Query[SQL Query] --> Parse[Parse & Validate]
+ Parse --> Cache[Connection Cache]
+ Cache --> Execute[Execute Query]
+ Execute --> Format[Format Results]
+ Format --> Limit[Apply Limits]
+ Limit --> Return[Return Results]
 ```
 
 ### Performance Optimizations
@@ -261,22 +261,22 @@ graph LR
 - **Concurrent Requests**: Request queuing and throttling
 - **Resource Cleanup**: Automatic connection and tunnel cleanup
 
-## 📦 Module Organization
+## Module Organization
 
 ### Core Modules
 ```
 src/
-├── classes/           # Core service classes
-│   ├── SQLMCPServer.ts       # Main MCP server
-│   ├── ConnectionManager.ts  # Connection management
-│   ├── SecurityManager.ts    # Security and validation
-│   ├── SchemaManager.ts      # Schema caching
-│   └── SSHTunnelManager.ts   # SSH tunneling
-├── database/          # Database access layer
-│   └── adapters/      # Database-specific adapters
-├── types/             # TypeScript definitions
-├── utils/             # Utilities and helpers
-└── setup/             # Configuration and setup
++-- classes/ # Core service classes
+|   +-- SQLMCPServer.ts # Main MCP server
+|   +-- ConnectionManager.ts # Connection management
+|   +-- SecurityManager.ts # Security and validation
+|   +-- SchemaManager.ts # Schema caching
+|   +-- SSHTunnelManager.ts # SSH tunneling
++-- database/ # Database access layer
+|   +-- adapters/ # Database-specific adapters
++-- types/ # TypeScript definitions
++-- utils/ # Utilities and helpers
++-- setup/ # Configuration and setup
 ```
 
 ### Separation of Concerns
@@ -286,7 +286,7 @@ src/
 - **Utils**: Cross-cutting utilities and helpers
 - **Setup**: Configuration and initialization code
 
-## 🔄 Event-Driven Architecture
+## Event-Driven Architecture
 
 ### Event System
 Components communicate via events for loose coupling:
@@ -312,7 +312,7 @@ securityManager.on('query-approved', (dbName: string) => {...})
 - **Monitoring**: Centralized event handling for logging
 - **Testing**: Events can be mocked for unit tests
 
-## 🔧 Configuration Architecture
+## Configuration Architecture
 
 ### Configuration Hierarchy
 1. **Default Values**: Hardcoded sensible defaults
@@ -331,7 +331,7 @@ securityManager.on('query-approved', (dbName: string) => {...})
 - **Validation**: Real-time configuration validation
 - **Fallbacks**: Graceful handling of invalid configurations
 
-## 🎯 Design Principles
+## Design Principles
 
 ### SOLID Principles
 - **Single Responsibility**: Each class has one clear purpose
@@ -347,7 +347,7 @@ securityManager.on('query-approved', (dbName: string) => {...})
 - **Monitoring by Design**: Built-in logging and metrics
 - **Type Safety**: Comprehensive TypeScript usage
 
-## 🔍 Quality Attributes
+## Quality Attributes
 
 ### Security
 - Query validation and sanitization

@@ -2,7 +2,7 @@
 
 This guide provides comprehensive security recommendations for deploying the SQL MCP Server in production environments. Follow these guidelines to ensure your deployment is secure and resilient against threats.
 
-## 🔒 Security Architecture Overview
+## Security Architecture Overview
 
 The SQL MCP Server implements defense-in-depth security with multiple layers:
 
@@ -12,7 +12,7 @@ The SQL MCP Server implements defense-in-depth security with multiple layers:
 4. **Configuration Security** - Secure configuration management
 5. **Operational Security** - Monitoring, logging, and incident response
 
-## 🛡️ Production Security Checklist
+## Production Security Checklist
 
 ### Essential Security Measures (Must Have)
 
@@ -37,7 +37,7 @@ The SQL MCP Server implements defense-in-depth security with multiple layers:
 - [ ] **Create incident response procedures**
 - [ ] **Regular security audits**
 
-## 🗄️ Database Security Configuration
+## Database Security Configuration
 
 ### PostgreSQL Security Hardening
 
@@ -53,7 +53,7 @@ GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO claude_readonly;
 
 -- Ensure future tables are also accessible
 ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-  GRANT SELECT ON TABLES TO claude_readonly;
+ GRANT SELECT ON TABLES TO claude_readonly;
 
 -- Allow schema introspection (required for schema capture)
 GRANT SELECT ON information_schema.tables TO claude_readonly;
@@ -82,10 +82,10 @@ hostssl production claude_readonly 0.0.0.0/0 md5
 #### 3. Network Security
 ```bash
 # In postgresql.conf - restrict listening addresses
-listen_addresses = 'localhost,10.0.0.100'  # Specific IPs only
+listen_addresses = 'localhost,10.0.0.100' # Specific IPs only
 
 # In pg_hba.conf - restrict client connections
-hostssl production claude_readonly 10.0.0.0/24 md5  # Specific network only
+hostssl production claude_readonly 10.0.0.0/24 md5 # Specific network only
 ```
 
 ### MySQL Security Hardening
@@ -104,12 +104,12 @@ GRANT SELECT ON information_schema.* TO 'claude_readonly'@'10.0.0.%';
 
 -- Explicitly deny dangerous operations
 REVOKE INSERT, UPDATE, DELETE, DROP, CREATE, ALTER, INDEX, REFERENCES 
-  ON production.* FROM 'claude_readonly'@'10.0.0.%';
+ ON production.* FROM 'claude_readonly'@'10.0.0.%';
 
 -- Set resource limits
 ALTER USER 'claude_readonly'@'10.0.0.%' 
-  WITH MAX_QUERIES_PER_HOUR 1000 
-       MAX_CONNECTIONS_PER_HOUR 100;
+ WITH MAX_QUERIES_PER_HOUR 1000 
+ MAX_CONNECTIONS_PER_HOUR 100;
 
 FLUSH PRIVILEGES;
 ```
@@ -161,7 +161,7 @@ CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER CER
 ALTER DATABASE production SET ENCRYPTION ON;
 ```
 
-## 🔐 MCP Server Security Configuration
+## MCP Server Security Configuration
 
 ### Production Configuration Template
 ```ini
@@ -173,8 +173,8 @@ database=production
 username=claude_readonly
 password=SecureRandomPassword123!@#
 ssl=true
-select_only=true                    # ← Critical: Enable read-only mode
-timeout=15000                       # Short timeout for security
+select_only=true # <- Critical: Enable read-only mode
+timeout=15000 # Short timeout for security
 
 # SSH Tunnel (Required for remote access)
 ssh_host=bastion.company.com
@@ -184,18 +184,18 @@ ssh_private_key=/secure/path/ssh_key
 local_port=0
 
 [extension]
-max_rows=500                        # Limit result set size
-query_timeout=10000                 # Short query timeout
-max_batch_size=3                    # Limit batch operations
-debug=false                         # Disable debug info
+max_rows=500 # Limit result set size
+query_timeout=10000 # Short query timeout
+max_batch_size=3 # Limit batch operations
+debug=false # Disable debug info
 
 [security]
-max_joins=5                         # Strict complexity limits
+max_joins=5 # Strict complexity limits
 max_subqueries=3
 max_unions=2
 max_group_bys=3
-max_complexity_score=50             # Very strict complexity limit
-max_query_length=5000               # Limit query length
+max_complexity_score=50 # Very strict complexity limit
+max_query_length=5000 # Limit query length
 ```
 
 ### File System Security
@@ -230,16 +230,16 @@ echo "ssh-ed25519 AAAAC3... claude-mcp-tunnel" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-## 🌐 Network Security
+## Network Security
 
 ### SSH Bastion Host Configuration
 
 #### 1. Harden SSH Configuration
 ```bash
 # /etc/ssh/sshd_config on bastion host
-Port 2222                           # Non-standard port
+Port 2222 # Non-standard port
 Protocol 2
-PasswordAuthentication no           # Disable password auth
+PasswordAuthentication no # Disable password auth
 PubkeyAuthentication yes
 AuthorizedKeysFile .ssh/authorized_keys
 PermitRootLogin no
@@ -248,8 +248,8 @@ LoginGraceTime 30
 MaxStartups 10:30:100
 ClientAliveInterval 300
 ClientAliveCountMax 2
-AllowUsers tunnel_user              # Restrict to specific users
-AllowTcpForwarding yes              # Required for tunneling
+AllowUsers tunnel_user # Restrict to specific users
+AllowTcpForwarding yes # Required for tunneling
 GatewayPorts no
 X11Forwarding no
 PermitTunnel no
@@ -276,30 +276,30 @@ iptables -A OUTPUT -j DROP
 # Database should be in private subnet
 # Allow connections only from bastion host
 Database Subnet: 10.0.2.0/24 (Private)
-Bastion Subnet:  10.0.1.0/24 (Public-facing)
-MCP Server:      10.0.3.0/24 (Application tier)
+Bastion Subnet: 10.0.1.0/24 (Public-facing)
+MCP Server: 10.0.3.0/24 (Application tier)
 
 # Security group rules (AWS example)
 Database Security Group:
-  - Inbound: Port 5432 from Bastion Security Group only
-  - Outbound: None
+ - Inbound: Port 5432 from Bastion Security Group only
+ - Outbound: None
 
 Bastion Security Group:
-  - Inbound: Port 2222 from MCP Server IP only
-  - Outbound: Port 5432 to Database Security Group only
+ - Inbound: Port 2222 from MCP Server IP only
+ - Outbound: Port 5432 to Database Security Group only
 ```
 
 #### 2. Database Firewall Rules
 ```bash
 # PostgreSQL: Configure pg_hba.conf for network restrictions
-hostssl production claude_readonly 10.0.1.0/24 md5  # Bastion subnet only
-host    production claude_readonly 127.0.0.1/32 md5  # Local connections
+hostssl production claude_readonly 10.0.1.0/24 md5 # Bastion subnet only
+host production claude_readonly 127.0.0.1/32 md5 # Local connections
 
 # MySQL: Bind to specific interface
-bind-address = 10.0.2.100  # Database server private IP
+bind-address = 10.0.2.100 # Database server private IP
 ```
 
-## 📊 Monitoring and Logging
+## Monitoring and Logging
 
 ### Security Event Monitoring
 
@@ -339,7 +339,7 @@ grep "SSH tunnel" /var/log/claude-mcp/tunnel.log
 # Set up alerts for critical events
 # Example: Send alert if more than 10 blocked queries in 5 minutes
 if [ $(grep -c "Query blocked" /var/log/claude-mcp/security.log | tail -100) -gt 10 ]; then
-  send_alert "High number of blocked queries detected"
+ send_alert "High number of blocked queries detected"
 fi
 ```
 
@@ -370,7 +370,7 @@ ss -tulpn | grep :2222
 # MySQL: max_connections = 100
 ```
 
-## 🚨 Incident Response
+## Incident Response
 
 ### Security Incident Classification
 
@@ -438,7 +438,7 @@ ALTER USER claude_readonly WITH PASSWORD 'NewSecurePassword123!@#';
 # Update configuration with new credentials
 ```
 
-## 🔄 Security Maintenance
+## Security Maintenance
 
 ### Regular Security Tasks
 
@@ -473,17 +473,17 @@ ALTER USER claude_readonly WITH PASSWORD 'NewSecurePassword123!@#';
 
 # Check file permissions
 if [ $(stat -c %a config.ini) != "600" ]; then
-  echo "WARNING: config.ini permissions not secure"
+ echo "WARNING: config.ini permissions not secure"
 fi
 
 # Check for passwords in config
 if grep -q "password=.*" config.ini; then
-  echo "INFO: Passwords found in config (expected)"
+ echo "INFO: Passwords found in config (expected)"
 fi
 
 # Check SSL configuration
 if ! grep -q "ssl=true" config.ini; then
-  echo "WARNING: SSL not enabled for all databases"
+ echo "WARNING: SSL not enabled for all databases"
 fi
 ```
 
@@ -499,36 +499,36 @@ npm update
 npm audit fix
 ```
 
-## 🎯 Security Best Practices Summary
+## Security Best Practices Summary
 
 ### Configuration Security
-- ✅ Use SELECT-only mode for production databases
-- ✅ Enable SSL/TLS for all database connections
-- ✅ Implement SSH tunneling for remote access
-- ✅ Set strict query complexity limits
-- ✅ Use strong, unique passwords
-- ✅ Secure file system permissions
+- Use SELECT-only mode for production databases
+- Enable SSL/TLS for all database connections
+- Implement SSH tunneling for remote access
+- Set strict query complexity limits
+- Use strong, unique passwords
+- Secure file system permissions
 
 ### Network Security
-- ✅ Network segmentation and firewall rules
-- ✅ SSH bastion host hardening
-- ✅ Database network access control
-- ✅ Regular security monitoring
+- Network segmentation and firewall rules
+- SSH bastion host hardening
+- Database network access control
+- Regular security monitoring
 
 ### Operational Security
-- ✅ Comprehensive logging and monitoring
-- ✅ Incident response procedures
-- ✅ Regular security maintenance
-- ✅ Security training and awareness
+- Comprehensive logging and monitoring
+- Incident response procedures
+- Regular security maintenance
+- Security training and awareness
 
 ### Database Security
-- ✅ Dedicated database users with minimal permissions
-- ✅ Database-level encryption
-- ✅ Query logging and monitoring
-- ✅ Regular access review
+- Dedicated database users with minimal permissions
+- Database-level encryption
+- Query logging and monitoring
+- Regular access review
 
 By following these security hardening guidelines, you can significantly reduce the attack surface and improve the security posture of your SQL MCP Server deployment. Remember that security is an ongoing process that requires regular maintenance, monitoring, and updates.
 
 ---
 
-**⚠️ Security Notice**: This guide provides general security recommendations. Always consult with your security team and conduct thorough testing before implementing changes in production environments.
+** Security Notice**: This guide provides general security recommendations. Always consult with your security team and conduct thorough testing before implementing changes in production environments.

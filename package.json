@@ -1,17 +1,18 @@
 {
   "name": "sql-access",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "MCP server for accessing SQL databases, with support for PostgreSQL, MySQL, SQLite, MSSQL, and SSH tunnels",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "sql-server": "./dist/index.js",
-    "sql-setup": "./dist/setup.js"
+    "sql-setup": "./dist/setup.js",
+    "sql-install": "./dist/install.js"
   },
   "scripts": {
     "build": "npm run clean && tsc",
     "build:fast": "npm run clean && npm run build:esbuild",
-    "build:esbuild": "esbuild src/index.ts src/setup.ts --bundle --platform=node --outdir=dist --external:mssql --external:mysql2 --external:pg --external:sqlite3 --external:ssh2 --external:ini --format=esm --sourcemap --minify",
+    "build:esbuild": "esbuild src/index.ts src/setup.ts src/install.ts --bundle --platform=node --outdir=dist --external:mssql --external:mysql2 --external:pg --external:sqlite3 --external:ssh2 --external:ini --format=esm --sourcemap --minify",
     "build:production": "npm run clean && npm run lint && npm run test && npm run build",
     "build:watch": "tsc --watch",
     "dev": "npm run build:watch",
@@ -30,7 +31,8 @@
     "validate": "npm run lint:check && npm run type-check && npm run test",
     "validate-docs": "node scripts/validate-documentation.js",
     "prepack": "npm run build:production",
-    "generate-template": "node dist/setup.js --template"
+    "generate-template": "node dist/setup.js --template",
+    "install-mcp": "node dist/install.js"
   },
   "keywords": [
     "claude",

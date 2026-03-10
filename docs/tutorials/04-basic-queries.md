@@ -7,7 +7,7 @@ This tutorial teaches you how to effectively use Claude with the SQL MCP Server 
 With Claude Desktop connected to your SQL MCP Server, Claude can help you:
 
 - **Execute SQL queries** safely with built-in security validation
-- **Analyze data patterns** and generate business insights  
+- **Analyze data patterns** and generate business insights 
 - **Create reports** with formatted results and visualizations
 - **Troubleshoot database issues** and optimize queries
 - **Learn SQL** through interactive examples and explanations
@@ -16,10 +16,10 @@ With Claude Desktop connected to your SQL MCP Server, Claude can help you:
 
 Before starting, ensure you have:
 
-- ✅ **SQL MCP Server installed** - [Installation Tutorial](01-installation.md)
-- ✅ **Claude Desktop integrated** - [Claude Integration Tutorial](03-claude-integration.md)
-- ✅ **Database connected** - At least one database configured and tested
-- ✅ **Sample data** - Some data in your database to query
+- **SQL MCP Server installed** - [Installation Tutorial](01-installation.md)
+- **Claude Desktop integrated** - [Claude Integration Tutorial](03-claude-integration.md)
+- **Database connected** - At least one database configured and tested
+- **Sample data** - Some data in your database to query
 
 ## Getting Started
 
@@ -39,8 +39,8 @@ Both databases are configured with SELECT-only access for security. Would you li
 
 The SQL MCP Server operates in SELECT-only mode by default, which means:
 
-- ✅ **Allowed**: SELECT, WITH, SHOW, EXPLAIN, DESCRIBE
-- ❌ **Blocked**: INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
+- **Allowed**: SELECT, WITH, SHOW, EXPLAIN, DESCRIBE
+- **Blocked**: INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
 
 This ensures safe, read-only access to your production data.
 
@@ -58,18 +58,18 @@ This ensures safe, read-only access to your production data.
 Here are the tables in your production database:
 
 **User Management:**
-• users - Main user accounts (id, name, email, created_at, updated_at)
-• user_profiles - Extended user information (user_id, bio, avatar_url, settings)
-• user_sessions - Active user sessions (id, user_id, token, expires_at)
+- users - Main user accounts (id, name, email, created_at, updated_at)
+- user_profiles - Extended user information (user_id, bio, avatar_url, settings)
+- user_sessions - Active user sessions (id, user_id, token, expires_at)
 
-**Content Management:**  
-• posts - User-generated content (id, user_id, title, content, published_at)
-• comments - Comments on posts (id, post_id, user_id, content, created_at)
-• categories - Content categories (id, name, description, slug)
+**Content Management:** 
+- posts - User-generated content (id, user_id, title, content, published_at)
+- comments - Comments on posts (id, post_id, user_id, content, created_at)
+- categories - Content categories (id, name, description, slug)
 
 **Analytics & Tracking:**
-• page_views - Page view tracking (id, page_url, visitor_id, viewed_at)
-• user_actions - User behavior tracking (id, user_id, action_type, metadata)
+- page_views - Page view tracking (id, page_url, visitor_id, viewed_at)
+- user_actions - User behavior tracking (id, user_id, action_type, metadata)
 
 Would you like me to examine any specific table in detail?
 ```
@@ -83,16 +83,16 @@ Would you like me to examine any specific table in detail?
 ```sql
 -- Users table structure:
 -- 
--- Column Name    | Data Type    | Nullable | Default | Comment
+-- Column Name | Data Type | Nullable | Default | Comment
 -- --------------|-------------|----------|---------|--------
--- id            | integer      | NOT NULL | nextval | Primary key
--- name          | varchar(255) | NOT NULL |         | User's full name
--- email         | varchar(255) | NOT NULL |         | Unique email address
--- password_hash | varchar(255) | NOT NULL |         | Encrypted password
--- created_at    | timestamp    | NOT NULL | now()   | Account creation time
--- updated_at    | timestamp    | NOT NULL | now()   | Last modification time
--- is_active     | boolean      | NOT NULL | true    | Account status
--- role          | varchar(50)  | NOT NULL | 'user'  | User role/permissions
+-- id | integer | NOT NULL | nextval | Primary key
+-- name | varchar(255) | NOT NULL | | User's full name
+-- email | varchar(255) | NOT NULL | | Unique email address
+-- password_hash | varchar(255) | NOT NULL | | Encrypted password
+-- created_at | timestamp | NOT NULL | now() | Account creation time
+-- updated_at | timestamp | NOT NULL | now() | Last modification time
+-- is_active | boolean | NOT NULL | true | Account status
+-- role | varchar(50) | NOT NULL | 'user' | User role/permissions
 
 The table has 8 columns with proper constraints and indexing on email for uniqueness.
 ```
@@ -113,7 +113,7 @@ Your database contains **2,847 users** total.
 
 This gives us a good sense of your user base size. Would you like me to break this down further, such as:
 - Active vs inactive users
-- Registration trends over time  
+- Registration trends over time 
 - Users by role or other attributes?
 ```
 
@@ -153,7 +153,7 @@ These are your most recent user registrations from today. I notice consistent si
 SELECT name, email, created_at, role
 FROM users 
 WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-  AND is_active = true
+ AND is_active = true
 ORDER BY created_at DESC;
 ```
 
@@ -161,7 +161,7 @@ ORDER BY created_at DESC;
 Found **234 active users** who registered in the last 30 days:
 
 Recent Registration Summary:
-- Last 7 days: 67 users  
+- Last 7 days: 67 users 
 - Last 14 days: 123 users
 - Last 30 days: 234 users
 
@@ -190,7 +190,7 @@ LIMIT 20;
 SELECT id, title, user_id, published_at
 FROM posts 
 WHERE title ILIKE '%tutorial%' 
-   OR title ILIKE '%guide%'
+ OR title ILIKE '%guide%'
 ORDER BY published_at DESC;
 ```
 
@@ -204,8 +204,8 @@ ORDER BY published_at DESC;
 **Claude's analytical query:**
 ```sql
 SELECT 
-  DATE_TRUNC('month', created_at) as month,
-  COUNT(*) as new_users
+ DATE_TRUNC('month', created_at) as month,
+ COUNT(*) as new_users
 FROM users 
 WHERE created_at >= DATE_TRUNC('year', CURRENT_DATE)
 GROUP BY DATE_TRUNC('month', created_at)
@@ -226,7 +226,7 @@ ORDER BY month;
 ```
 User registration trends show:
 - **Growth trajectory**: Steady increase from 187 (Jan) to 312 (July)
-- **Peak month**: July with 312 new registrations  
+- **Peak month**: July with 312 new registrations 
 - **Current month**: 156 registrations so far in August
 - **Average**: ~232 new users per month
 
@@ -240,11 +240,11 @@ The growth trend is very positive with a 67% increase from January to July.
 
 ```sql
 SELECT 
-  COUNT(*) as total_posts,
-  ROUND(AVG(LENGTH(content))) as avg_length,
-  MIN(LENGTH(content)) as min_length,
-  MAX(LENGTH(content)) as max_length,
-  ROUND(STDDEV(LENGTH(content))) as std_deviation
+ COUNT(*) as total_posts,
+ ROUND(AVG(LENGTH(content))) as avg_length,
+ MIN(LENGTH(content)) as min_length,
+ MAX(LENGTH(content)) as max_length,
+ ROUND(STDDEV(LENGTH(content))) as std_deviation
 FROM posts 
 WHERE content IS NOT NULL;
 ```
@@ -261,11 +261,11 @@ WHERE content IS NOT NULL;
 **Claude's optimized query:**
 ```sql
 SELECT 
-  u.name,
-  u.email,
-  u.created_at as user_since,
-  COUNT(p.id) as post_count,
-  MAX(p.published_at) as latest_post
+ u.name,
+ u.email,
+ u.created_at as user_since,
+ COUNT(p.id) as post_count,
+ MAX(p.published_at) as latest_post
 FROM users u
 LEFT JOIN posts p ON u.id = p.user_id
 GROUP BY u.id, u.name, u.email, u.created_at
@@ -280,17 +280,17 @@ LIMIT 10;
 
 ```sql
 SELECT 
-  p.id,
-  p.title,
-  u.name as author,
-  p.published_at,
-  COUNT(c.id) as comment_count,
-  CASE 
-    WHEN COUNT(c.id) > 20 THEN 'Highly Discussed'
-    WHEN COUNT(c.id) > 5 THEN 'Active Discussion'  
-    WHEN COUNT(c.id) > 0 THEN 'Some Comments'
-    ELSE 'No Comments Yet'
-  END as engagement_level
+ p.id,
+ p.title,
+ u.name as author,
+ p.published_at,
+ COUNT(c.id) as comment_count,
+ CASE 
+ WHEN COUNT(c.id) > 20 THEN 'Highly Discussed'
+ WHEN COUNT(c.id) > 5 THEN 'Active Discussion' 
+ WHEN COUNT(c.id) > 0 THEN 'Some Comments'
+ ELSE 'No Comments Yet'
+ END as engagement_level
 FROM posts p
 JOIN users u ON p.user_id = u.id
 LEFT JOIN comments c ON p.id = c.post_id
@@ -308,25 +308,25 @@ LIMIT 15;
 
 ```sql
 WITH user_post_counts AS (
-  SELECT 
-    u.id,
-    u.name,
-    u.email,
-    COUNT(p.id) as post_count
-  FROM users u
-  LEFT JOIN posts p ON u.id = p.user_id
-  GROUP BY u.id, u.name, u.email
+ SELECT 
+ u.id,
+ u.name,
+ u.email,
+ COUNT(p.id) as post_count
+ FROM users u
+ LEFT JOIN posts p ON u.id = p.user_id
+ GROUP BY u.id, u.name, u.email
 ),
 average_posts AS (
-  SELECT AVG(post_count) as avg_posts
-  FROM user_post_counts
+ SELECT AVG(post_count) as avg_posts
+ FROM user_post_counts
 )
 SELECT 
-  upc.name,
-  upc.email,
-  upc.post_count,
-  ROUND(ap.avg_posts, 1) as average_posts,
-  ROUND(upc.post_count::numeric / ap.avg_posts, 2) as above_average_ratio
+ upc.name,
+ upc.email,
+ upc.post_count,
+ ROUND(ap.avg_posts, 1) as average_posts,
+ ROUND(upc.post_count::numeric / ap.avg_posts, 2) as above_average_ratio
 FROM user_post_counts upc, average_posts ap
 WHERE upc.post_count > ap.avg_posts
 ORDER BY upc.post_count DESC;
@@ -339,11 +339,11 @@ ORDER BY upc.post_count DESC;
 
 ```sql
 SELECT 
-  u.name,
-  COUNT(p.id) as post_count,
-  ROW_NUMBER() OVER (ORDER BY COUNT(p.id) DESC) as rank,
-  ROUND(PERCENT_RANK() OVER (ORDER BY COUNT(p.id)) * 100, 1) as percentile,
-  NTILE(10) OVER (ORDER BY COUNT(p.id)) as decile
+ u.name,
+ COUNT(p.id) as post_count,
+ ROW_NUMBER() OVER (ORDER BY COUNT(p.id) DESC) as rank,
+ ROUND(PERCENT_RANK() OVER (ORDER BY COUNT(p.id)) * 100, 1) as percentile,
+ NTILE(10) OVER (ORDER BY COUNT(p.id)) as decile
 FROM users u
 LEFT JOIN posts p ON u.id = p.user_id
 GROUP BY u.id, u.name
@@ -361,9 +361,9 @@ LIMIT 20;
 
 ```sql
 SELECT 
-  EXTRACT(HOUR FROM published_at) as hour_of_day,
-  COUNT(*) as post_count,
-  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+ EXTRACT(HOUR FROM published_at) as hour_of_day,
+ COUNT(*) as post_count,
+ ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
 FROM posts 
 WHERE published_at >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY EXTRACT(HOUR FROM published_at)
@@ -377,27 +377,27 @@ ORDER BY hour_of_day;
 
 ```sql
 WITH user_cohorts AS (
-  SELECT 
-    u.id,
-    DATE_TRUNC('month', u.created_at) as cohort_month,
-    u.created_at
-  FROM users u
+ SELECT 
+ u.id,
+ DATE_TRUNC('month', u.created_at) as cohort_month,
+ u.created_at
+ FROM users u
 ),
 user_activity AS (
-  SELECT 
-    uc.cohort_month,
-    uc.id as user_id,
-    DATE_TRUNC('month', p.published_at) as activity_month
-  FROM user_cohorts uc
-  LEFT JOIN posts p ON uc.id = p.user_id
-  WHERE p.published_at IS NOT NULL
+ SELECT 
+ uc.cohort_month,
+ uc.id as user_id,
+ DATE_TRUNC('month', p.published_at) as activity_month
+ FROM user_cohorts uc
+ LEFT JOIN posts p ON uc.id = p.user_id
+ WHERE p.published_at IS NOT NULL
 )
 SELECT 
-  cohort_month,
-  COUNT(DISTINCT user_id) as cohort_size,
-  COUNT(DISTINCT CASE WHEN activity_month = cohort_month THEN user_id END) as active_month_0,
-  COUNT(DISTINCT CASE WHEN activity_month = cohort_month + INTERVAL '1 month' THEN user_id END) as active_month_1,
-  COUNT(DISTINCT CASE WHEN activity_month = cohort_month + INTERVAL '2 months' THEN user_id END) as active_month_2
+ cohort_month,
+ COUNT(DISTINCT user_id) as cohort_size,
+ COUNT(DISTINCT CASE WHEN activity_month = cohort_month THEN user_id END) as active_month_0,
+ COUNT(DISTINCT CASE WHEN activity_month = cohort_month + INTERVAL '1 month' THEN user_id END) as active_month_1,
+ COUNT(DISTINCT CASE WHEN activity_month = cohort_month + INTERVAL '2 months' THEN user_id END) as active_month_2
 FROM user_activity
 GROUP BY cohort_month
 ORDER BY cohort_month;
@@ -415,31 +415,31 @@ ORDER BY cohort_month;
 **Claude's comprehensive analysis:**
 ```sql
 WITH category_performance AS (
-  SELECT 
-    cat.name as category,
-    COUNT(DISTINCT p.id) as post_count,
-    COUNT(DISTINCT c.id) as total_comments,
-    COUNT(DISTINCT pv.id) as total_views,
-    ROUND(AVG(LENGTH(p.content))) as avg_content_length,
-    MAX(p.published_at) as latest_post
-  FROM categories cat
-  JOIN posts p ON cat.id = p.category_id
-  LEFT JOIN comments c ON p.id = c.post_id
-  LEFT JOIN page_views pv ON pv.page_url LIKE '%/posts/' || p.id || '%'
-  GROUP BY cat.id, cat.name
+ SELECT 
+ cat.name as category,
+ COUNT(DISTINCT p.id) as post_count,
+ COUNT(DISTINCT c.id) as total_comments,
+ COUNT(DISTINCT pv.id) as total_views,
+ ROUND(AVG(LENGTH(p.content))) as avg_content_length,
+ MAX(p.published_at) as latest_post
+ FROM categories cat
+ JOIN posts p ON cat.id = p.category_id
+ LEFT JOIN comments c ON p.id = c.post_id
+ LEFT JOIN page_views pv ON pv.page_url LIKE '%/posts/' || p.id || '%'
+ GROUP BY cat.id, cat.name
 )
 SELECT 
-  category,
-  post_count,
-  total_comments,
-  total_views,
-  ROUND(total_comments::numeric / NULLIF(post_count, 0), 2) as comments_per_post,
-  ROUND(total_views::numeric / NULLIF(post_count, 0), 2) as views_per_post,
-  CASE 
-    WHEN total_views > 1000 AND total_comments > 100 THEN 'High Engagement'
-    WHEN total_views > 500 OR total_comments > 50 THEN 'Medium Engagement'
-    ELSE 'Low Engagement'
-  END as engagement_category
+ category,
+ post_count,
+ total_comments,
+ total_views,
+ ROUND(total_comments::numeric / NULLIF(post_count, 0), 2) as comments_per_post,
+ ROUND(total_views::numeric / NULLIF(post_count, 0), 2) as views_per_post,
+ CASE 
+ WHEN total_views > 1000 AND total_comments > 100 THEN 'High Engagement'
+ WHEN total_views > 500 OR total_comments > 50 THEN 'Medium Engagement'
+ ELSE 'Low Engagement'
+ END as engagement_category
 FROM category_performance
 ORDER BY total_views DESC, total_comments DESC;
 ```
@@ -453,24 +453,24 @@ ORDER BY total_views DESC, total_comments DESC;
 
 ```sql
 WITH monthly_metrics AS (
-  SELECT 
-    DATE_TRUNC('month', created_at) as month,
-    COUNT(DISTINCT id) as new_users,
-    COUNT(DISTINCT CASE WHEN is_active THEN id END) as active_users
-  FROM users
-  WHERE created_at >= CURRENT_DATE - INTERVAL '12 months'
-  GROUP BY DATE_TRUNC('month', created_at)
+ SELECT 
+ DATE_TRUNC('month', created_at) as month,
+ COUNT(DISTINCT id) as new_users,
+ COUNT(DISTINCT CASE WHEN is_active THEN id END) as active_users
+ FROM users
+ WHERE created_at >= CURRENT_DATE - INTERVAL '12 months'
+ GROUP BY DATE_TRUNC('month', created_at)
 )
 SELECT 
-  month,
-  new_users,
-  active_users,
-  LAG(new_users) OVER (ORDER BY month) as prev_month_users,
-  ROUND(
-    (new_users - LAG(new_users) OVER (ORDER BY month))::numeric / 
-    NULLIF(LAG(new_users) OVER (ORDER BY month), 0) * 100, 
-    2
-  ) as user_growth_rate
+ month,
+ new_users,
+ active_users,
+ LAG(new_users) OVER (ORDER BY month) as prev_month_users,
+ ROUND(
+ (new_users - LAG(new_users) OVER (ORDER BY month))::numeric / 
+ NULLIF(LAG(new_users) OVER (ORDER BY month), 0) * 100, 
+ 2
+ ) as user_growth_rate
 FROM monthly_metrics
 ORDER BY month;
 ```
@@ -490,7 +490,7 @@ EXPLAIN ANALYZE
 SELECT name, email, created_at 
 FROM users 
 WHERE is_active = true 
-  AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+ AND created_at >= CURRENT_DATE - INTERVAL '30 days'
 ORDER BY created_at DESC;
 ```
 
@@ -509,22 +509,22 @@ ORDER BY created_at DESC;
 
 **Efficient Filtering:**
 ```sql
--- ✅ Good: Use indexed columns in WHERE clauses
+-- Good: Use indexed columns in WHERE clauses
 SELECT * FROM users WHERE email = 'user@example.com';
 
--- ❌ Avoid: Functions on indexed columns
+-- Avoid: Functions on indexed columns
 SELECT * FROM users WHERE UPPER(email) = 'USER@EXAMPLE.COM';
 ```
 
 **Optimal JOINs:**
 ```sql
--- ✅ Good: JOIN on indexed foreign keys
+-- Good: JOIN on indexed foreign keys
 SELECT u.name, COUNT(p.id)
 FROM users u
 LEFT JOIN posts p ON u.id = p.user_id
 GROUP BY u.id, u.name;
 
--- ⚠️ Consider: Large table JOINs may need optimization
+-- Consider: Large table JOINs may need optimization
 ```
 
 ## Error Handling and Troubleshooting
@@ -565,10 +565,10 @@ The error was "SELCT" instead of "SELECT". Here are some common SQL syntax remin
 
 Claude will remind you about security best practices:
 
-- ✅ **Read-only queries** are automatically enforced
-- ⚠️ **Large result sets** are limited for performance
-- 🔒 **Sensitive data** handling recommendations
-- 📊 **Query complexity** limits prevent resource abuse
+- **Read-only queries** are automatically enforced
+- **Large result sets** are limited for performance
+- **Sensitive data** handling recommendations
+- **Query complexity** limits prevent resource abuse
 
 ## Practical Examples
 
@@ -582,7 +582,7 @@ Claude will remind you about security best practices:
 **Claude generates a comprehensive report with:**
 - New user registrations
 - Posts published
-- Comments made  
+- Comments made 
 - Page views
 - Most active users
 - Top content
@@ -657,8 +657,8 @@ Claude can structure results for easy export and further analysis.
 
 **Be Specific:**
 ```
-✅ Good: "Show me users who registered in the last 7 days and have made at least one post"
-❌ Vague: "Show me some recent active users"
+ Good: "Show me users who registered in the last 7 days and have made at least one post"
+ Vague: "Show me some recent active users"
 ```
 
 ### 2. Iterative Analysis
@@ -666,7 +666,7 @@ Claude can structure results for easy export and further analysis.
 **Build on Results:**
 ```
 "Now show me which categories those users are posting in"
-"Can you break that down by user role?"  
+"Can you break that down by user role?" 
 "What's the average engagement for those posts?"
 ```
 
@@ -689,10 +689,10 @@ Claude remembers the conversation context and can:
 
 Now that you understand basic query operations:
 
-1. **Explore Advanced Features** → [Multi-Database Setup Tutorial](advanced-01-multi-database.md)
-2. **Learn Security Configuration** → [Security Configuration Tutorial](advanced-03-security.md)
-3. **Optimize Performance** → [Performance Optimization Guide](../operations/performance-tuning.md)
-4. **Set Up Monitoring** → [Monitoring Guide](../operations/monitoring.md)
+1. **Explore Advanced Features** -> [Multi-Database Setup Tutorial](advanced-01-multi-database.md)
+2. **Learn Security Configuration** -> [Security Configuration Tutorial](advanced-03-security.md)
+3. **Optimize Performance** -> [Performance Optimization Guide](../operations/performance-tuning.md)
+4. **Set Up Monitoring** -> [Monitoring Guide](../operations/monitoring.md)
 
 ## Query Reference
 
@@ -732,4 +732,4 @@ SELECT column, ROW_NUMBER() OVER (ORDER BY column) FROM table;
 
 ---
 
-**🎉 Congratulations!** You now know how to effectively use Claude for database queries and analysis. The combination of Claude's AI capabilities with the SQL MCP Server's security features provides a powerful platform for data exploration and business intelligence.
+** Congratulations!** You now know how to effectively use Claude for database queries and analysis. The combination of Claude's AI capabilities with the SQL MCP Server's security features provides a powerful platform for data exploration and business intelligence.

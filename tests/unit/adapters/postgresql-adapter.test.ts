@@ -5,10 +5,10 @@
 
 import { PostgreSQLAdapter } from '../../../src/database/adapters/postgresql.js';
 import type { 
-  DatabaseConnection, 
-  DatabaseConfig, 
-  QueryResult, 
-  DatabaseSchema 
+ DatabaseConnection, 
+ DatabaseConfig, 
+ QueryResult, 
+ DatabaseSchema 
 } from '../../../src/types/index.js';
 
 // Mock the 'pg' module
@@ -17,14 +17,14 @@ const mockConnect = jest.fn();
 const mockEnd = jest.fn();
 
 const mockClient = {
-  query: mockQuery,
-  connect: mockConnect,
-  end: mockEnd,
-  _connected: true
+ query: mockQuery,
+ connect: mockConnect,
+ end: mockEnd,
+ _connected: true
 };
 
 jest.mock('pg', () => ({
-  Client: jest.fn(() => mockClient)
+ Client: jest.fn(() => mockClient)
 }));
 
 import * as pg from 'pg';
@@ -34,705 +34,705 @@ import * as pg from 'pg';
 // ============================================================================
 
 describe('PostgreSQLAdapter', () => {
-  let config: DatabaseConfig;
-  let adapter: PostgreSQLAdapter;
-
-  beforeEach(() => {
-    config = {
-      type: 'postgresql',
-      host: 'localhost',
-      port: 5432,
-      database: 'testdb',
-      username: 'testuser',
-      password: 'testpass',
-      timeout: 30000,
-      ssl: false
-    };
-
-    adapter = new PostgreSQLAdapter(config);
-
-    // Reset mocks
-    jest.clearAllMocks();
-    mockQuery.mockResolvedValue({
-      rows: [{ id: 1, name: 'test' }],
-      fields: [{ name: 'id' }, { name: 'name' }],
-      rowCount: 1
-    });
-    mockConnect.mockResolvedValue(undefined);
-    mockEnd.mockResolvedValue(undefined);
-    mockClient._connected = true;
-  });
-
-  // ============================================================================
-  // Constructor and Configuration Tests
-  // ============================================================================
-
-  describe('constructor', () => {
-    it('should initialize with valid PostgreSQL config', () => {
-      expect(adapter.getType()).toBe('postgresql');
-      expect(adapter.getConfig().host).toBe('localhost');
-      expect(adapter.getConfig().port).toBe(5432);
-    });
-
-    it('should handle port as string', () => {
-      const stringPortConfig = { ...config, port: '5433' as any };
-      const stringAdapter = new PostgreSQLAdapter(stringPortConfig);
-      expect(stringAdapter.getConfig().port).toBe('5433'); // Port remains as string in this implementation
-    });
-  });
-
-  // ============================================================================
-  // Connection Management Tests
-  // ============================================================================
-
-  describe('connect', () => {
-    it('should connect to PostgreSQL database successfully', async () => {
-      const connection = await adapter.connect();
-      
-      expect(pg.Client).toHaveBeenCalledWith({
-        host: 'localhost',
-        port: 5432,
-        database: 'testdb',
-        user: 'testuser',
-        password: 'testpass',
-        connectionTimeoutMillis: 30000,
-        ssl: false,
-      });
-      expect(mockConnect).toHaveBeenCalled();
-      expect(connection).toBe(mockClient);
-    });
-
-    it('should handle SSL configuration', async () => {
-      const sslConfig = { ...config, ssl: true };
-      const sslAdapter = new PostgreSQLAdapter(sslConfig);
-      
-      await sslAdapter.connect();
-      
-      expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
-        ssl: { rejectUnauthorized: false }
-      }));
-    });
-
-    it('should handle SSL disabled', async () => {
-      const sslConfig = { ...config, ssl: false };
-      const sslAdapter = new PostgreSQLAdapter(sslConfig);
-      
-      await sslAdapter.connect();
-      
-      expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
-        ssl: false
-      }));
-    });
-
-    it('should validate required configuration fields', async () => {
-      const incompleteConfig = { type: 'postgresql' as const };
-      const incompleteAdapter = new PostgreSQLAdapter(incompleteConfig);
-      
-      await expect(incompleteAdapter.connect()).rejects.toThrow(
-        'Missing required configuration fields: host, database, username, password'
-      );
-    });
-
-    it('should handle connection errors', async () => {
-      const connectionError = new Error('Connection failed');
-      mockConnect.mockRejectedValueOnce(connectionError);
-      
-      await expect(adapter.connect()).rejects.toThrow(
-        'postgresql adapter error: Failed to connect to PostgreSQL database - Connection failed'
-      );
-    });
-
-    it('should use default port when not specified', async () => {
-      const noPortConfig = { ...config };
-      delete noPortConfig.port;
-      const noPortAdapter = new PostgreSQLAdapter(noPortConfig);
-      
-      await noPortAdapter.connect();
-      
-      expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
-        port: 5432
-      }));
-    });
-  });
-
-  describe('disconnect', () => {
-    it('should disconnect from PostgreSQL database successfully', async () => {
-      const connection = await adapter.connect();
-      await adapter.disconnect(connection);
-      
-      expect(mockEnd).toHaveBeenCalled();
-    });
-
-    it('should handle disconnect errors', async () => {
-      const disconnectError = new Error('Disconnect failed');
-      mockEnd.mockRejectedValueOnce(disconnectError);
-      
-      const connection = await adapter.connect();
-      await expect(adapter.disconnect(connection)).rejects.toThrow(
-        'postgresql adapter error: Failed to disconnect from PostgreSQL database - Disconnect failed'
-      );
-    });
-  });
-
-  describe('isConnected', () => {
-    it('should return true for connected client', async () => {
-      const connection = await adapter.connect();
-      mockClient._connected = true;
-      
-      expect(adapter.isConnected(connection)).toBe(true);
-    });
-
-    it('should return false for disconnected client', async () => {
-      const connection = await adapter.connect();
-      mockClient._connected = false;
-      
-      expect(adapter.isConnected(connection)).toBe(false);
-    });
-
-    it('should return false for invalid connection', () => {
-      // The isConnected method returns null for null input due to short-circuiting
-      expect(adapter.isConnected(null as any)).toBe(null);
-      expect(adapter.isConnected({} as any)).toBe(false);
-    });
-
-    it('should handle exceptions gracefully', () => {
-      const badConnection = {
-        get _connected() {
-          throw new Error('Property access failed');
-        }
-      };
-      
-      expect(adapter.isConnected(badConnection as any)).toBe(false);
-    });
-  });
-
-  // ============================================================================
-  // Query Execution Tests
-  // ============================================================================
-
-  describe('executeQuery', () => {
-    let connection: DatabaseConnection;
-
-    beforeEach(async () => {
-      connection = await adapter.connect();
-    });
-
-    it('should execute query successfully', async () => {
-      const mockResult = {
-        rows: [{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }],
-        fields: [{ name: 'id' }, { name: 'name' }],
-        rowCount: 2
-      };
-      mockQuery.mockResolvedValueOnce(mockResult);
-
-      const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
-
-      expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM users', []);
-      expect(result.rows).toEqual([{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }]);
-      expect(result.fields).toEqual(['id', 'name']);
-      expect(result.rowCount).toBe(2);
-      expect(result.truncated).toBe(false);
-      expect(result.execution_time_ms).toBeGreaterThanOrEqual(0);
-    });
-
-    it('should execute query with parameters', async () => {
-      const mockResult = {
-        rows: [{ id: 1, name: 'John' }],
-        fields: [{ name: 'id' }, { name: 'name' }],
-        rowCount: 1
-      };
-      mockQuery.mockResolvedValueOnce(mockResult);
-
-      await adapter.executeQuery(connection, 'SELECT * FROM users WHERE id = $1', [1]);
-
-      expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM users WHERE id = $1', [1]);
-    });
-
-    it('should handle query execution errors', async () => {
-      const queryError = new Error('Query execution failed');
-      mockQuery.mockRejectedValueOnce(queryError);
-
-      await expect(
-        adapter.executeQuery(connection, 'INVALID SQL')
-      ).rejects.toThrow(
-        'postgresql adapter error: Failed to execute PostgreSQL query - Query execution failed'
-      );
-    });
-
-    it('should handle empty result sets', async () => {
-      const mockResult = {
-        rows: [],
-        fields: [],
-        rowCount: 0
-      };
-      mockQuery.mockResolvedValueOnce(mockResult);
-
-      const result = await adapter.executeQuery(connection, 'SELECT * FROM empty_table');
-
-      expect(result.rows).toEqual([]);
-      expect(result.fields).toEqual([]);
-      expect(result.rowCount).toBe(0);
-      expect(result.truncated).toBe(false);
-    });
-
-    it('should handle result truncation', async () => {
-      // Create mock result with more rows than the limit
-      const largeRowSet = Array(1500).fill(0).map((_, i) => ({ id: i + 1, name: `User${i + 1}` }));
-      const mockResult = {
-        rows: largeRowSet,
-        fields: [{ name: 'id' }, { name: 'name' }],
-        rowCount: 1500
-      };
-      mockQuery.mockResolvedValueOnce(mockResult);
-
-      const result = await adapter.executeQuery(connection, 'SELECT * FROM large_table');
-
-      expect(result.rows).toHaveLength(1000); // Should be truncated to max_rows
-      expect(result.rowCount).toBe(1500); // Original count before truncation
-      expect(result.truncated).toBe(true);
-    });
-  });
-
-  // ============================================================================
-  // Transaction Management Tests
-  // ============================================================================
-
-  describe('transaction management', () => {
-    let connection: DatabaseConnection;
-
-    beforeEach(async () => {
-      connection = await adapter.connect();
-    });
-
-    describe('beginTransaction', () => {
-      it('should begin transaction successfully', async () => {
-        await adapter.beginTransaction(connection);
-        expect(mockQuery).toHaveBeenCalledWith('BEGIN');
-      });
-
-      it('should handle begin transaction errors', async () => {
-        const transactionError = new Error('Begin failed');
-        mockQuery.mockRejectedValueOnce(transactionError);
-
-        await expect(adapter.beginTransaction(connection)).rejects.toThrow(
-          'postgresql adapter error: Failed to begin PostgreSQL transaction - Begin failed'
-        );
-      });
-    });
-
-    describe('commitTransaction', () => {
-      it('should commit transaction successfully', async () => {
-        await adapter.commitTransaction(connection);
-        expect(mockQuery).toHaveBeenCalledWith('COMMIT');
-      });
-
-      it('should handle commit transaction errors', async () => {
-        const commitError = new Error('Commit failed');
-        mockQuery.mockRejectedValueOnce(commitError);
-
-        await expect(adapter.commitTransaction(connection)).rejects.toThrow(
-          'postgresql adapter error: Failed to commit PostgreSQL transaction - Commit failed'
-        );
-      });
-    });
-
-    describe('rollbackTransaction', () => {
-      it('should rollback transaction successfully', async () => {
-        await adapter.rollbackTransaction(connection);
-        expect(mockQuery).toHaveBeenCalledWith('ROLLBACK');
-      });
-
-      it('should handle rollback transaction errors', async () => {
-        const rollbackError = new Error('Rollback failed');
-        mockQuery.mockRejectedValueOnce(rollbackError);
-
-        await expect(adapter.rollbackTransaction(connection)).rejects.toThrow(
-          'postgresql adapter error: Failed to rollback PostgreSQL transaction - Rollback failed'
-        );
-      });
-    });
-  });
-
-  // ============================================================================
-  // Performance Analysis Tests
-  // ============================================================================
-
-  describe('buildExplainQuery', () => {
-    it('should build PostgreSQL explain query with analysis', () => {
-      const query = 'SELECT * FROM users WHERE active = true';
-      const explainQuery = adapter.buildExplainQuery(query);
-      
-      expect(explainQuery).toBe(
-        'EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT * FROM users WHERE active = true'
-      );
-    });
-
-    it('should handle complex queries', () => {
-      const complexQuery = `
-        SELECT u.name, p.title 
-        FROM users u 
-        JOIN posts p ON u.id = p.user_id 
-        WHERE u.created_at > '2023-01-01'
-      `;
-      
-      const explainQuery = adapter.buildExplainQuery(complexQuery);
-      expect(explainQuery).toContain('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)');
-      expect(explainQuery).toContain(complexQuery);
-    });
-  });
-
-  // ============================================================================
-  // Schema Capture Tests
-  // ============================================================================
-
-  describe('captureSchema', () => {
-    let connection: DatabaseConnection;
-
-    beforeEach(async () => {
-      connection = await adapter.connect();
-    });
-
-    it('should capture database schema successfully', async () => {
-      // Mock tables query result
-      const tablesResult = {
-        rows: [
-          { table_name: 'users', table_type: 'BASE TABLE', table_comment: 'User accounts' },
-          { table_name: 'posts', table_type: 'BASE TABLE', table_comment: '' },
-          { table_name: 'user_stats', table_type: 'VIEW', table_comment: 'User statistics view' }
-        ]
-      };
-
-      // Mock columns query results
-      const usersColumnsResult = {
-        rows: [
-          {
-            column_name: 'id',
-            data_type: 'integer',
-            is_nullable: 'NO',
-            column_default: 'nextval(\'users_id_seq\'::regclass)',
-            character_maximum_length: null,
-            numeric_precision: 32,
-            numeric_scale: 0,
-            column_comment: 'Primary key'
-          },
-          {
-            column_name: 'name',
-            data_type: 'character varying',
-            is_nullable: 'NO',
-            column_default: null,
-            character_maximum_length: 100,
-            numeric_precision: null,
-            numeric_scale: null,
-            column_comment: 'Full name'
-          }
-        ]
-      };
-
-      const postsColumnsResult = {
-        rows: [
-          {
-            column_name: 'id',
-            data_type: 'integer',
-            is_nullable: 'NO',
-            column_default: 'nextval(\'posts_id_seq\'::regclass)',
-            character_maximum_length: null,
-            numeric_precision: 32,
-            numeric_scale: 0,
-            column_comment: ''
-          }
-        ]
-      };
-
-      const userStatsColumnsResult = {
-        rows: [
-          {
-            column_name: 'user_id',
-            data_type: 'integer',
-            is_nullable: 'YES',
-            column_default: null,
-            character_maximum_length: null,
-            numeric_precision: 32,
-            numeric_scale: 0,
-            column_comment: 'User ID reference'
-          }
-        ]
-      };
-
-      // Set up query responses in order
-      mockQuery
-        .mockResolvedValueOnce(tablesResult)
-        .mockResolvedValueOnce(usersColumnsResult)
-        .mockResolvedValueOnce(postsColumnsResult)
-        .mockResolvedValueOnce(userStatsColumnsResult);
-
-      const schema = await adapter.captureSchema(connection);
-
-      expect(schema.database).toBe('testdb');
-      expect(schema.type).toBe('postgresql');
-      expect(schema.captured_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-
-      // Check tables
-      expect(Object.keys(schema.tables)).toHaveLength(2);
-      expect(schema.tables.users).toBeDefined();
-      expect(schema.tables.users.name).toBe('users');
-      expect(schema.tables.users.comment).toBe('User accounts');
-      expect(schema.tables.users.columns).toHaveLength(2);
-      expect(schema.tables.users.columns[0].name).toBe('id');
-      expect(schema.tables.users.columns[0].nullable).toBe(false);
-      expect(schema.tables.users.columns[1].name).toBe('name');
-      expect(schema.tables.users.columns[1].max_length).toBe(100);
-
-      // Check views
-      expect(Object.keys(schema.views)).toHaveLength(1);
-      expect(schema.views.user_stats).toBeDefined();
-      expect(schema.views.user_stats.name).toBe('user_stats');
-      expect(schema.views.user_stats.type).toBe('VIEW');
-
-      // Check summary
-      expect(schema.summary.table_count).toBe(2);
-      expect(schema.summary.view_count).toBe(1);
-      expect(schema.summary.total_columns).toBe(4);
-    });
-
-    it('should handle schema capture errors', async () => {
-      const schemaError = new Error('Schema query failed');
-      mockQuery.mockRejectedValueOnce(schemaError);
-
-      await expect(adapter.captureSchema(connection)).rejects.toThrow(
-        'postgresql adapter error: Failed to capture PostgreSQL schema - Schema query failed'
-      );
-    });
-
-    it('should handle empty schema results', async () => {
-      const emptyResult = { rows: [] };
-      mockQuery.mockResolvedValueOnce(emptyResult);
-
-      const schema = await adapter.captureSchema(connection);
-
-      expect(schema.tables).toEqual({});
-      expect(schema.views).toEqual({});
-      expect(schema.summary.table_count).toBe(0);
-      expect(schema.summary.view_count).toBe(0);
-      expect(schema.summary.total_columns).toBe(0);
-    });
-  });
-
-  // ============================================================================
-  // PostgreSQL-specific Methods Tests
-  // ============================================================================
-
-  describe('PostgreSQL-specific methods', () => {
-    let connection: DatabaseConnection;
-
-    beforeEach(async () => {
-      connection = await adapter.connect();
-    });
-
-    describe('getVersion', () => {
-      it('should get PostgreSQL version successfully', async () => {
-        const versionResult = {
-          rows: [{ version: 'PostgreSQL 13.4 on x86_64-pc-linux-gnu' }]
-        };
-        mockQuery.mockResolvedValueOnce(versionResult);
-
-        const version = await adapter.getVersion(connection);
-
-        expect(mockQuery).toHaveBeenCalledWith('SELECT version()');
-        expect(version).toBe('PostgreSQL 13.4 on x86_64-pc-linux-gnu');
-      });
-
-      it('should handle version query errors', async () => {
-        const versionError = new Error('Version query failed');
-        mockQuery.mockRejectedValueOnce(versionError);
-
-        await expect(adapter.getVersion(connection)).rejects.toThrow(
-          'postgresql adapter error: Failed to get PostgreSQL version - Version query failed'
-        );
-      });
-
-      it('should handle empty version result', async () => {
-        const emptyResult = { rows: [] };
-        mockQuery.mockResolvedValueOnce(emptyResult);
-
-        const version = await adapter.getVersion(connection);
-        expect(version).toBe('Unknown');
-      });
-    });
-
-    describe('getDatabaseSize', () => {
-      it('should get database size successfully', async () => {
-        const sizeResult = {
-          rows: [{ size: '42 MB' }]
-        };
-        mockQuery.mockResolvedValueOnce(sizeResult);
-
-        const size = await adapter.getDatabaseSize(connection);
-
-        expect(mockQuery).toHaveBeenCalledWith(
-          `
-        SELECT pg_size_pretty(pg_database_size($1)) as size
-      `,
-          ['testdb']
-        );
-        expect(size).toBe('42 MB');
-      });
-
-      it('should handle database size query errors', async () => {
-        const sizeError = new Error('Size query failed');
-        mockQuery.mockRejectedValueOnce(sizeError);
-
-        await expect(adapter.getDatabaseSize(connection)).rejects.toThrow(
-          'postgresql adapter error: Failed to get PostgreSQL database size - Size query failed'
-        );
-      });
-    });
-
-    describe('getTableStats', () => {
-      it('should get table statistics successfully', async () => {
-        const statsResult = {
-          rows: [
-            {
-              schemaname: 'public',
-              tablename: 'users',
-              attname: 'id',
-              n_distinct: -1,
-              correlation: 1
-            },
-            {
-              schemaname: 'public',
-              tablename: 'users',
-              attname: 'name',
-              n_distinct: 100,
-              correlation: 0.1
-            }
-          ]
-        };
-        mockQuery.mockResolvedValueOnce(statsResult);
-
-        const stats = await adapter.getTableStats(connection, 'users');
-
-        expect(mockQuery).toHaveBeenCalledWith(
-          expect.stringContaining('FROM pg_stats'),
-          ['users']
-        );
-        expect(stats.table).toBe('users');
-        expect(stats.columns).toHaveLength(2);
-      });
-
-      it('should handle table stats query errors', async () => {
-        const statsError = new Error('Stats query failed');
-        mockQuery.mockRejectedValueOnce(statsError);
-
-        await expect(adapter.getTableStats(connection, 'users')).rejects.toThrow(
-          'postgresql adapter error: Failed to get PostgreSQL table statistics - Stats query failed'
-        );
-      });
-    });
-  });
-
-  // ============================================================================
-  // Error Handling and Edge Cases
-  // ============================================================================
-
-  describe('error handling and edge cases', () => {
-    it('should handle malformed query results gracefully', async () => {
-      const connection = await adapter.connect();
-      
-      // Mock a result without the expected structure
-      const malformedResult = {
-        // Missing rows and fields properties
-        rowCount: 0
-      };
-      mockQuery.mockResolvedValueOnce(malformedResult);
-
-      const result = await adapter.executeQuery(connection, 'SELECT 1');
-      
-      // Should handle gracefully and return empty results
-      expect(result.rows).toEqual([]);
-      expect(result.fields).toEqual([]);
-    });
-
-    it('should handle SSL configuration edge cases', async () => {
-      // Test with SSL as string 'true'
-      const sslStringConfig = { ...config, ssl: 'true' as any };
-      const sslStringAdapter = new PostgreSQLAdapter(sslStringConfig);
-      
-      await sslStringAdapter.connect();
-      
-      expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
-        ssl: { rejectUnauthorized: false } // Should be parsed as SSL object since it's truthy
-      }));
-    });
-
-    it('should handle missing field information in query results', async () => {
-      const connection = await adapter.connect();
-      
-      const resultWithoutFields = {
-        rows: [{ id: 1, name: 'test' }],
-        // fields property is missing
-        rowCount: 1
-      };
-      mockQuery.mockResolvedValueOnce(resultWithoutFields);
-
-      const result = await adapter.executeQuery(connection, 'SELECT * FROM test');
-      expect(result.fields).toEqual([]);
-    });
-
-    it('should handle concurrent connection attempts', async () => {
-      const connections = await Promise.all([
-        adapter.connect(),
-        adapter.connect(),
-        adapter.connect()
-      ]);
-
-      expect(connections).toHaveLength(3);
-      expect(mockConnect).toHaveBeenCalledTimes(3);
-      
-      // Clean up connections
-      await Promise.all(connections.map(conn => adapter.disconnect(conn)));
-    });
-  });
-
-  // ============================================================================
-  // Integration-style Tests
-  // ============================================================================
-
-  describe('integration scenarios', () => {
-    it('should handle complete workflow: connect -> query -> transaction -> disconnect', async () => {
-      // Connect
-      const connection = await adapter.connect();
-      expect(adapter.isConnected(connection)).toBe(true);
-
-      // Execute query
-      const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
-      expect(result).toBeDefined();
-
-      // Transaction workflow
-      await adapter.beginTransaction(connection);
-      await adapter.executeQuery(connection, 'INSERT INTO users (name) VALUES ($1)', ['John']);
-      await adapter.commitTransaction(connection);
-
-      // Disconnect
-      await adapter.disconnect(connection);
-      expect(mockEnd).toHaveBeenCalled();
-    });
-
-    it('should handle transaction rollback scenario', async () => {
-      const connection = await adapter.connect();
-
-      await adapter.beginTransaction(connection);
-      
-      // Simulate error during transaction by setting up the mock to fail on the INSERT
-      mockQuery.mockRejectedValueOnce(new Error('Operation failed'));
-
-      try {
-        await adapter.executeQuery(connection, 'INSERT INTO users (invalid_column) VALUES ($1)', ['value']);
-      } catch (error) {
-        await adapter.rollbackTransaction(connection);
-      }
-
-      expect(mockQuery).toHaveBeenCalledWith('BEGIN');
-      expect(mockQuery).toHaveBeenCalledWith('ROLLBACK');
-    });
-  });
+ let config: DatabaseConfig;
+ let adapter: PostgreSQLAdapter;
+
+ beforeEach(() => {
+ config = {
+ type: 'postgresql',
+ host: 'localhost',
+ port: 5432,
+ database: 'testdb',
+ username: 'testuser',
+ password: 'testpass',
+ timeout: 30000,
+ ssl: false
+ };
+
+ adapter = new PostgreSQLAdapter(config);
+
+ // Reset mocks
+ jest.clearAllMocks();
+ mockQuery.mockResolvedValue({
+ rows: [{ id: 1, name: 'test' }],
+ fields: [{ name: 'id' }, { name: 'name' }],
+ rowCount: 1
+ });
+ mockConnect.mockResolvedValue(undefined);
+ mockEnd.mockResolvedValue(undefined);
+ mockClient._connected = true;
+ });
+
+ // ============================================================================
+ // Constructor and Configuration Tests
+ // ============================================================================
+
+ describe('constructor', () => {
+ it('should initialize with valid PostgreSQL config', () => {
+ expect(adapter.getType()).toBe('postgresql');
+ expect(adapter.getConfig().host).toBe('localhost');
+ expect(adapter.getConfig().port).toBe(5432);
+ });
+
+ it('should handle port as string', () => {
+ const stringPortConfig = { ...config, port: '5433' as any };
+ const stringAdapter = new PostgreSQLAdapter(stringPortConfig);
+ expect(stringAdapter.getConfig().port).toBe('5433'); // Port remains as string in this implementation
+ });
+ });
+
+ // ============================================================================
+ // Connection Management Tests
+ // ============================================================================
+
+ describe('connect', () => {
+ it('should connect to PostgreSQL database successfully', async () => {
+ const connection = await adapter.connect();
+ 
+ expect(pg.Client).toHaveBeenCalledWith({
+ host: 'localhost',
+ port: 5432,
+ database: 'testdb',
+ user: 'testuser',
+ password: 'testpass',
+ connectionTimeoutMillis: 30000,
+ ssl: false,
+ });
+ expect(mockConnect).toHaveBeenCalled();
+ expect(connection).toBe(mockClient);
+ });
+
+ it('should handle SSL configuration', async () => {
+ const sslConfig = { ...config, ssl: true };
+ const sslAdapter = new PostgreSQLAdapter(sslConfig);
+ 
+ await sslAdapter.connect();
+ 
+ expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
+ ssl: { rejectUnauthorized: false }
+ }));
+ });
+
+ it('should handle SSL disabled', async () => {
+ const sslConfig = { ...config, ssl: false };
+ const sslAdapter = new PostgreSQLAdapter(sslConfig);
+ 
+ await sslAdapter.connect();
+ 
+ expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
+ ssl: false
+ }));
+ });
+
+ it('should validate required configuration fields', async () => {
+ const incompleteConfig = { type: 'postgresql' as const };
+ const incompleteAdapter = new PostgreSQLAdapter(incompleteConfig);
+ 
+ await expect(incompleteAdapter.connect()).rejects.toThrow(
+ 'Missing required configuration fields: host, database, username, password'
+ );
+ });
+
+ it('should handle connection errors', async () => {
+ const connectionError = new Error('Connection failed');
+ mockConnect.mockRejectedValueOnce(connectionError);
+ 
+ await expect(adapter.connect()).rejects.toThrow(
+ 'postgresql adapter error: Failed to connect to PostgreSQL database - Connection failed'
+ );
+ });
+
+ it('should use default port when not specified', async () => {
+ const noPortConfig = { ...config };
+ delete noPortConfig.port;
+ const noPortAdapter = new PostgreSQLAdapter(noPortConfig);
+ 
+ await noPortAdapter.connect();
+ 
+ expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
+ port: 5432
+ }));
+ });
+ });
+
+ describe('disconnect', () => {
+ it('should disconnect from PostgreSQL database successfully', async () => {
+ const connection = await adapter.connect();
+ await adapter.disconnect(connection);
+ 
+ expect(mockEnd).toHaveBeenCalled();
+ });
+
+ it('should handle disconnect errors', async () => {
+ const disconnectError = new Error('Disconnect failed');
+ mockEnd.mockRejectedValueOnce(disconnectError);
+ 
+ const connection = await adapter.connect();
+ await expect(adapter.disconnect(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to disconnect from PostgreSQL database - Disconnect failed'
+ );
+ });
+ });
+
+ describe('isConnected', () => {
+ it('should return true for connected client', async () => {
+ const connection = await adapter.connect();
+ mockClient._connected = true;
+ 
+ expect(adapter.isConnected(connection)).toBe(true);
+ });
+
+ it('should return false for disconnected client', async () => {
+ const connection = await adapter.connect();
+ mockClient._connected = false;
+ 
+ expect(adapter.isConnected(connection)).toBe(false);
+ });
+
+ it('should return false for invalid connection', () => {
+ // The isConnected method returns null for null input due to short-circuiting
+ expect(adapter.isConnected(null as any)).toBe(null);
+ expect(adapter.isConnected({} as any)).toBe(false);
+ });
+
+ it('should handle exceptions gracefully', () => {
+ const badConnection = {
+ get _connected() {
+ throw new Error('Property access failed');
+ }
+ };
+ 
+ expect(adapter.isConnected(badConnection as any)).toBe(false);
+ });
+ });
+
+ // ============================================================================
+ // Query Execution Tests
+ // ============================================================================
+
+ describe('executeQuery', () => {
+ let connection: DatabaseConnection;
+
+ beforeEach(async () => {
+ connection = await adapter.connect();
+ });
+
+ it('should execute query successfully', async () => {
+ const mockResult = {
+ rows: [{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }],
+ fields: [{ name: 'id' }, { name: 'name' }],
+ rowCount: 2
+ };
+ mockQuery.mockResolvedValueOnce(mockResult);
+
+ const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
+
+ expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM users', []);
+ expect(result.rows).toEqual([{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }]);
+ expect(result.fields).toEqual(['id', 'name']);
+ expect(result.rowCount).toBe(2);
+ expect(result.truncated).toBe(false);
+ expect(result.execution_time_ms).toBeGreaterThanOrEqual(0);
+ });
+
+ it('should execute query with parameters', async () => {
+ const mockResult = {
+ rows: [{ id: 1, name: 'John' }],
+ fields: [{ name: 'id' }, { name: 'name' }],
+ rowCount: 1
+ };
+ mockQuery.mockResolvedValueOnce(mockResult);
+
+ await adapter.executeQuery(connection, 'SELECT * FROM users WHERE id = $1', [1]);
+
+ expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM users WHERE id = $1', [1]);
+ });
+
+ it('should handle query execution errors', async () => {
+ const queryError = new Error('Query execution failed');
+ mockQuery.mockRejectedValueOnce(queryError);
+
+ await expect(
+ adapter.executeQuery(connection, 'INVALID SQL')
+ ).rejects.toThrow(
+ 'postgresql adapter error: Failed to execute PostgreSQL query - Query execution failed'
+ );
+ });
+
+ it('should handle empty result sets', async () => {
+ const mockResult = {
+ rows: [],
+ fields: [],
+ rowCount: 0
+ };
+ mockQuery.mockResolvedValueOnce(mockResult);
+
+ const result = await adapter.executeQuery(connection, 'SELECT * FROM empty_table');
+
+ expect(result.rows).toEqual([]);
+ expect(result.fields).toEqual([]);
+ expect(result.rowCount).toBe(0);
+ expect(result.truncated).toBe(false);
+ });
+
+ it('should handle result truncation', async () => {
+ // Create mock result with more rows than the limit
+ const largeRowSet = Array(1500).fill(0).map((_, i) => ({ id: i + 1, name: `User${i + 1}` }));
+ const mockResult = {
+ rows: largeRowSet,
+ fields: [{ name: 'id' }, { name: 'name' }],
+ rowCount: 1500
+ };
+ mockQuery.mockResolvedValueOnce(mockResult);
+
+ const result = await adapter.executeQuery(connection, 'SELECT * FROM large_table');
+
+ expect(result.rows).toHaveLength(1000); // Should be truncated to max_rows
+ expect(result.rowCount).toBe(1500); // Original count before truncation
+ expect(result.truncated).toBe(true);
+ });
+ });
+
+ // ============================================================================
+ // Transaction Management Tests
+ // ============================================================================
+
+ describe('transaction management', () => {
+ let connection: DatabaseConnection;
+
+ beforeEach(async () => {
+ connection = await adapter.connect();
+ });
+
+ describe('beginTransaction', () => {
+ it('should begin transaction successfully', async () => {
+ await adapter.beginTransaction(connection);
+ expect(mockQuery).toHaveBeenCalledWith('BEGIN');
+ });
+
+ it('should handle begin transaction errors', async () => {
+ const transactionError = new Error('Begin failed');
+ mockQuery.mockRejectedValueOnce(transactionError);
+
+ await expect(adapter.beginTransaction(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to begin PostgreSQL transaction - Begin failed'
+ );
+ });
+ });
+
+ describe('commitTransaction', () => {
+ it('should commit transaction successfully', async () => {
+ await adapter.commitTransaction(connection);
+ expect(mockQuery).toHaveBeenCalledWith('COMMIT');
+ });
+
+ it('should handle commit transaction errors', async () => {
+ const commitError = new Error('Commit failed');
+ mockQuery.mockRejectedValueOnce(commitError);
+
+ await expect(adapter.commitTransaction(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to commit PostgreSQL transaction - Commit failed'
+ );
+ });
+ });
+
+ describe('rollbackTransaction', () => {
+ it('should rollback transaction successfully', async () => {
+ await adapter.rollbackTransaction(connection);
+ expect(mockQuery).toHaveBeenCalledWith('ROLLBACK');
+ });
+
+ it('should handle rollback transaction errors', async () => {
+ const rollbackError = new Error('Rollback failed');
+ mockQuery.mockRejectedValueOnce(rollbackError);
+
+ await expect(adapter.rollbackTransaction(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to rollback PostgreSQL transaction - Rollback failed'
+ );
+ });
+ });
+ });
+
+ // ============================================================================
+ // Performance Analysis Tests
+ // ============================================================================
+
+ describe('buildExplainQuery', () => {
+ it('should build PostgreSQL explain query with analysis', () => {
+ const query = 'SELECT * FROM users WHERE active = true';
+ const explainQuery = adapter.buildExplainQuery(query);
+ 
+ expect(explainQuery).toBe(
+ 'EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) SELECT * FROM users WHERE active = true'
+ );
+ });
+
+ it('should handle complex queries', () => {
+ const complexQuery = `
+ SELECT u.name, p.title 
+ FROM users u 
+ JOIN posts p ON u.id = p.user_id 
+ WHERE u.created_at > '2023-01-01'
+ `;
+ 
+ const explainQuery = adapter.buildExplainQuery(complexQuery);
+ expect(explainQuery).toContain('EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)');
+ expect(explainQuery).toContain(complexQuery);
+ });
+ });
+
+ // ============================================================================
+ // Schema Capture Tests
+ // ============================================================================
+
+ describe('captureSchema', () => {
+ let connection: DatabaseConnection;
+
+ beforeEach(async () => {
+ connection = await adapter.connect();
+ });
+
+ it('should capture database schema successfully', async () => {
+ // Mock tables query result
+ const tablesResult = {
+ rows: [
+ { table_name: 'users', table_type: 'BASE TABLE', table_comment: 'User accounts' },
+ { table_name: 'posts', table_type: 'BASE TABLE', table_comment: '' },
+ { table_name: 'user_stats', table_type: 'VIEW', table_comment: 'User statistics view' }
+ ]
+ };
+
+ // Mock columns query results
+ const usersColumnsResult = {
+ rows: [
+ {
+ column_name: 'id',
+ data_type: 'integer',
+ is_nullable: 'NO',
+ column_default: 'nextval(\'users_id_seq\'::regclass)',
+ character_maximum_length: null,
+ numeric_precision: 32,
+ numeric_scale: 0,
+ column_comment: 'Primary key'
+ },
+ {
+ column_name: 'name',
+ data_type: 'character varying',
+ is_nullable: 'NO',
+ column_default: null,
+ character_maximum_length: 100,
+ numeric_precision: null,
+ numeric_scale: null,
+ column_comment: 'Full name'
+ }
+ ]
+ };
+
+ const postsColumnsResult = {
+ rows: [
+ {
+ column_name: 'id',
+ data_type: 'integer',
+ is_nullable: 'NO',
+ column_default: 'nextval(\'posts_id_seq\'::regclass)',
+ character_maximum_length: null,
+ numeric_precision: 32,
+ numeric_scale: 0,
+ column_comment: ''
+ }
+ ]
+ };
+
+ const userStatsColumnsResult = {
+ rows: [
+ {
+ column_name: 'user_id',
+ data_type: 'integer',
+ is_nullable: 'YES',
+ column_default: null,
+ character_maximum_length: null,
+ numeric_precision: 32,
+ numeric_scale: 0,
+ column_comment: 'User ID reference'
+ }
+ ]
+ };
+
+ // Set up query responses in order
+ mockQuery
+ .mockResolvedValueOnce(tablesResult)
+ .mockResolvedValueOnce(usersColumnsResult)
+ .mockResolvedValueOnce(postsColumnsResult)
+ .mockResolvedValueOnce(userStatsColumnsResult);
+
+ const schema = await adapter.captureSchema(connection);
+
+ expect(schema.database).toBe('testdb');
+ expect(schema.type).toBe('postgresql');
+ expect(schema.captured_at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+ // Check tables
+ expect(Object.keys(schema.tables)).toHaveLength(2);
+ expect(schema.tables.users).toBeDefined();
+ expect(schema.tables.users.name).toBe('users');
+ expect(schema.tables.users.comment).toBe('User accounts');
+ expect(schema.tables.users.columns).toHaveLength(2);
+ expect(schema.tables.users.columns[0].name).toBe('id');
+ expect(schema.tables.users.columns[0].nullable).toBe(false);
+ expect(schema.tables.users.columns[1].name).toBe('name');
+ expect(schema.tables.users.columns[1].max_length).toBe(100);
+
+ // Check views
+ expect(Object.keys(schema.views)).toHaveLength(1);
+ expect(schema.views.user_stats).toBeDefined();
+ expect(schema.views.user_stats.name).toBe('user_stats');
+ expect(schema.views.user_stats.type).toBe('VIEW');
+
+ // Check summary
+ expect(schema.summary.table_count).toBe(2);
+ expect(schema.summary.view_count).toBe(1);
+ expect(schema.summary.total_columns).toBe(4);
+ });
+
+ it('should handle schema capture errors', async () => {
+ const schemaError = new Error('Schema query failed');
+ mockQuery.mockRejectedValueOnce(schemaError);
+
+ await expect(adapter.captureSchema(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to capture PostgreSQL schema - Schema query failed'
+ );
+ });
+
+ it('should handle empty schema results', async () => {
+ const emptyResult = { rows: [] };
+ mockQuery.mockResolvedValueOnce(emptyResult);
+
+ const schema = await adapter.captureSchema(connection);
+
+ expect(schema.tables).toEqual({});
+ expect(schema.views).toEqual({});
+ expect(schema.summary.table_count).toBe(0);
+ expect(schema.summary.view_count).toBe(0);
+ expect(schema.summary.total_columns).toBe(0);
+ });
+ });
+
+ // ============================================================================
+ // PostgreSQL-specific Methods Tests
+ // ============================================================================
+
+ describe('PostgreSQL-specific methods', () => {
+ let connection: DatabaseConnection;
+
+ beforeEach(async () => {
+ connection = await adapter.connect();
+ });
+
+ describe('getVersion', () => {
+ it('should get PostgreSQL version successfully', async () => {
+ const versionResult = {
+ rows: [{ version: 'PostgreSQL 13.4 on x86_64-pc-linux-gnu' }]
+ };
+ mockQuery.mockResolvedValueOnce(versionResult);
+
+ const version = await adapter.getVersion(connection);
+
+ expect(mockQuery).toHaveBeenCalledWith('SELECT version()');
+ expect(version).toBe('PostgreSQL 13.4 on x86_64-pc-linux-gnu');
+ });
+
+ it('should handle version query errors', async () => {
+ const versionError = new Error('Version query failed');
+ mockQuery.mockRejectedValueOnce(versionError);
+
+ await expect(adapter.getVersion(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to get PostgreSQL version - Version query failed'
+ );
+ });
+
+ it('should handle empty version result', async () => {
+ const emptyResult = { rows: [] };
+ mockQuery.mockResolvedValueOnce(emptyResult);
+
+ const version = await adapter.getVersion(connection);
+ expect(version).toBe('Unknown');
+ });
+ });
+
+ describe('getDatabaseSize', () => {
+ it('should get database size successfully', async () => {
+ const sizeResult = {
+ rows: [{ size: '42 MB' }]
+ };
+ mockQuery.mockResolvedValueOnce(sizeResult);
+
+ const size = await adapter.getDatabaseSize(connection);
+
+ expect(mockQuery).toHaveBeenCalledWith(
+ `
+ SELECT pg_size_pretty(pg_database_size($1)) as size
+ `,
+ ['testdb']
+ );
+ expect(size).toBe('42 MB');
+ });
+
+ it('should handle database size query errors', async () => {
+ const sizeError = new Error('Size query failed');
+ mockQuery.mockRejectedValueOnce(sizeError);
+
+ await expect(adapter.getDatabaseSize(connection)).rejects.toThrow(
+ 'postgresql adapter error: Failed to get PostgreSQL database size - Size query failed'
+ );
+ });
+ });
+
+ describe('getTableStats', () => {
+ it('should get table statistics successfully', async () => {
+ const statsResult = {
+ rows: [
+ {
+ schemaname: 'public',
+ tablename: 'users',
+ attname: 'id',
+ n_distinct: -1,
+ correlation: 1
+ },
+ {
+ schemaname: 'public',
+ tablename: 'users',
+ attname: 'name',
+ n_distinct: 100,
+ correlation: 0.1
+ }
+ ]
+ };
+ mockQuery.mockResolvedValueOnce(statsResult);
+
+ const stats = await adapter.getTableStats(connection, 'users');
+
+ expect(mockQuery).toHaveBeenCalledWith(
+ expect.stringContaining('FROM pg_stats'),
+ ['users']
+ );
+ expect(stats.table).toBe('users');
+ expect(stats.columns).toHaveLength(2);
+ });
+
+ it('should handle table stats query errors', async () => {
+ const statsError = new Error('Stats query failed');
+ mockQuery.mockRejectedValueOnce(statsError);
+
+ await expect(adapter.getTableStats(connection, 'users')).rejects.toThrow(
+ 'postgresql adapter error: Failed to get PostgreSQL table statistics - Stats query failed'
+ );
+ });
+ });
+ });
+
+ // ============================================================================
+ // Error Handling and Edge Cases
+ // ============================================================================
+
+ describe('error handling and edge cases', () => {
+ it('should handle malformed query results gracefully', async () => {
+ const connection = await adapter.connect();
+ 
+ // Mock a result without the expected structure
+ const malformedResult = {
+ // Missing rows and fields properties
+ rowCount: 0
+ };
+ mockQuery.mockResolvedValueOnce(malformedResult);
+
+ const result = await adapter.executeQuery(connection, 'SELECT 1');
+ 
+ // Should handle gracefully and return empty results
+ expect(result.rows).toEqual([]);
+ expect(result.fields).toEqual([]);
+ });
+
+ it('should handle SSL configuration edge cases', async () => {
+ // Test with SSL as string 'true'
+ const sslStringConfig = { ...config, ssl: 'true' as any };
+ const sslStringAdapter = new PostgreSQLAdapter(sslStringConfig);
+ 
+ await sslStringAdapter.connect();
+ 
+ expect(pg.Client).toHaveBeenCalledWith(expect.objectContaining({
+ ssl: { rejectUnauthorized: false } // Should be parsed as SSL object since it's truthy
+ }));
+ });
+
+ it('should handle missing field information in query results', async () => {
+ const connection = await adapter.connect();
+ 
+ const resultWithoutFields = {
+ rows: [{ id: 1, name: 'test' }],
+ // fields property is missing
+ rowCount: 1
+ };
+ mockQuery.mockResolvedValueOnce(resultWithoutFields);
+
+ const result = await adapter.executeQuery(connection, 'SELECT * FROM test');
+ expect(result.fields).toEqual([]);
+ });
+
+ it('should handle concurrent connection attempts', async () => {
+ const connections = await Promise.all([
+ adapter.connect(),
+ adapter.connect(),
+ adapter.connect()
+ ]);
+
+ expect(connections).toHaveLength(3);
+ expect(mockConnect).toHaveBeenCalledTimes(3);
+ 
+ // Clean up connections
+ await Promise.all(connections.map(conn => adapter.disconnect(conn)));
+ });
+ });
+
+ // ============================================================================
+ // Integration-style Tests
+ // ============================================================================
+
+ describe('integration scenarios', () => {
+ it('should handle complete workflow: connect -> query -> transaction -> disconnect', async () => {
+ // Connect
+ const connection = await adapter.connect();
+ expect(adapter.isConnected(connection)).toBe(true);
+
+ // Execute query
+ const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
+ expect(result).toBeDefined();
+
+ // Transaction workflow
+ await adapter.beginTransaction(connection);
+ await adapter.executeQuery(connection, 'INSERT INTO users (name) VALUES ($1)', ['John']);
+ await adapter.commitTransaction(connection);
+
+ // Disconnect
+ await adapter.disconnect(connection);
+ expect(mockEnd).toHaveBeenCalled();
+ });
+
+ it('should handle transaction rollback scenario', async () => {
+ const connection = await adapter.connect();
+
+ await adapter.beginTransaction(connection);
+ 
+ // Simulate error during transaction by setting up the mock to fail on the INSERT
+ mockQuery.mockRejectedValueOnce(new Error('Operation failed'));
+
+ try {
+ await adapter.executeQuery(connection, 'INSERT INTO users (invalid_column) VALUES ($1)', ['value']);
+ } catch (error) {
+ await adapter.rollbackTransaction(connection);
+ }
+
+ expect(mockQuery).toHaveBeenCalledWith('BEGIN');
+ expect(mockQuery).toHaveBeenCalledWith('ROLLBACK');
+ });
+ });
 });

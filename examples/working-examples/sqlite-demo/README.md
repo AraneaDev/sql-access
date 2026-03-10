@@ -2,13 +2,13 @@
 
 **Objective**: Get SQL MCP Server running with zero external dependencies in under 5 minutes.
 
-## ✅ Prerequisites
+## Prerequisites
 
 - Node.js 16+ installed
 - sql-access package installed (`npm install -g sql-access`)
 - Command line access
 
-## 🚀 Try It Now!
+## Try It Now!
 
 ### Step 1: Run the Demo
 ```bash
@@ -19,27 +19,27 @@ cd examples/working-examples/sqlite-demo
 ./run-demo.sh
 
 # Or run manually step-by-step
-./setup-demo.sh      # Create database and config
-./start-server.sh    # Start SQL MCP Server
-./test-queries.sh    # Test sample queries
-./stop-server.sh     # Clean shutdown
+./setup-demo.sh # Create database and config
+./start-server.sh # Start SQL MCP Server
+./test-queries.sh # Test sample queries
+./stop-server.sh # Clean shutdown
 ```
 
 ### Step 2: Verify Results
 After running the demo, you should see:
 ```
-✅ SQLite database created with sample data
-✅ SQL MCP Server started successfully
-✅ 5 test queries executed successfully
-✅ Server responded to MCP protocol
-✅ Demo completed successfully
+ SQLite database created with sample data
+ SQL MCP Server started successfully
+ 5 test queries executed successfully
+ Server responded to MCP protocol
+ Demo completed successfully
 ```
 
-## 📊 What This Demo Shows
+## What This Demo Shows
 
 ### Database Structure Created
 - **users** table with 5 sample users
-- **orders** table with 8 sample orders  
+- **orders** table with 8 sample orders 
 - **departments** lookup table
 - Foreign key relationships between tables
 
@@ -56,7 +56,7 @@ After running the demo, you should see:
 - `sql_get_schema` - Retrieve table structures
 - Error handling and security validation
 
-## 📁 Files in This Demo
+## Files in This Demo
 
 - `README.md` - This file
 - `run-demo.sh` - Complete automated demo
@@ -69,7 +69,7 @@ After running the demo, you should see:
 - `create-database.sql` - Database schema
 - `claude-config.json` - Claude Desktop integration
 
-## 🔧 Manual Setup Instructions
+## Manual Setup Instructions
 
 ### 1. Create the Database
 ```bash
@@ -109,7 +109,7 @@ echo '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"sql_query"
 kill $SERVER_PID
 ```
 
-## 🖥️ Claude Desktop Integration
+## Claude Desktop Integration
 
 ### 1. Copy Configuration
 ```bash
@@ -126,14 +126,14 @@ sed -i "s|/path/to/demo|$(pwd)|g" ~/.config/Claude/claude_desktop_config.json
 Ask Claude these questions to verify the integration:
 
 1. "What databases do you have access to?"
-2. "Show me the structure of the users table"  
+2. "Show me the structure of the users table" 
 3. "List all users with their departments"
 4. "What are the total sales by department?"
 5. "Show me the most expensive order"
 
 Expected responses should show actual data from the demo database.
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Database Not Created
 ```bash
@@ -169,11 +169,11 @@ tail -f sql-mcp-server.log
 
 # Test with curl instead
 curl -X POST http://localhost:3000/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+ -H "Content-Type: application/json" \
+ -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-## 📈 Performance Benchmarks
+## Performance Benchmarks
 
 On a typical development machine, this demo should show:
 
@@ -183,7 +183,7 @@ On a typical development machine, this demo should show:
 - Memory usage: < 50MB
 - Total demo time: < 2 minutes
 
-## 🎯 Next Steps
+## Next Steps
 
 After completing this demo:
 
@@ -192,7 +192,7 @@ After completing this demo:
 3. **Add Real Data**: Connect to your own SQLite databases
 4. **API Integration**: Try the [Python client example](../api-integration/)
 
-## 📋 Demo Checklist
+## Demo Checklist
 
 Use this checklist to verify the demo works:
 
@@ -209,7 +209,7 @@ Use this checklist to verify the demo works:
 - [ ] Claude Desktop integration configured
 - [ ] Claude can query the demo database
 
-## 💡 Learning Objectives
+## Learning Objectives
 
 By completing this demo, you'll understand:
 
@@ -220,7 +220,7 @@ By completing this demo, you'll understand:
 - Claude Desktop integration
 - Security considerations for database access
 
-## 🔗 Related Resources
+## Related Resources
 
 - [SQLite Documentation](https://www.sqlite.org/docs.html)
 - [SQL MCP Server Configuration Guide](../../../docs/guides/configuration-guide.md)

@@ -1,113 +1,127 @@
-# MCP SQL Access Server v2.2.0
+# MCP SQL Access Server v2.3.0
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Test Coverage](https://img.shields.io/badge/Coverage-57%25-orange)](https://github.com/your-org/sql-ts)
+[![Test Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen)](https://github.com/your-org/sql-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-437%20passing-success)](https://github.com/your-org/sql-ts)
+[![Tests](https://img.shields.io/badge/Tests-456%20passing-success)](https://github.com/your-org/sql-ts)
 
-🚀 **Enterprise-grade MCP SQL Access Server v2.2.0** - Connect Claude Desktop to your databases with bulletproof security, comprehensive monitoring, and seamless multi-database support.
+**Enterprise-grade MCP SQL Access Server v2.3.0** - Connect Claude Desktop to your databases with bulletproof security, comprehensive monitoring, and seamless multi-database support.
 
-## ✨ Why Choose MCP SQL Access Server v2.2.0?
+## Why Choose MCP SQL Access Server v2.3.0?
 
-### 🛡️ **Security First**
+### **Security First**
 - **SELECT-Only Mode** - Production-safe read-only database access
 - **Query Validation** - Advanced SQL injection prevention and complexity analysis
 - **SSH Tunneling** - Secure encrypted connections through bastion hosts
 - **Audit Logging** - Comprehensive security event tracking
 
-### ⚡ **High Performance** 
+### **High Performance**
 - **Connection Pooling** - Efficient database connection management
 - **Schema Caching** - Lightning-fast metadata access
 - **Query Optimization** - Built-in performance analysis and recommendations
 - **Batch Operations** - Execute multiple queries with transaction support
 
-### 🗄️ **Universal Database Support**
+### **Universal Database Support**
 - **PostgreSQL** - Full support including advanced features
 - **MySQL/MariaDB** - Complete compatibility with all versions
 - **SQLite** - Perfect for development and small applications
 - **SQL Server** - Enterprise-grade Microsoft SQL Server support
 
-### 🔧 **Developer Experience**
-- **5-Minute Setup** - Interactive configuration wizard
+### **Developer Experience**
+- **5-Minute Setup** - Interactive configuration wizard or automatic installer
 - **TypeScript Native** - Full type safety and IntelliSense support
 - **Comprehensive Docs** - Detailed guides, tutorials, and API reference
 - **Extensive Testing** - Unit, integration, and end-to-end test coverage
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install
 ```bash
 git clone https://forgejo.aranea.dev/ContextForge/sql-access.git
 cd sql-access
 npm install
-rpm run build
+npm run build
 ```
 
-### 2. Configure
+### 2. Automatic Installation (Recommended)
+```bash
+sql-install
+```
+The `sql-install` command handles database configuration, security setup, and Claude Desktop integration automatically. This is the easiest way to get up and running.
+
+### 3. Configure (Manual)
 ```bash
 npm run setup
 ```
 The interactive wizard guides you through database setup, security configuration, and SSH tunneling.
 
-### 3. Connect Claude Desktop
+### 4. Connect Claude Desktop
 Add to your Claude Desktop configuration:
 
-**Windows:**
+You can use either `sql-install` (automatic, recommended) or manually configure Claude Desktop as shown below.
+
+**Automatic (Recommended):**
+```bash
+sql-install
+```
+This will detect your platform, configure the database, and set up Claude Desktop integration in one step.
+
+**Manual - Windows:**
 ```json
 {
-  "mcpServers": {
-    "sql-database": {
-      "command": "d:\\path\\to\\sql-access\\start.bat"
-    }
-  }
+ "mcpServers": {
+ "sql-database": {
+ "command": "d:\\path\\to\\sql-access\\start.bat"
+ }
+ }
 }
 ```
 
-**macOS/Linux:**
+**Manual - macOS/Linux:**
 ```json
 {
-  "mcpServers": {
-    "sql-database": {
-      "command": "sql-server",
-      "args": []
-    }
-  }
+ "mcpServers": {
+ "sql-database": {
+ "command": "sql-server",
+ "args": []
+ }
+ }
 }
 ```
 
-**That's it!** 🎉 Claude Desktop will automatically start the MCP server when needed and connect to your databases.
+**That's it!** Claude Desktop will automatically start the MCP server when needed and connect to your databases.
 
-## 🎯 Use Cases
+## Use Cases
 
-### 📊 **Data Analytics & Business Intelligence**
+### **Data Analytics & Business Intelligence**
 > "Show me the top 10 customers by revenue this quarter, including their growth rate compared to last quarter"
 
-### 🏢 **Production Database Monitoring**
+### **Production Database Monitoring**
 > "Check the status of our user registration system - how many signups in the last 24 hours and any error patterns?"
 
-### 🔍 **Database Administration**
+### **Database Administration**
 > "Analyze the performance of our product catalog queries and suggest optimizations"
 
-### 🧪 **Development & Testing**
+### **Development & Testing**
 > "Generate test data scenarios based on our current user demographics"
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 graph TB
-    Claude[Claude Desktop] --> MCP[MCP Protocol]
-    MCP --> Security[Security Layer]
-    Security --> Connection[Connection Manager]
-    Connection --> Adapters[Database Adapters]
-    
-    Adapters --> PostgreSQL[(PostgreSQL)]
-    Adapters --> MySQL[(MySQL)]
-    Adapters --> SQLite[(SQLite)]
-    Adapters --> MSSQL[(SQL Server)]
-    
-    Security --> SSH[SSH Tunneling]
-    SSH --> Bastion[Bastion Host]
-    Bastion --> RemoteDB[(Remote Database)]
+ Claude[Claude Desktop] --> MCP[MCP Protocol]
+ MCP --> Security[Security Layer]
+ Security --> Connection[Connection Manager]
+ Connection --> Adapters[Database Adapters]
+
+ Adapters --> PostgreSQL[(PostgreSQL)]
+ Adapters --> MySQL[(MySQL)]
+ Adapters --> SQLite[(SQLite)]
+ Adapters --> MSSQL[(SQL Server)]
+
+ Security --> SSH[SSH Tunneling]
+ SSH --> Bastion[Bastion Host]
+ Bastion --> RemoteDB[(Remote Database)]
 ```
 
 **Built on solid foundations:**
@@ -116,33 +130,33 @@ graph TB
 - **MCP Protocol** - Standard protocol for AI tool integration
 - **Industry-standard drivers** - Proven database connectivity libraries
 
-## 📚 Documentation Hub
+## Documentation Hub
 
-### 🚀 **Getting Started**
+### **Getting Started**
 - **[5-Minute Quick Start](docs/guides/quick-start.md)** - Get running fast
 - **[Installation Guide](docs/guides/installation-guide.md)** - Detailed setup instructions
 - **[First Database Tutorial](docs/tutorials/02-first-database.md)** - Connect your first database
 - **[Claude Integration](docs/tutorials/03-claude-integration.md)** - Set up Claude Desktop
 
-### 🏗️ **Architecture & Design**
+### **Architecture & Design**
 - **[System Architecture](docs/architecture/system-architecture.md)** - How it all works together
 - **[Security Architecture](docs/architecture/security-architecture.md)** - Defense-in-depth security model
 - **[Database Layer](docs/architecture/database-layer.md)** - Adapter pattern implementation
 
-### 📖 **API Reference**
+### **API Reference**
 - **[MCP Tools Reference](docs/api/mcp-tools-reference.md)** - Complete tool documentation
 - **[TypeScript API](docs/api/typescript-api.md)** - Developer API reference
 - **[Configuration Reference](docs/guides/configuration-guide.md)** - All configuration options
 
-### 🎯 **Advanced Guides**
+### **Advanced Guides**
 - **[Multi-Database Setup](docs/tutorials/advanced-01-multi-database.md)** - Managing multiple databases
 - **[SSH Tunneling](docs/tutorials/advanced-02-ssh-tunnels.md)** - Secure remote access
 - **[Security Hardening](docs/operations/security-hardening.md)** - Production security guide
 - **[Performance Tuning](docs/operations/performance-tuning.md)** - Optimization strategies
 
-**[📖 Browse All Documentation →](docs/README.md)**
+**[Browse All Documentation](docs/README.md)**
 
-## 🔧 Configuration Examples
+## Configuration Examples
 
 ### Production PostgreSQL with SSH
 ```ini
@@ -188,12 +202,18 @@ type=sqlite
 file=./data/analytics.sqlite
 select_only=false
 
+[database.local_cache]
+type=sqlite
+file=./data/cache.sqlite
+select_only=false
+mcp_configurable=true
+
 [extension]
 max_rows=1000
 query_timeout=30000
 ```
 
-## 🔒 Security Features
+## Security Features
 
 ### Multi-Layer Security Model
 1. **Query Validation** - SQL injection prevention and syntax analysis
@@ -201,6 +221,7 @@ query_timeout=30000
 3. **SELECT-Only Mode** - Read-only database access for production safety
 4. **Connection Encryption** - SSL/TLS and SSH tunnel support
 5. **Audit Logging** - Comprehensive security event tracking
+6. **Field Redaction** - Configurable masking patterns for sensitive data
 
 ### Enterprise Security Compliance
 - **SOC 2 Type II** compatible logging and monitoring
@@ -208,7 +229,28 @@ query_timeout=30000
 - **HIPAA** suitable with proper configuration
 - **PCI DSS** compatible for payment data environments
 
-## 🚀 Performance
+## Dynamic Database Management
+
+MCP SQL Access Server supports runtime database management through dedicated MCP tools. This allows you to add, update, and remove database connections without restarting the server.
+
+### Available MCP Tools
+
+| Tool | Description | Requirements |
+|------|-------------|--------------|
+| `sql_add_database` | Add new database connections at runtime via MCP | None |
+| `sql_update_database` | Update existing database settings via MCP | `mcp_configurable=true` on the target database |
+| `sql_remove_database` | Remove database connections via MCP | `mcp_configurable=true` on the target database |
+| `sql_get_config` | View database configuration (passwords are automatically redacted) | None |
+| `sql_set_mcp_configurable` | Lock a database from MCP changes | One-way operation: can only lock (`false`), unlocking requires manual config edit |
+
+### Usage Notes
+
+- Set `mcp_configurable=true` in your database config to allow MCP-driven updates and removal.
+- The `sql_set_mcp_configurable` tool is a one-way lock: once set to `false`, the database can no longer be modified or removed via MCP. Unlocking requires a manual edit to the configuration file.
+- The `sql_get_config` tool always redacts passwords and other sensitive fields before returning configuration data.
+- Databases added at runtime via `sql_add_database` have `mcp_configurable=true` by default.
+
+## Performance
 
 ### Benchmarks
 | Operation | PostgreSQL | MySQL | SQLite | SQL Server |
@@ -225,7 +267,17 @@ query_timeout=30000
 - **Result Streaming** - Handle large datasets efficiently
 - **Batch Operations** - Execute multiple queries optimally
 
-## 🛠️ Development
+## CLI Commands
+
+The following CLI commands are available after installation:
+
+| Command | Description |
+|---------|-------------|
+| `sql-server` | Start the MCP SQL Access Server |
+| `sql-setup` | Run the interactive configuration wizard |
+| `sql-install` | Automatic installer for quick setup and Claude Desktop integration |
+
+## Development
 
 ### Development Setup
 ```bash
@@ -236,22 +288,22 @@ npm run dev
 npm test
 ```
 
-**[📖 Full Development Guide →](docs/development/development-setup.md)**
+**[Full Development Guide](docs/development/development-setup.md)**
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License**.
 
 ### Open Source Commitment
-- ✅ **Always free** for individual developers and small teams
-- ✅ **No vendor lock-in** - use with any Claude deployment
-- ✅ **Transparent** development process and roadmap
+- **Always free** for individual developers and small teams
+- **No vendor lock-in** - use with any Claude deployment
+- **Transparent** development process and roadmap
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-### Built With ❤️
+### Built With
 - **TypeScript** - Language and tooling
-- **Node.js** - Runtime platform  
+- **Node.js** - Runtime platform
 - **Jest** - Testing framework
 - **ESLint** - Code quality
 - **MCP Protocol** - AI integration standard
@@ -265,7 +317,7 @@ This project is licensed under the **MIT License**.
 
 <div align="center">
 
-**[🚀 Get Started Now](docs/guides/quick-start.md)** • **[📖 Documentation](docs/README.md)**
+**[Get Started Now](docs/guides/quick-start.md)** | **[Documentation](docs/README.md)**
 
 *Transform your database interactions with AI-powered SQL intelligence*
 

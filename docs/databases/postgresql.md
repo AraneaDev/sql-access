@@ -2,7 +2,7 @@
 
 This guide provides comprehensive information for connecting the SQL MCP Server to PostgreSQL databases, including configuration, optimization, and best practices.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Quick Start](#quick-start)
 - [Configuration Options](#configuration-options)
@@ -16,7 +16,7 @@ This guide provides comprehensive information for connecting the SQL MCP Server 
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Basic PostgreSQL Configuration
 ```ini
@@ -42,7 +42,7 @@ node dist/index.js
 
 ---
 
-## ⚙️ Configuration Options
+## Configuration Options
 
 ### Required Parameters
 | Parameter | Description | Example |
@@ -71,7 +71,7 @@ node dist/index.js
 
 ---
 
-## 🔗 Connection Examples
+## Connection Examples
 
 ### Local Development Database
 ```ini
@@ -128,7 +128,7 @@ select_only=true
 
 ---
 
-## 🐘 PostgreSQL-Specific Features
+## PostgreSQL-Specific Features
 
 ### Supported Data Types
 The SQL MCP Server fully supports all PostgreSQL data types:
@@ -174,10 +174,10 @@ The SQL MCP Server fully supports all PostgreSQL data types:
 #### Common Table Expressions (CTEs)
 ```sql
 WITH recent_orders AS (
-  SELECT customer_id, COUNT(*) as order_count
-  FROM orders 
-  WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-  GROUP BY customer_id
+ SELECT customer_id, COUNT(*) as order_count
+ FROM orders 
+ WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+ GROUP BY customer_id
 )
 SELECT c.name, c.email, ro.order_count
 FROM customers c
@@ -188,11 +188,11 @@ ORDER BY ro.order_count DESC;
 #### Window Functions
 ```sql
 SELECT 
-  name,
-  salary,
-  department,
-  AVG(salary) OVER (PARTITION BY department) as dept_avg_salary,
-  ROW_NUMBER() OVER (ORDER BY salary DESC) as salary_rank
+ name,
+ salary,
+ department,
+ AVG(salary) OVER (PARTITION BY department) as dept_avg_salary,
+ ROW_NUMBER() OVER (ORDER BY salary DESC) as salary_rank
 FROM employees;
 ```
 
@@ -200,21 +200,21 @@ FROM employees;
 ```sql
 -- Query JSON data
 SELECT 
-  id,
-  metadata->>'customer_name' as customer_name,
-  metadata->'preferences'->>'theme' as theme
+ id,
+ metadata->>'customer_name' as customer_name,
+ metadata->'preferences'->>'theme' as theme
 FROM user_profiles 
 WHERE metadata @> '{"active": true}';
 
 -- JSON aggregation
 SELECT 
-  department,
-  JSON_AGG(
-    JSON_BUILD_OBJECT(
-      'name', name,
-      'salary', salary
-    )
-  ) as employees
+ department,
+ JSON_AGG(
+ JSON_BUILD_OBJECT(
+ 'name', name,
+ 'salary', salary
+ )
+ ) as employees
 FROM employees 
 GROUP BY department;
 ```
@@ -223,17 +223,17 @@ GROUP BY department;
 ```sql
 -- Working with arrays
 SELECT 
-  product_name,
-  tags,
-  ARRAY_LENGTH(tags, 1) as tag_count,
-  'electronics' = ANY(tags) as is_electronic
+ product_name,
+ tags,
+ ARRAY_LENGTH(tags, 1) as tag_count,
+ 'electronics' = ANY(tags) as is_electronic
 FROM products 
 WHERE tags && ARRAY['sale', 'featured'];
 ```
 
 ---
 
-## ⚡ Performance Optimization
+## Performance Optimization
 
 ### Connection Pooling
 The SQL MCP Server automatically manages connection pooling for PostgreSQL:
@@ -251,14 +251,14 @@ const result2 = await executeQuery('production', 'SELECT COUNT(*) FROM orders');
 ```sql
 -- Check for missing indexes
 SELECT 
-  schemaname,
-  tablename,
-  attname,
-  n_distinct,
-  correlation
+ schemaname,
+ tablename,
+ attname,
+ n_distinct,
+ correlation
 FROM pg_stats 
 WHERE schemaname = 'public' 
-  AND n_distinct > 100;
+ AND n_distinct > 100;
 
 -- Create indexes for frequently queried columns
 CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
@@ -296,27 +296,27 @@ LIMIT 100;
 ```sql
 -- Check active connections
 SELECT 
-  datname,
-  usename,
-  client_addr,
-  state,
-  query_start,
-  LEFT(query, 50) as query_preview
+ datname,
+ usename,
+ client_addr,
+ state,
+ query_start,
+ LEFT(query, 50) as query_preview
 FROM pg_stat_activity 
 WHERE datname = current_database()
-  AND state = 'active';
+ AND state = 'active';
 ```
 
 #### Query Performance Statistics
 ```sql
 -- Top slow queries
 SELECT 
-  query,
-  calls,
-  total_time,
-  total_time/calls as avg_time,
-  rows,
-  100.0 * shared_blks_hit/nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
+ query,
+ calls,
+ total_time,
+ total_time/calls as avg_time,
+ rows,
+ 100.0 * shared_blks_hit/nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
 FROM pg_stat_statements 
 ORDER BY total_time DESC 
 LIMIT 10;
@@ -324,7 +324,7 @@ LIMIT 10;
 
 ---
 
-## 🔒 Security Best Practices
+## Security Best Practices
 
 ### User Account Setup
 
@@ -347,7 +347,7 @@ GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO sql_mcp_readonly;
 
 -- Set default permissions for future tables
 ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-  GRANT SELECT ON TABLES TO sql_mcp_readonly;
+ GRANT SELECT ON TABLES TO sql_mcp_readonly;
 ```
 
 #### Create Analytics User (Limited Write Access)
@@ -404,14 +404,14 @@ ALTER TABLE customer_data ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for MCP user
 CREATE POLICY mcp_access_policy ON customer_data
-  FOR SELECT
-  TO sql_mcp_readonly
-  USING (tenant_id = current_setting('app.current_tenant_id', true));
+ FOR SELECT
+ TO sql_mcp_readonly
+ USING (tenant_id = current_setting('app.current_tenant_id', true));
 ```
 
 ---
 
-## 🔐 SSH Tunnel Setup
+## SSH Tunnel Setup
 
 ### Basic SSH Tunnel Configuration
 ```ini
@@ -466,81 +466,81 @@ ssh_passphrase=key_passphrase
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Connection Issues
 
 #### Authentication Failed
 ```
-❌ Error: password authentication failed for user "username"
+ Error: password authentication failed for user "username"
 ```
 
 **Solutions:**
 1. Verify username and password in configuration
 2. Check user exists and has login permission:
-   ```sql
-   SELECT rolname, rolcanlogin FROM pg_roles WHERE rolname = 'username';
-   ```
+ ```sql
+ SELECT rolname, rolcanlogin FROM pg_roles WHERE rolname = 'username';
+ ```
 3. Check `pg_hba.conf` authentication methods
 4. Verify password hasn't expired
 
 #### Connection Refused
 ```
-❌ Error: connect ECONNREFUSED 127.0.0.1:5432
+ Error: connect ECONNREFUSED 127.0.0.1:5432
 ```
 
 **Solutions:**
 1. Verify PostgreSQL is running:
-   ```bash
-   sudo systemctl status postgresql
-   ```
+ ```bash
+ sudo systemctl status postgresql
+ ```
 2. Check PostgreSQL is listening on correct port:
-   ```bash
-   sudo netstat -tlnp | grep 5432
-   ```
+ ```bash
+ sudo netstat -tlnp | grep 5432
+ ```
 3. Verify `listen_addresses` in `postgresql.conf`
 4. Check firewall rules
 
 #### SSL Connection Issues
 ```
-❌ Error: SSL connection failed
+ Error: SSL connection failed
 ```
 
 **Solutions:**
 1. Verify server SSL configuration
 2. Check certificate validity:
-   ```bash
-   openssl x509 -in server.crt -text -noout
-   ```
+ ```bash
+ openssl x509 -in server.crt -text -noout
+ ```
 3. Test SSL connectivity:
-   ```bash
-   psql "host=hostname port=5432 dbname=database user=username sslmode=require"
-   ```
+ ```bash
+ psql "host=hostname port=5432 dbname=database user=username sslmode=require"
+ ```
 
 #### Permission Denied
 ```
-❌ Error: permission denied for table "table_name"
+ Error: permission denied for table "table_name"
 ```
 
 **Solutions:**
 1. Grant necessary permissions:
-   ```sql
-   GRANT SELECT ON table_name TO username;
-   ```
+ ```sql
+ GRANT SELECT ON table_name TO username;
+ ```
 2. Check schema permissions:
-   ```sql
-   GRANT USAGE ON SCHEMA schema_name TO username;
-   ```
+ ```sql
+ GRANT USAGE ON SCHEMA schema_name TO username;
+ ```
 
 ### Performance Issues
 
 #### Slow Queries
 1. Enable query logging in `postgresql.conf`:
-   ```
-   log_statement = 'all'
-   log_duration = on
-   log_min_duration_statement = 1000
-   ```
+ ```
+ log_statement = 'all'
+ log_duration = on
+ log_min_duration_statement = 1000
+ ```
 
 2. Use `EXPLAIN ANALYZE` to identify bottlenecks
 3. Check for missing indexes
@@ -548,14 +548,14 @@ ssh_passphrase=key_passphrase
 
 #### Connection Limits
 ```
-❌ Error: too many connections for role "username"
+ Error: too many connections for role "username"
 ```
 
 **Solutions:**
 1. Increase connection limit:
-   ```sql
-   ALTER ROLE username CONNECTION LIMIT 10;
-   ```
+ ```sql
+ ALTER ROLE username CONNECTION LIMIT 10;
+ ```
 2. Use connection pooling (already handled by MCP server)
 3. Check for connection leaks
 
@@ -565,18 +565,18 @@ ssh_passphrase=key_passphrase
 If schema capture returns no tables:
 
 1. Check user has access to `information_schema`:
-   ```sql
-   SELECT * FROM information_schema.tables LIMIT 5;
-   ```
+ ```sql
+ SELECT * FROM information_schema.tables LIMIT 5;
+ ```
 2. Verify schema permissions:
-   ```sql
-   SELECT schema_name FROM information_schema.schemata;
-   ```
+ ```sql
+ SELECT schema_name FROM information_schema.schemata;
+ ```
 3. Check table ownership and permissions
 
 ---
 
-## 🔧 Advanced Configuration
+## Advanced Configuration
 
 ### PostgreSQL Extensions Support
 The SQL MCP Server supports queries using PostgreSQL extensions:
@@ -610,10 +610,10 @@ CREATE TYPE mood AS ENUM ('sad', 'ok', 'happy');
 
 -- Custom composite types
 CREATE TYPE address AS (
-  street text,
-  city text,
-  state text,
-  zip_code text
+ street text,
+ city text,
+ state text,
+ zip_code text
 );
 
 -- Query custom types
@@ -627,9 +627,9 @@ WHERE current_mood = 'happy';
 -- Create materialized view
 CREATE MATERIALIZED VIEW sales_summary AS
 SELECT 
-  DATE_TRUNC('month', created_at) as month,
-  SUM(amount) as total_sales,
-  COUNT(*) as order_count
+ DATE_TRUNC('month', created_at) as month,
+ SUM(amount) as total_sales,
+ COUNT(*) as order_count
 FROM orders 
 GROUP BY DATE_TRUNC('month', created_at);
 
@@ -646,21 +646,21 @@ REFRESH MATERIALIZED VIEW sales_summary;
 SELECT customer_id, order_date, amount 
 FROM orders_partitioned 
 WHERE order_date >= '2024-01-01'
-  AND order_date < '2025-01-01';
+ AND order_date < '2025-01-01';
 ```
 
 ---
 
-## 📊 Monitoring and Maintenance
+## Monitoring and Maintenance
 
 ### Database Health Queries
 
 #### Table Sizes
 ```sql
 SELECT 
-  schemaname,
-  tablename,
-  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+ schemaname,
+ tablename,
+ pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
 FROM pg_tables 
 WHERE schemaname = 'public'
 ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
@@ -669,11 +669,11 @@ ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
 #### Index Usage
 ```sql
 SELECT 
-  schemaname,
-  tablename,
-  indexname,
-  idx_scan as index_scans,
-  pg_size_pretty(pg_relation_size(indexname::regclass)) as index_size
+ schemaname,
+ tablename,
+ indexname,
+ idx_scan as index_scans,
+ pg_size_pretty(pg_relation_size(indexname::regclass)) as index_size
 FROM pg_stat_user_indexes 
 ORDER BY idx_scan DESC;
 ```
@@ -681,13 +681,13 @@ ORDER BY idx_scan DESC;
 #### Vacuum and Analyze Status
 ```sql
 SELECT 
-  schemaname,
-  tablename,
-  last_vacuum,
-  last_autovacuum,
-  last_analyze,
-  last_autoanalyze,
-  n_tup_ins + n_tup_upd + n_tup_del as total_operations
+ schemaname,
+ tablename,
+ last_vacuum,
+ last_autovacuum,
+ last_analyze,
+ last_autoanalyze,
+ n_tup_ins + n_tup_upd + n_tup_del as total_operations
 FROM pg_stat_user_tables 
 ORDER BY total_operations DESC;
 ```
@@ -699,13 +699,13 @@ ORDER BY total_operations DESC;
 SELECT name, setting, unit, short_desc 
 FROM pg_settings 
 WHERE name IN (
-  'max_connections',
-  'shared_buffers', 
-  'work_mem',
-  'maintenance_work_mem',
-  'checkpoint_completion_target',
-  'wal_buffers',
-  'default_statistics_target'
+ 'max_connections',
+ 'shared_buffers', 
+ 'work_mem',
+ 'maintenance_work_mem',
+ 'checkpoint_completion_target',
+ 'wal_buffers',
+ 'default_statistics_target'
 );
 ```
 

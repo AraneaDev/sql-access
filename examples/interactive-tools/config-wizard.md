@@ -162,7 +162,7 @@ Generated configurations can be exported in multiple formats:
 ```javascript
 // Add custom validation
 wizard.addValidator('database.port', (value) => {
-  return value > 1024 && value < 65535;
+ return value > 1024 && value < 65535;
 });
 ```
 
@@ -178,9 +178,9 @@ wizard.loadTemplate('high-availability');
 ```javascript
 // Override for specific environments
 wizard.setEnvironmentOverrides('production', {
-  'security.enable_readonly_mode': true,
-  'logging.level': 'warn',
-  'monitoring.enable_metrics': true
+ 'security.enable_readonly_mode': true,
+ 'logging.level': 'warn',
+ 'monitoring.enable_metrics': true
 });
 ```
 
@@ -199,19 +199,19 @@ CMD ["node", "config-wizard.js"]
 ```yaml
 # GitHub Actions example
 - name: Generate Configuration
-  run: |
-    node tools/config-wizard.js --cli --template production \
-      --database-host ${{ secrets.DB_HOST }} \
-      --database-user ${{ secrets.DB_USER }} \
-      --output config/production.ini
+ run: |
+ node tools/config-wizard.js --cli --template production \
+ --database-host ${{ secrets.DB_HOST }} \
+ --database-user ${{ secrets.DB_USER }} \
+ --output config/production.ini
 ```
 
 ### Kubernetes ConfigMap Generation
 ```bash
 # Generate ConfigMap from wizard output
 kubectl create configmap sql-mcp-config \
-  --from-file=config.ini=wizard-output.ini \
-  --namespace sql-mcp-server
+ --from-file=config.ini=wizard-output.ini \
+ --namespace sql-mcp-server
 ```
 
 ## Security Considerations
@@ -267,37 +267,37 @@ npm run test-config -- --config generated-config.ini
 To add new configuration templates or validation rules:
 
 1. **Template Structure**:
-   ```json
-   {
-     "name": "template-name",
-     "description": "Template description",
-     "sections": {
-       "server": { "host": "0.0.0.0", "port": 3000 },
-       "database": { "type": "postgresql" }
-     },
-     "validation": {
-       "required": ["server.host", "database.type"],
-       "rules": { "server.port": "number" }
-     }
-   }
-   ```
+ ```json
+ {
+ "name": "template-name",
+ "description": "Template description",
+ "sections": {
+ "server": { "host": "0.0.0.0", "port": 3000 },
+ "database": { "type": "postgresql" }
+ },
+ "validation": {
+ "required": ["server.host", "database.type"],
+ "rules": { "server.port": "number" }
+ }
+ }
+ ```
 
 2. **Custom Validators**:
-   ```javascript
-   function validateDatabaseType(value) {
-     const supportedTypes = ['postgresql', 'mysql', 'sqlite', 'mssql'];
-     return supportedTypes.includes(value);
-   }
-   ```
+ ```javascript
+ function validateDatabaseType(value) {
+ const supportedTypes = ['postgresql', 'mysql', 'sqlite', 'mssql'];
+ return supportedTypes.includes(value);
+ }
+ ```
 
 3. **Integration Tests**:
-   ```javascript
-   describe('ConfigWizard', () => {
-     it('should generate valid PostgreSQL config', () => {
-       const config = wizard.generate('postgresql-template');
-       expect(config).toHaveProperty('database.type', 'postgresql');
-     });
-   });
-   ```
+ ```javascript
+ describe('ConfigWizard', () => {
+ it('should generate valid PostgreSQL config', () => {
+ const config = wizard.generate('postgresql-template');
+ expect(config).toHaveProperty('database.type', 'postgresql');
+ });
+ });
+ ```
 
 For detailed API documentation, see [Configuration API Reference](../api/config-api.md).

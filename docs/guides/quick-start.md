@@ -2,17 +2,17 @@
 
 Get the SQL MCP Server up and running with Claude Desktop in less than 5 minutes.
 
-## 🚀 Prerequisites
+## Prerequisites
 
 Before you begin, ensure you have:
 
 - **Node.js 16+** and **npm 8+** installed
 - **Claude Desktop** application installed
 - **Database credentials** for at least one supported database:
-  - PostgreSQL, MySQL, SQLite, or SQL Server
-  - Network access to your database (direct or via SSH)
+ - PostgreSQL, MySQL, SQLite, or SQL Server
+ - Network access to your database (direct or via SSH)
 
-## ⚡ 5-Minute Setup
+## 5-Minute Setup
 
 ### Step 1: Install the Server
 
@@ -28,6 +28,14 @@ npm install
 npm run build
 ```
 
+```bash
+# Option A: Automatic installer (recommended)
+sql-install
+
+# Option B: Interactive setup wizard
+sql-setup
+```
+
 ### Step 2: Run Interactive Setup
 
 ```bash
@@ -37,19 +45,19 @@ sql-setup
 The setup wizard will guide you through:
 
 1. **Database Configuration**
-   - Database type (PostgreSQL/MySQL/SQLite/SQL Server)
-   - Connection details (host, port, credentials)
-   - SSH tunnel setup (if needed)
-   - Security settings (SELECT-only mode recommended)
+ - Database type (PostgreSQL/MySQL/SQLite/SQL Server)
+ - Connection details (host, port, credentials)
+ - SSH tunnel setup (if needed)
+ - Security settings (SELECT-only mode recommended)
 
 2. **Extension Settings**
-   - Query result limits (default: 1,000 rows)
-   - Query timeout (default: 30 seconds)
-   - Batch operation limits (default: 10 queries)
+ - Query result limits (default: 1,000 rows)
+ - Query timeout (default: 30 seconds)
+ - Batch operation limits (default: 10 queries)
 
 3. **Security Configuration** (optional)
-   - Query complexity limits
-   - Performance safeguards
+ - Query complexity limits
+ - Performance safeguards
 
 Example setup session:
 ```
@@ -78,7 +86,7 @@ SELECT-only mode restricts this database to SELECT, WITH, SHOW, EXPLAIN, and DES
 This is recommended for production databases or read-only access scenarios.
 Enable SELECT-only mode? (y/n): y
 
-✅ Database 'production' configured with SELECT-only access
+ Database 'production' configured with SELECT-only access
 ```
 
 ### Step 3: Test Connections
@@ -90,26 +98,28 @@ Test database connections now? (y/n): y
 
 --- Testing Connections ---
 Testing production...
-✅ Connected
-🔒 SSH tunnel established
-📊 Schema captured: 45 tables, 1,247 columns
-🛡️ Access mode: SELECT-only
+ Connected
+ SSH tunnel established
+ Schema captured: 45 tables, 1,247 columns
+ Access mode: SELECT-only
 ```
 
 ### Step 4: Configure Claude Desktop
+
+> **Note:** If you used `sql-install` in Step 1, this step is handled automatically. You can skip to Step 5.
 
 Add the SQL MCP Server to your Claude Desktop configuration:
 
 **For macOS/Linux:**
 ```json
 {
-  "mcpServers": {
-    "sql-database": {
-      "command": "node",
-      "args": ["/path/to/your/sql-ts/dist/index.js"],
-      "env": {}
-    }
-  }
+ "mcpServers": {
+ "sql-database": {
+ "command": "node",
+ "args": ["/path/to/your/sql-ts/dist/index.js"],
+ "env": {}
+ }
+ }
 }
 ```
 
@@ -131,7 +141,7 @@ Connection established: production
 Schema cached: production
 ```
 
-## 🎯 Your First Query
+## Your First Query
 
 Once configured, open Claude Desktop and try:
 
@@ -143,7 +153,7 @@ or
 
 Claude will now have access to your database through the MCP tools!
 
-## 📋 Example Configuration Files
+## Example Configuration Files
 
 ### Simple PostgreSQL Setup
 ```ini
@@ -213,6 +223,7 @@ max_query_length=10000
 type=sqlite
 file=./data/app.db
 select_only=false
+mcp_configurable=true
 
 [extension]
 max_rows=500
@@ -220,7 +231,7 @@ query_timeout=15000
 debug=true
 ```
 
-## 🔧 Common Configuration Options
+## Common Configuration Options
 
 ### Database Types
 | Type | Description | Default Port |
@@ -245,12 +256,12 @@ ssh_private_key=/path/to/key
 ssh_password=ssh_password
 ```
 
-## 🛡️ Security Best Practices
+## Security Best Practices
 
 ### Production Databases
 Always use SELECT-only mode for production databases:
 ```ini
-select_only=true  # Blocks INSERT, UPDATE, DELETE, DROP, etc.
+select_only=true # Blocks INSERT, UPDATE, DELETE, DROP, etc.
 ```
 
 ### Connection Security
@@ -263,15 +274,15 @@ select_only=true  # Blocks INSERT, UPDATE, DELETE, DROP, etc.
 Configure appropriate limits for your use case:
 ```ini
 [extension]
-max_rows=1000        # Limit result sets
-query_timeout=30000  # 30-second timeout
+max_rows=1000 # Limit result sets
+query_timeout=30000 # 30-second timeout
 
 [security]
-max_joins=10         # Prevent complex queries
-max_complexity_score=100  # Overall complexity limit
+max_joins=10 # Prevent complex queries
+max_complexity_score=100 # Overall complexity limit
 ```
 
-## 🔍 Troubleshooting Quick Fixes
+## Troubleshooting Quick Fixes
 
 ### Connection Issues
 ```bash
@@ -292,8 +303,8 @@ tail -f sql-mcp-server.log
 ### Permission Denied
 ```sql
 -- Check database user permissions
-SHOW GRANTS FOR 'username'@'host';  -- MySQL
-\du username                        -- PostgreSQL
+SHOW GRANTS FOR 'username'@'host'; -- MySQL
+\du username -- PostgreSQL
 ```
 
 ### SSH Tunnel Issues
@@ -305,7 +316,7 @@ ssh -i /path/to/key user@bastion.example.com
 chmod 600 ~/.ssh/id_rsa
 ```
 
-## 🎯 Next Steps
+## Next Steps
 
 Once you have the basic setup working:
 
@@ -314,7 +325,7 @@ Once you have the basic setup working:
 3. **[Production Deployment](../operations/deployment-guide.md)** - Deploy for team use
 4. **[Security Hardening](../operations/security-hardening.md)** - Enhanced security configuration
 
-## 💡 Pro Tips
+## Pro Tips
 
 ### Faster Setup
 - Keep database credentials handy before running setup

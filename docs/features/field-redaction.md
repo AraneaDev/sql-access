@@ -80,9 +80,9 @@ redaction_rules=phone:full_mask
 ```
 
 **Examples:**
-- `john@email.com` → `*************`
-- `555-123-4567` → `************`
-- `123-45-6789` → `***********`
+- `john@email.com` -> `*************`
+- `555-123-4567` -> `************`
+- `123-45-6789` -> `***********`
 
 #### 2. Partial Masking (`partial_mask`)
 
@@ -93,9 +93,9 @@ redaction_rules=email:partial_mask,phone:partial_mask
 ```
 
 **Examples:**
-- `john.doe@example.com` → `j******.e@*****.com`
-- `555-123-4567` → `***-***-4567`
-- `sensitive_data` → `s*********a`
+- `john.doe@example.com` -> `j******.e@*****.com`
+- `555-123-4567` -> `***-***-4567`
+- `sensitive_data` -> `s*********a`
 
 #### 3. Fixed Replacement (`replace`)
 
@@ -106,9 +106,9 @@ redaction_rules=ssn:replace:[SSN_PROTECTED],password:replace:[HIDDEN]
 ```
 
 **Examples:**
-- `123-45-6789` → `[SSN_PROTECTED]`
-- `mypassword123` → `[HIDDEN]`
-- Any value → `[REDACTED]` (if no replacement text specified)
+- `123-45-6789` -> `[SSN_PROTECTED]`
+- `mypassword123` -> `[HIDDEN]`
+- Any value -> `[REDACTED]` (if no replacement text specified)
 
 #### 4. Custom Pattern (`custom`)
 
@@ -119,7 +119,7 @@ redaction_rules=user_id:custom:\d+:[ID_HIDDEN]
 ```
 
 **Examples:**
-- `user_12345_profile` → `user_[ID_HIDDEN]_profile`
+- `user_12345_profile` -> `user_[ID_HIDDEN]_profile`
 - Custom patterns allow fine-grained control over redaction
 
 ## Complete Examples

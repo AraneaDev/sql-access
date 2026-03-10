@@ -1,10 +1,10 @@
 # Enhanced SSH Tunnel Port Management
 
-## 🔧 Implementation Status
+## Implementation Status
 
-- ✅ **Fully Implemented**: Smart port detection, database-specific port suggestions, conflict resolution, enhanced tunnel creation
-- ✅ **Available Methods**: `createEnhancedTunnel()`, `getPortRecommendations()`, `checkPortAvailability()`, `getTunnelStats()`
-- 📋 **Future Enhancements**: Port pool management, dynamic port rebalancing, service discovery integration
+- **Fully Implemented**: Smart port detection, database-specific port suggestions, conflict resolution, enhanced tunnel creation
+- **Available Methods**: `createEnhancedTunnel()`, `getPortRecommendations()`, `checkPortAvailability()`, `getTunnelStats()`
+- **Future Enhancements**: Port pool management, dynamic port rebalancing, service discovery integration
 
 ## Overview
 
@@ -12,22 +12,22 @@ The Enhanced SSH Tunnel Management system provides intelligent automatic port as
 
 ## Key Features
 
-### 🔍 **Smart Port Detection**
+### **Smart Port Detection**
 - Automatically detects available ports on the local system
 - Checks for conflicts with running services
 - Avoids commonly used ports (80, 443, 3000, 8080, etc.)
 
-### 🎯 **Database-Specific Port Suggestions**
+### **Database-Specific Port Suggestions**
 - MySQL tunnels prefer ports like 3307, 3308, 3316, 3406, 4306
 - PostgreSQL tunnels prefer ports like 5433, 5442, 5532, 6432
 - SQL Server tunnels prefer ports like 1434, 1443, 1533, 2433
 
-### ⚙️ **Flexible Configuration Options**
+### **Flexible Configuration Options**
 - **Auto-assignment**: `local_port=0` or omit the setting
 - **Preferred port**: `local_port=3307` (system finds alternative if unavailable)
 - **Strict mode**: Force specific port (fails if unavailable)
 
-### 🛡️ **Conflict Resolution**
+### **Conflict Resolution**
 - Automatically finds alternatives when preferred ports are unavailable
 - Provides meaningful error messages and suggestions
 - Handles concurrent tunnel creation without conflicts
@@ -48,7 +48,7 @@ ssh_username=deploy_user
 ssh_private_key=/path/to/key
 
 # Let system choose port automatically
-# local_port=0  # Optional - this is the default behavior
+# local_port=0 # Optional - this is the default behavior
 ```
 
 ### Preferred Port with Fallback
@@ -105,21 +105,21 @@ When creating an SSH tunnel, the system follows this intelligent assignment proc
 
 ```
 1. User specifies preferred port? 
-   ├─ YES: Check if available
-   │   ├─ Available? → Use preferred port ✓
-   │   └─ Unavailable? → Log warning, continue to step 2
-   └─ NO: Continue to step 2
+ |- YES: Check if available
+ | |- Available? -> Use preferred port 
+ | \- Unavailable? -> Log warning, continue to step 2
+ \- NO: Continue to step 2
 
 2. Database type detected?
-   ├─ YES: Try database-specific alternatives (3307, 3308, etc.)
-   │   └─ Found available? → Use database-specific port ✓
-   └─ NO: Continue to step 3
-   
+ |- YES: Try database-specific alternatives (3307, 3308, etc.)
+ | \- Found available? -> Use database-specific port 
+ \- NO: Continue to step 3
+ 
 3. Search safe port range (30000-40000)
-   └─ Find first available port → Use safe range port ✓
+ \- Find first available port -> Use safe range port 
 
 4. No ports available?
-   └─ Throw detailed error with attempted ports
+ \- Throw detailed error with attempted ports
 ```
 
 ### 2. Database-Specific Alternatives
@@ -138,17 +138,17 @@ The system recognizes database types and suggests appropriate alternatives:
 // The system checks for conflicts by attempting to bind to ports
 const server = net.createServer();
 server.listen(port, '127.0.0.1', () => {
-  // Port is available
-  server.close();
+ // Port is available
+ server.close();
 });
 
 server.on('error', (error) => {
-  // Port is unavailable - provides specific error reason
-  if (error.code === 'EADDRINUSE') {
-    // Port already in use
-  } else if (error.code === 'EACCES') {
-    // Permission denied (privileged port)
-  }
+ // Port is unavailable - provides specific error reason
+ if (error.code === 'EADDRINUSE') {
+ // Port already in use
+ } else if (error.code === 'EACCES') {
+ // Permission denied (privileged port)
+ }
 });
 ```
 
@@ -158,23 +158,23 @@ server.on('error', (error) => {
 
 ```typescript
 class PortManager {
-  // Check if a port is available
-  async isPortAvailable(port: number): Promise<PortCheckResult>
-  
-  // Find an available port with options
-  async findAvailablePort(options: PortAssignmentOptions): Promise<PortAssignmentResult>
-  
-  // Get database-specific port recommendations
-  getPortRecommendations(databaseType: string): number[]
-  
-  // Suggest optimal tunnel port for database type
-  async suggestTunnelPort(databaseType: string, preferredPort?: number): Promise<PortAssignmentResult>
-  
-  // Check multiple ports simultaneously
-  async checkMultiplePorts(ports: number[]): Promise<PortCheckResult[]>
-  
-  // Get human-readable port status
-  async getPortStatus(port: number): Promise<string>
+ // Check if a port is available
+ async isPortAvailable(port: number): Promise<PortCheckResult>
+ 
+ // Find an available port with options
+ async findAvailablePort(options: PortAssignmentOptions): Promise<PortAssignmentResult>
+ 
+ // Get database-specific port recommendations
+ getPortRecommendations(databaseType: string): number[]
+ 
+ // Suggest optimal tunnel port for database type
+ async suggestTunnelPort(databaseType: string, preferredPort?: number): Promise<PortAssignmentResult>
+ 
+ // Check multiple ports simultaneously
+ async checkMultiplePorts(ports: number[]): Promise<PortCheckResult[]>
+ 
+ // Get human-readable port status
+ async getPortStatus(port: number): Promise<string>
 }
 ```
 
@@ -182,35 +182,35 @@ class PortManager {
 
 ```typescript
 class EnhancedSSHTunnelManager {
-  // Create tunnel with intelligent port assignment
-  async createEnhancedTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<TunnelCreationResult>
-  
-  // Get port recommendations for database type
-  async getPortRecommendations(databaseType: string): Promise<{
-    recommended: number[];
-    available: number[];
-    status: Array<{port: number; available: boolean; reason?: string}>;
-  }>
-  
-  // Check port availability with suggestions
-  async checkPortAvailability(port: number): Promise<{
-    available: boolean;
-    reason?: string;
-    suggestion?: number;
-  }>
-  
-  // Get enhanced statistics including port info
-  getTunnelStats(): {
-    total: number;
-    active: number;
-    connecting: number;
-    errors: number;
-    portInfo: {
-      reserved: number[];
-      preferredUsed: number;
-      autoAssigned: number;
-    };
-  }
+ // Create tunnel with intelligent port assignment
+ async createEnhancedTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<TunnelCreationResult>
+ 
+ // Get port recommendations for database type
+ async getPortRecommendations(databaseType: string): Promise<{
+ recommended: number[];
+ available: number[];
+ status: Array<{port: number; available: boolean; reason?: string}>;
+ }>
+ 
+ // Check port availability with suggestions
+ async checkPortAvailability(port: number): Promise<{
+ available: boolean;
+ reason?: string;
+ suggestion?: number;
+ }>
+ 
+ // Get enhanced statistics including port info
+ getTunnelStats(): {
+ total: number;
+ active: number;
+ connecting: number;
+ errors: number;
+ portInfo: {
+ reserved: number[];
+ preferredUsed: number;
+ autoAssigned: number;
+ };
+ }
 }
 ```
 
@@ -227,14 +227,14 @@ port=3306
 ssh_host=bastion.com
 ssh_username=deploy
 ssh_private_key=/path/to/key
-local_port=3307  # Manual assignment, conflicts possible
+local_port=3307 # Manual assignment, conflicts possible
 ```
 
 **After (Enhanced Port Management):**
 ```ini
 [database.prod]
 type=mysql
-host=db.internal  
+host=db.internal 
 port=3306
 ssh_host=bastion.com
 ssh_username=deploy
@@ -334,8 +334,8 @@ lsof -i :3307
 1. **Use database-specific types**: Ensure `type=mysql`, `type=postgresql`, etc. are set correctly for optimal port suggestions.
 
 2. **Configure appropriate ranges**: Set `port_range_min` and `port_range_max` based on your environment:
-   - **Development**: 30000-35000 (smaller range, faster assignment)
-   - **Production**: 30000-50000 (larger range, more options)
+ - **Development**: 30000-35000 (smaller range, faster assignment)
+ - **Production**: 30000-50000 (larger range, more options)
 
 3. **Exclude busy ports**: Add commonly used ports to `exclude_ports` to avoid checking them repeatedly.
 
@@ -373,28 +373,28 @@ The system tracks:
 
 ### 1. Configuration Management
 ```ini
-# ✅ Good: Let system manage ports
+# Good: Let system manage ports
 [database.prod]
 type=mysql
 ssh_host=bastion.com
 # local_port automatically assigned
 
-# ❌ Avoid: Hard-coded ports in shared configs
+# Avoid: Hard-coded ports in shared configs
 [database.prod]
 type=mysql
 ssh_host=bastion.com
-local_port=3307  # May conflict on different systems
+local_port=3307 # May conflict on different systems
 ```
 
 ### 2. Database Type Specification
 ```ini
-# ✅ Good: Specify correct database type
+# Good: Specify correct database type
 [database.mysql_server]
-type=mysql  # Enables MySQL-specific port suggestions
+type=mysql # Enables MySQL-specific port suggestions
 
-# ❌ Avoid: Generic or missing type
+# Avoid: Generic or missing type
 [database.mysql_server]
-type=database  # No intelligent port suggestions
+type=database # No intelligent port suggestions
 ```
 
 ### 3. Environment-Specific Configuration
@@ -405,7 +405,7 @@ port_range_min=30000
 port_range_max=32000
 debug_port_assignment=true
 
-# Production environment  
+# Production environment 
 [ssh_tunnel]
 port_range_min=35000
 port_range_max=45000
@@ -417,11 +417,11 @@ debug_port_assignment=false
 // Monitor tunnel statistics
 const stats = tunnelManager.getTunnelStats();
 if (stats.errors > 0) {
-  console.warn('SSH tunnel errors detected:', stats.errors);
+ console.warn('SSH tunnel errors detected:', stats.errors);
 }
 
 if (stats.portInfo.autoAssigned > stats.portInfo.preferredUsed) {
-  console.info('Most tunnels using auto-assigned ports - consider reviewing port preferences');
+ console.info('Most tunnels using auto-assigned ports - consider reviewing port preferences');
 }
 ```
 
@@ -440,14 +440,14 @@ if (stats.portInfo.autoAssigned > stats.portInfo.preferredUsed) {
 ```typescript
 // Future API additions
 interface PortManager {
-  // Port pool management
-  createPortPool(dbType: string, size: number): Promise<PortPool>
-  
-  // Advanced conflict resolution
-  resolvePortConflicts(preferences: PortPreference[]): Promise<PortResolution[]>
-  
-  // Performance monitoring
-  getPortAssignmentMetrics(): PortMetrics
+ // Port pool management
+ createPortPool(dbType: string, size: number): Promise<PortPool>
+ 
+ // Advanced conflict resolution
+ resolvePortConflicts(preferences: PortPreference[]): Promise<PortResolution[]>
+ 
+ // Performance monitoring
+ getPortAssignmentMetrics(): PortMetrics
 }
 ```
 

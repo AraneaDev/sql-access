@@ -386,8 +386,8 @@ function outputConsole() {
   
   console.log('Individual Checks:');
   results.checks.forEach(check => {
-    const statusIcon = check.status === 'pass' ? '✅' : 
-                      check.status === 'warn' ? '⚠️' : '❌';
+    const statusIcon = check.status === 'pass' ? '[OK]' :
+                      check.status === 'warn' ? '[WARN]' : '[ERROR]';
     console.log(`  ${statusIcon} ${check.name}: ${check.message}`);
     if (CONFIG.verbose && check.details && Object.keys(check.details).length > 0) {
       console.log(`     Details: ${JSON.stringify(check.details)}`);

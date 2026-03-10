@@ -2,11 +2,11 @@
 
 This comprehensive guide walks you through installing the SQL MCP Server on various platforms and environments.
 
-## 📋 System Requirements
+## System Requirements
 
 ### Minimum Requirements
 - **Node.js**: 16.0.0 or higher
-- **npm**: 8.0.0 or higher  
+- **npm**: 8.0.0 or higher
 - **Memory**: 256 MB RAM
 - **Storage**: 100 MB available disk space
 - **Network**: Internet access for package installation
@@ -23,7 +23,32 @@ This comprehensive guide walks you through installing the SQL MCP Server on vari
 - **macOS**: 10.15 (Catalina) or later
 - **Linux**: Ubuntu 18.04+, CentOS 7+, Debian 9+, RHEL 7+
 
-## 🚀 Quick Installation
+## Quick Installation
+
+### Option 0: Automatic Installer (Easiest)
+
+```bash
+# Install globally
+npm install -g sql-access
+
+# Run the automatic installer
+sql-install
+
+# The installer will:
+# - Detect your platform (macOS/Windows/Linux)
+# - Find Claude Code and Claude Desktop config files
+# - Add sql-access as an MCP server automatically
+# - Create a default config.ini if none exists
+```
+
+**Installer Options:**
+```bash
+sql-install --client=claude-code # Configure Claude Code only
+sql-install --client=claude-desktop # Configure Claude Desktop only
+sql-install --config=/path/to/config.ini # Use custom config path
+sql-install --dry-run # Preview changes without modifying files
+sql-install --uninstall # Remove sql-access from client configs
+```
 
 ### Option 1: NPM Package (Recommended)
 
@@ -55,21 +80,21 @@ npm run build
 npm run setup
 ```
 
-## 📦 Detailed Installation Steps
+## Detailed Installation Steps
 
 ### Windows Installation
 
 #### Prerequisites
 1. **Install Node.js**
-   - Download from [nodejs.org](https://nodejs.org/)
-   - Choose LTS version (18.x recommended)
-   - Run installer with default options
+ - Download from [nodejs.org](https://nodejs.org/)
+ - Choose LTS version (18.x recommended)
+ - Run installer with default options
 
 2. **Verify Installation**
-   ```cmd
-   node --version
-   npm --version
-   ```
+ ```cmd
+ node --version
+ npm --version
+ ```
 
 #### Install SQL MCP Server
 ```cmd
@@ -99,17 +124,17 @@ ssh_private_key=C:\Users\username\.ssh\id_rsa
 
 #### Prerequisites
 1. **Install Node.js**
-   ```bash
-   # Using Homebrew (recommended)
-   brew install node@18
-   
-   # Or download from nodejs.org
-   ```
+ ```bash
+ # Using Homebrew (recommended)
+ brew install node@18
+
+ # Or download from nodejs.org
+ ```
 
 2. **Install Xcode Command Line Tools** (if building from source)
-   ```bash
-   xcode-select --install
-   ```
+ ```bash
+ xcode-select --install
+ ```
 
 #### Install SQL MCP Server
 ```bash
@@ -175,28 +200,28 @@ cd /opt/claude-sql-mcp
 sql-setup
 ```
 
-## 🗂️ Installation Directories
+## Installation Directories
 
 ### Global Installation Structure
 ```
 Global npm packages/
-├── sql-mcp-server/
-│   ├── dist/              # Compiled JavaScript
-│   ├── package.json       # Package information
-│   └── README.md          # Documentation
++-- sql-mcp-server/
+    +-- dist/ # Compiled JavaScript
+    +-- package.json # Package information
+    +-- README.md # Documentation
 ```
 
 ### Local Project Structure
 ```
 your-project/
-├── node_modules/
-│   └── sql-mcp-server/    # Package files
-├── config.ini             # Your configuration
-├── package.json           # Project dependencies
-└── sql-mcp-server.log     # Log file (created at runtime)
++-- node_modules/
+|   +-- sql-mcp-server/ # Package files
++-- config.ini # Your configuration
++-- package.json # Project dependencies
++-- sql-mcp-server.log # Log file (created at runtime)
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Initial Setup
 After installation, run the setup wizard:
@@ -207,20 +232,22 @@ sql-setup
 npx sql-setup
 ```
 
+> **Tip:** As an alternative to `sql-setup`, you can run `sql-install` which will automatically detect your platform, configure your MCP client (Claude Code or Claude Desktop), and create a default config.ini if none exists. See [Option 0: Automatic Installer](#option-0-automatic-installer-easiest) above.
+
 The setup wizard will guide you through:
 
 1. **Database Configuration**
-   - Database type selection
-   - Connection parameters
-   - Security settings
+ - Database type selection
+ - Connection parameters
+ - Security settings
 
 2. **Extension Settings**
-   - Query limits and timeouts
-   - Performance tuning
+ - Query limits and timeouts
+ - Performance tuning
 
 3. **Security Configuration**
-   - Query complexity limits
-   - SELECT-only mode settings
+ - Query complexity limits
+ - SELECT-only mode settings
 
 ### Manual Configuration
 If you prefer manual configuration, copy and edit the template:
@@ -230,11 +257,11 @@ If you prefer manual configuration, copy and edit the template:
 cp node_modules/sql-mcp-server/config.ini.template config.ini
 
 # Edit configuration
-nano config.ini  # Linux/macOS
-notepad config.ini  # Windows
+nano config.ini # Linux/macOS
+notepad config.ini # Windows
 ```
 
-## 🔌 Database Drivers
+## Database Drivers
 
 The server includes drivers for all supported databases:
 
@@ -251,17 +278,17 @@ The server includes drivers for all supported databases:
 node -e "
 const drivers = ['pg', 'mysql2', 'sqlite3', 'mssql', 'ssh2'];
 drivers.forEach(driver => {
-  try {
-    require(driver);
-    console.log('✅', driver);
-  } catch (e) {
-    console.log('❌', driver);
-  }
+ try {
+ require(driver);
+ console.log('', driver);
+ } catch (e) {
+ console.log('', driver);
+ }
 });
 "
 ```
 
-## 🧪 Verify Installation
+## Verify Installation
 
 ### Test Server Startup
 ```bash
@@ -283,8 +310,8 @@ sql-mcp-test
 npx sql-mcp-test
 
 # Expected output for successful connection:
-# ✅ Connection successful to database_name
-# 📊 Schema captured: X tables, Y columns
+# Connection successful to database_name
+# Schema captured: X tables, Y columns
 ```
 
 ### Test Claude Desktop Integration
@@ -293,7 +320,7 @@ npx sql-mcp-test
 3. Ask Claude: "List my available databases"
 4. Expected: Claude shows your configured databases
 
-## 🐳 Docker Installation
+## Docker Installation
 
 ### Using Pre-built Image
 ```bash
@@ -302,9 +329,9 @@ docker pull sql-mcp-server:latest
 
 # Run with volume for configuration
 docker run -it --rm \
-  -v $(pwd)/config.ini:/app/config.ini \
-  -v $(pwd)/logs:/app/logs \
-  sql-mcp-server:latest
+ -v $(pwd)/config.ini:/app/config.ini \
+ -v $(pwd)/logs:/app/logs \
+ sql-mcp-server:latest
 ```
 
 ### Build from Source
@@ -318,8 +345,8 @@ docker build -t sql-mcp-server .
 
 # Run container
 docker run -it --rm \
-  -v $(pwd)/config.ini:/app/config.ini \
-  sql-mcp-server
+ -v $(pwd)/config.ini:/app/config.ini \
+ sql-mcp-server
 ```
 
 ### Docker Compose
@@ -328,18 +355,18 @@ docker run -it --rm \
 version: '3.8'
 
 services:
-  sql-mcp-server:
-    image: sql-mcp-server:latest
-    volumes:
-      - ./config.ini:/app/config.ini:ro
-      - ./logs:/app/logs
-    environment:
-      - NODE_ENV=production
-      - SQL_LOG_LEVEL=info
-    restart: unless-stopped
+ sql-mcp-server:
+ image: sql-mcp-server:latest
+ volumes:
+ - ./config.ini:/app/config.ini:ro
+ - ./logs:/app/logs
+ environment:
+ - NODE_ENV=production
+ - SQL_LOG_LEVEL=info
+ restart: unless-stopped
 ```
 
-## 🏢 Enterprise Installation
+## Enterprise Installation
 
 ### System Service Installation
 
@@ -375,26 +402,26 @@ net start "SQL MCP Server"
 ```nginx
 # nginx configuration for multiple instances
 upstream sql_mcp_servers {
-    server 127.0.0.1:3001;
-    server 127.0.0.1:3002;
-    server 127.0.0.1:3003;
+ server 127.0.0.1:3001;
+ server 127.0.0.1:3002;
+ server 127.0.0.1:3003;
 }
 
 server {
-    listen 80;
-    server_name sql-mcp.company.com;
-    
-    location / {
-        proxy_pass http://sql_mcp_servers;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_cache_bypass $http_upgrade;
-    }
+ listen 80;
+ server_name sql-mcp.company.com;
+
+ location / {
+ proxy_pass http://sql_mcp_servers;
+ proxy_http_version 1.1;
+ proxy_set_header Upgrade $http_upgrade;
+ proxy_set_header Connection 'upgrade';
+ proxy_cache_bypass $http_upgrade;
+ }
 }
 ```
 
-## 🔧 Development Installation
+## Development Installation
 
 ### Development Setup
 ```bash
@@ -430,7 +457,7 @@ npm install -D eslint @typescript-eslint/eslint-plugin prettier
 npm install -D @testcontainers/postgresql @testcontainers/mysql
 ```
 
-## 🔄 Updating
+## Updating
 
 ### Update NPM Package
 ```bash
@@ -443,6 +470,8 @@ npm update -g sql-mcp-server
 # Verify update
 sql-mcp-server --version
 ```
+
+> **Tip:** After updating, you can re-run `sql-install` to ensure your MCP client configurations (Claude Code, Claude Desktop) are up to date with the latest server path and settings.
 
 ### Update from Source
 ```bash
@@ -474,7 +503,17 @@ sql-mcp-migrate-config --check
 sql-mcp-migrate-config --apply
 ```
 
-## 🚨 Troubleshooting Installation
+## Command Reference
+
+| Command | Description |
+|---------|-------------|
+| `sql-install` | Automatic installer -- detects platform, configures MCP clients, creates default config |
+| `sql-setup` | Interactive setup wizard for database configuration |
+| `sql-server` | Start the MCP server |
+| `sql-mcp-start` | Start the MCP server (alias) |
+| `sql-mcp-test` | Test database connections |
+
+## Troubleshooting Installation
 
 ### Common Issues
 
@@ -529,16 +568,16 @@ sudo apt-get install libpq-dev
 #!/bin/bash
 # verify-installation.sh
 
-echo "🔍 Verifying SQL MCP Server Installation..."
+echo " Verifying SQL MCP Server Installation..."
 
 # Check Node.js version
 NODE_VERSION=$(node --version | cut -d'v' -f2)
 echo "Node.js version: $NODE_VERSION"
 if [ "$(printf '%s\n' "16.0.0" "$NODE_VERSION" | sort -V | head -n1)" = "16.0.0" ]; then
-    echo "✅ Node.js version is sufficient"
+ echo " Node.js version is sufficient"
 else
-    echo "❌ Node.js version is too old (need 16.0.0+)"
-    exit 1
+ echo " Node.js version is too old (need 16.0.0+)"
+ exit 1
 fi
 
 # Check npm version
@@ -547,11 +586,11 @@ echo "npm version: $NPM_VERSION"
 
 # Check if sql-mcp-server is installed
 if command -v sql-mcp-server &> /dev/null; then
-    echo "✅ sql-mcp-server command is available"
-    sql-mcp-server --version
+ echo " sql-mcp-server command is available"
+ sql-mcp-server --version
 else
-    echo "❌ sql-mcp-server command not found"
-    exit 1
+ echo " sql-mcp-server command not found"
+ exit 1
 fi
 
 # Check database drivers
@@ -559,19 +598,19 @@ echo "Checking database drivers..."
 node -e "
 const drivers = ['pg', 'mysql2', 'sqlite3', 'mssql', 'ssh2'];
 drivers.forEach(driver => {
-  try {
-    require(driver);
-    console.log('✅ ' + driver);
-  } catch (e) {
-    console.log('❌ ' + driver + ': ' + e.message);
-  }
+ try {
+ require(driver);
+ console.log(' ' + driver);
+ } catch (e) {
+ console.log(' ' + driver + ': ' + e.message);
+ }
 });
 "
 
-echo "🎉 Installation verification complete!"
+echo " Installation verification complete!"
 ```
 
-## 📚 Next Steps
+## Next Steps
 
 After successful installation:
 

@@ -6,49 +6,49 @@ This directory contains comprehensive examples for monitoring, logging, and obse
 
 ```
 monitoring-setup/
-├── README.md                           # This file
-├── prometheus/                         # Prometheus monitoring setup
-│   ├── prometheus.yml                  # Prometheus configuration
-│   ├── sql-mcp-server-rules.yml       # Alerting rules
-│   ├── docker-compose.yml             # Prometheus stack
-│   └── README.md                       # Prometheus setup guide
-├── grafana/                            # Grafana dashboards and config
-│   ├── dashboards/                     # Pre-built dashboards
-│   │   ├── sql-mcp-overview.json      # Main overview dashboard
-│   │   ├── database-performance.json  # Database performance metrics
-│   │   ├── query-analytics.json       # Query analysis dashboard
-│   │   └── security-monitoring.json   # Security events dashboard
-│   ├── grafana.ini                     # Grafana configuration
-│   ├── datasources.yml                # Data source configuration
-│   └── README.md                       # Grafana setup guide
-├── logging/                            # Centralized logging setup
-│   ├── elasticsearch/                  # Elasticsearch configuration
-│   ├── logstash/                       # Logstash pipeline config
-│   ├── kibana/                         # Kibana dashboards
-│   ├── fluentd/                        # Fluentd logging config
-│   └── README.md                       # Logging setup guide
-├── alerts/                             # Alerting configurations
-│   ├── alertmanager.yml               # Alertmanager configuration
-│   ├── notification-templates/        # Custom alert templates
-│   ├── webhook-handlers/               # Custom webhook handlers
-│   └── README.md                       # Alerting setup guide
-├── health-checks/                      # Health monitoring scripts
-│   ├── health-check-script.js         # Node.js health checker
-│   ├── health-check-script.py         # Python health checker
-│   ├── monitoring-agent.js            # Custom monitoring agent
-│   └── README.md                       # Health check guide
-├── performance/                        # Performance monitoring
-│   ├── apm-setup.js                   # Application Performance Monitoring
-│   ├── query-profiler.js              # Query performance profiler
-│   ├── resource-monitor.js            # System resource monitoring
-│   └── README.md                       # Performance monitoring guide
-├── docker-compose-monitoring.yml      # Complete monitoring stack
-├── kubernetes-monitoring/             # Kubernetes monitoring manifests
-│   ├── prometheus-operator.yml        # Prometheus operator setup
-│   ├── grafana-deployment.yml         # Grafana deployment
-│   ├── service-monitor.yml            # SQL MCP Server monitoring
-│   └── README.md                       # Kubernetes monitoring guide
-└── troubleshooting.md                  # Monitoring troubleshooting guide
+|-- README.md # This file
+|-- prometheus/ # Prometheus monitoring setup
+| |-- prometheus.yml # Prometheus configuration
+| |-- sql-mcp-server-rules.yml # Alerting rules
+| |-- docker-compose.yml # Prometheus stack
+| \-- README.md # Prometheus setup guide
+|-- grafana/ # Grafana dashboards and config
+| |-- dashboards/ # Pre-built dashboards
+| | |-- sql-mcp-overview.json # Main overview dashboard
+| | |-- database-performance.json # Database performance metrics
+| | |-- query-analytics.json # Query analysis dashboard
+| | \-- security-monitoring.json # Security events dashboard
+| |-- grafana.ini # Grafana configuration
+| |-- datasources.yml # Data source configuration
+| \-- README.md # Grafana setup guide
+|-- logging/ # Centralized logging setup
+| |-- elasticsearch/ # Elasticsearch configuration
+| |-- logstash/ # Logstash pipeline config
+| |-- kibana/ # Kibana dashboards
+| |-- fluentd/ # Fluentd logging config
+| \-- README.md # Logging setup guide
+|-- alerts/ # Alerting configurations
+| |-- alertmanager.yml # Alertmanager configuration
+| |-- notification-templates/ # Custom alert templates
+| |-- webhook-handlers/ # Custom webhook handlers
+| \-- README.md # Alerting setup guide
+|-- health-checks/ # Health monitoring scripts
+| |-- health-check-script.js # Node.js health checker
+| |-- health-check-script.py # Python health checker
+| |-- monitoring-agent.js # Custom monitoring agent
+| \-- README.md # Health check guide
+|-- performance/ # Performance monitoring
+| |-- apm-setup.js # Application Performance Monitoring
+| |-- query-profiler.js # Query performance profiler
+| |-- resource-monitor.js # System resource monitoring
+| \-- README.md # Performance monitoring guide
+|-- docker-compose-monitoring.yml # Complete monitoring stack
+|-- kubernetes-monitoring/ # Kubernetes monitoring manifests
+| |-- prometheus-operator.yml # Prometheus operator setup
+| |-- grafana-deployment.yml # Grafana deployment
+| |-- service-monitor.yml # SQL MCP Server monitoring
+| \-- README.md # Kubernetes monitoring guide
+\-- troubleshooting.md # Monitoring troubleshooting guide
 ```
 
 ## Monitoring Overview
@@ -57,7 +57,7 @@ monitoring-setup/
 
 #### 1. Application Metrics
 - **Request/Response**: Query count, response times, error rates
-- **Connection Pool**: Active connections, pool usage, connection errors  
+- **Connection Pool**: Active connections, pool usage, connection errors 
 - **Security**: Failed authentication attempts, blocked queries
 - **Performance**: Query execution times, result set sizes
 
@@ -146,7 +146,7 @@ sql_mcp_errors_total{type, database}
 
 **Stack Options**:
 - **ELK Stack**: Elasticsearch, Logstash, Kibana
-- **EFK Stack**: Elasticsearch, Fluentd, Kibana  
+- **EFK Stack**: Elasticsearch, Fluentd, Kibana 
 - **Loki Stack**: Grafana Loki, Promtail, Grafana
 
 **Log Categories**:
@@ -172,15 +172,15 @@ sql_mcp_errors_total{type, database}
 ### Basic Prometheus Configuration
 ```yaml
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+ scrape_interval: 15s
+ evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'sql-mcp-server'
-    static_configs:
-      - targets: ['localhost:3001']
-    metrics_path: '/metrics'
-    scrape_interval: 10s
+ - job_name: 'sql-mcp-server'
+ static_configs:
+ - targets: ['localhost:3001']
+ metrics_path: '/metrics'
+ scrape_interval: 10s
 ```
 
 ### Grafana Dashboard Query Examples
@@ -202,20 +202,20 @@ sql_mcp_connections_active / sql_mcp_connections_max * 100
 const winston = require('winston');
 
 const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'sql-mcp-server' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
+ level: 'info',
+ format: winston.format.combine(
+ winston.format.timestamp(),
+ winston.format.errors({ stack: true }),
+ winston.format.json()
+ ),
+ defaultMeta: { service: 'sql-mcp-server' },
+ transports: [
+ new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+ new winston.transports.File({ filename: 'logs/combined.log' }),
+ new winston.transports.Console({
+ format: winston.format.simple()
+ })
+ ]
 });
 ```
 
@@ -227,7 +227,7 @@ const logger = winston.createLogger({
 - Simple alerting to development team
 - Resource usage tracking
 
-### 2. Staging Environment  
+### 2. Staging Environment 
 - Full monitoring stack
 - Performance baseline establishment
 - Load testing metrics
@@ -320,17 +320,17 @@ SQL MCP Server includes built-in monitoring capabilities:
 ```javascript
 // Enable metrics endpoint
 const server = new SQLMCPServer({
-  enableMetrics: true,
-  metricsPort: 3001,
-  metricsPath: '/metrics'
+ enableMetrics: true,
+ metricsPort: 3001,
+ metricsPath: '/metrics'
 });
 
 // Custom metric collection
 server.on('queryExecuted', (event) => {
-  queryCounter.inc({
-    database: event.database,
-    status: event.success ? 'success' : 'error'
-  });
+ queryCounter.inc({
+ database: event.database,
+ status: event.success ? 'success' : 'error'
+ });
 });
 ```
 
@@ -340,17 +340,17 @@ Add custom metrics for specific use cases:
 ```javascript
 // Custom business metrics
 const businessMetrics = {
-  userQueries: new prometheus.Counter({
-    name: 'user_queries_total',
-    help: 'Total queries by user',
-    labelNames: ['user', 'department']
-  }),
-  
-  dataVolume: new prometheus.Histogram({
-    name: 'query_result_size_bytes',
-    help: 'Size of query results',
-    buckets: [100, 1000, 10000, 100000, 1000000]
-  })
+ userQueries: new prometheus.Counter({
+ name: 'user_queries_total',
+ help: 'Total queries by user',
+ labelNames: ['user', 'department']
+ }),
+ 
+ dataVolume: new prometheus.Histogram({
+ name: 'query_result_size_bytes',
+ help: 'Size of query results',
+ buckets: [100, 1000, 10000, 100000, 1000000]
+ })
 };
 ```
 

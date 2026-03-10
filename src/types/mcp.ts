@@ -8,35 +8,35 @@
 // ============================================================================
 
 export interface MCPMessage {
-  jsonrpc: '2.0';
-  id?: string | number | null;
-  method?: string;
-  params?: unknown;
-  result?: unknown;
-  error?: MCPError;
+ jsonrpc: '2.0';
+ id?: string | number | null;
+ method?: string;
+ params?: unknown;
+ result?: unknown;
+ error?: MCPError;
 }
 
 export interface MCPError {
-  code: number;
-  message: string;
-  data?: unknown;
+ code: number;
+ message: string;
+ data?: unknown;
 }
 
 export interface MCPRequest extends MCPMessage {
-  id: string | number;
-  method: string;
-  params?: unknown;
+ id: string | number;
+ method: string;
+ params?: unknown;
 }
 
 export interface MCPResponse extends MCPMessage {
-  id: string | number | null;
-  result?: unknown;
-  error?: MCPError;
+ id: string | number | null;
+ result?: unknown;
+ error?: MCPError;
 }
 
 export interface MCPNotification extends MCPMessage {
-  method: string;
-  params?: unknown;
+ method: string;
+ params?: unknown;
 }
 
 // ============================================================================
@@ -44,19 +44,19 @@ export interface MCPNotification extends MCPMessage {
 // ============================================================================
 
 export interface MCPCapabilities {
-  tools?: object;
-  logging?: object;
+ tools?: object;
+ logging?: object;
 }
 
 export interface MCPServerInfo {
-  name: string;
-  version: string;
+ name: string;
+ version: string;
 }
 
 export interface MCPInitializeResult {
-  protocolVersion: string;
-  capabilities: MCPCapabilities;
-  serverInfo: MCPServerInfo;
+ protocolVersion: string;
+ capabilities: MCPCapabilities;
+ serverInfo: MCPServerInfo;
 }
 
 // ============================================================================
@@ -64,54 +64,54 @@ export interface MCPInitializeResult {
 // ============================================================================
 
 export interface MCPToolParameter {
-  type: string;
-  description?: string;
-  items?: MCPToolParameter;
-  properties?: Record<string, MCPToolParameter>;
-  required?: string[];
-  enum?: string[];
-  default?: unknown;
-  additionalProperties?: boolean;
+ type: string;
+ description?: string;
+ items?: MCPToolParameter;
+ properties?: Record<string, MCPToolParameter>;
+ required?: string[];
+ enum?: string[];
+ default?: unknown;
+ additionalProperties?: boolean;
 }
 
 export interface MCPToolInputSchema {
-  type: 'object';
-  properties: Record<string, MCPToolParameter>;
-  required?: string[];
-  additionalProperties?: boolean;
+ type: 'object';
+ properties: Record<string, MCPToolParameter>;
+ required?: string[];
+ additionalProperties?: boolean;
 }
 
 export interface MCPTool {
-  name: string;
-  description: string;
-  inputSchema: MCPToolInputSchema;
+ name: string;
+ description: string;
+ inputSchema: MCPToolInputSchema;
 }
 
 export interface MCPToolsListResult {
-  tools: MCPTool[];
+ tools: MCPTool[];
 }
 
 export interface MCPToolCallParams {
-  name: string;
-  arguments: Record<string, unknown>;
+ name: string;
+ arguments: Record<string, unknown>;
 }
 
 export interface MCPToolCallRequest extends MCPRequest {
-  method: 'tools/call';
-  params: MCPToolCallParams;
+ method: 'tools/call';
+ params: MCPToolCallParams;
 }
 
 export interface MCPToolContent {
-  type: 'text';
-  text: string;
+ type: 'text';
+ text: string;
 }
 
 export interface MCPToolResponse {
-  content: MCPToolContent[];
-  isError?: boolean;
-  _meta: {
-    progressToken: null;
-  };
+ content: MCPToolContent[];
+ isError?: boolean;
+ _meta: {
+ progressToken: null;
+ };
 }
 
 // ============================================================================
@@ -119,42 +119,42 @@ export interface MCPToolResponse {
 // ============================================================================
 
 export interface SQLQueryArgs {
-  database: string;
-  query: string;
-  params?: string[];
+ database: string;
+ query: string;
+ params?: string[];
 }
 
 export interface SQLBatchQueryArgs {
-  database: string;
-  queries: Array<{
-    query: string;
-    params?: string[];
-    label?: string;
-  }>;
-  transaction?: boolean;
+ database: string;
+ queries: Array<{
+ query: string;
+ params?: string[];
+ label?: string;
+ }>;
+ transaction?: boolean;
 }
 
 export interface SQLAnalyzePerformanceArgs {
-  database: string;
-  query: string;
+ database: string;
+ query: string;
 }
 
 export interface SQLGetSchemaArgs {
-  database: string;
-  table?: string;
+ database: string;
+ table?: string;
 }
 
 export interface SQLTestConnectionArgs {
-  database: string;
+ database: string;
 }
 
 export interface SQLRefreshSchemaArgs {
-  database: string;
+ database: string;
 }
 
 // Empty interface for list_databases (no arguments required)
 export interface SQLListDatabasesArgs {
-  // No properties - this tool takes no arguments
+ // No properties - this tool takes no arguments
 }
 
 // ============================================================================
@@ -162,10 +162,10 @@ export interface SQLListDatabasesArgs {
 // ============================================================================
 
 export interface MCPToolValidationError {
-  message: string;
-  field?: string;
-  value?: unknown;
-  expectedType?: string;
+ message: string;
+ field?: string;
+ value?: unknown;
+ expectedType?: string;
 }
 
 // ============================================================================
@@ -175,10 +175,10 @@ export interface MCPToolValidationError {
 export type MCPMessageHandler = (_message: MCPRequest) => Promise<void> | void;
 
 export interface MCPMessageHandlers {
-  initialize: MCPMessageHandler;
-  'tools/list': MCPMessageHandler;
-  'tools/call': MCPMessageHandler;
-  'notifications/initialized': MCPMessageHandler;
+ initialize: MCPMessageHandler;
+ 'tools/list': MCPMessageHandler;
+ 'tools/call': MCPMessageHandler;
+ 'notifications/initialized': MCPMessageHandler;
 }
 
 // ============================================================================
@@ -186,26 +186,26 @@ export interface MCPMessageHandlers {
 // ============================================================================
 
 export function isMCPRequest(message: MCPMessage): message is MCPRequest {
-  return 'id' in message && 'method' in message && message.id !== undefined;
+ return 'id' in message && 'method' in message && message.id !== undefined;
 }
 
 export function isMCPResponse(message: MCPMessage): message is MCPResponse {
-  return 'id' in message && ('result' in message || 'error' in message);
+ return 'id' in message && ('result' in message || 'error' in message);
 }
 
 export function isMCPNotification(message: MCPMessage): message is MCPNotification {
-  return 'method' in message && !('id' in message);
+ return 'method' in message && !('id' in message);
 }
 
 export function isMCPToolCallRequest(message: MCPMessage): message is MCPToolCallRequest {
-  return (
-    isMCPRequest(message) && 
-    message.method === 'tools/call' &&
-    typeof message.params === 'object' &&
-    message.params !== null &&
-    'name' in message.params &&
-    'arguments' in message.params
-  );
+ return (
+ isMCPRequest(message) && 
+ message.method === 'tools/call' &&
+ typeof message.params === 'object' &&
+ message.params !== null &&
+ 'name' in message.params &&
+ 'arguments' in message.params
+ );
 }
 
 // ============================================================================
@@ -213,41 +213,41 @@ export function isMCPToolCallRequest(message: MCPMessage): message is MCPToolCal
 // ============================================================================
 
 export function isSQLQueryArgs(args: unknown): args is SQLQueryArgs {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'database' in args &&
-    'query' in args &&
-    typeof (args as SQLQueryArgs).database === 'string' &&
-    typeof (args as SQLQueryArgs).query === 'string'
-  );
+ return (
+ typeof args === 'object' &&
+ args !== null &&
+ 'database' in args &&
+ 'query' in args &&
+ typeof (args as SQLQueryArgs).database === 'string' &&
+ typeof (args as SQLQueryArgs).query === 'string'
+ );
 }
 
 export function isSQLBatchQueryArgs(args: unknown): args is SQLBatchQueryArgs {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'database' in args &&
-    'queries' in args &&
-    typeof (args as SQLBatchQueryArgs).database === 'string' &&
-    Array.isArray((args as SQLBatchQueryArgs).queries)
-  );
+ return (
+ typeof args === 'object' &&
+ args !== null &&
+ 'database' in args &&
+ 'queries' in args &&
+ typeof (args as SQLBatchQueryArgs).database === 'string' &&
+ Array.isArray((args as SQLBatchQueryArgs).queries)
+ );
 }
 
 export function isSQLGetSchemaArgs(args: unknown): args is SQLGetSchemaArgs {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'database' in args &&
-    typeof (args as SQLGetSchemaArgs).database === 'string'
-  );
+ return (
+ typeof args === 'object' &&
+ args !== null &&
+ 'database' in args &&
+ typeof (args as SQLGetSchemaArgs).database === 'string'
+ );
 }
 
 export function isSQLTestConnectionArgs(args: unknown): args is SQLTestConnectionArgs {
-  return (
-    typeof args === 'object' &&
-    args !== null &&
-    'database' in args &&
-    typeof (args as SQLTestConnectionArgs).database === 'string'
-  );
+ return (
+ typeof args === 'object' &&
+ args !== null &&
+ 'database' in args &&
+ typeof (args as SQLTestConnectionArgs).database === 'string'
+ );
 }

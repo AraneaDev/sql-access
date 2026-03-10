@@ -87,16 +87,16 @@ Organize your SQLite databases:
 
 ```
 project/
-├── databases/
-│   ├── development/
-│   │   ├── app.db
-│   │   └── test.db
-│   ├── analytics/
-│   │   ├── reports.db
-│   │   └── metrics.db
-│   └── backups/
-│       └── app_backup_20240812.db
-└── config.ini
++-- databases/
+|   +-- development/
+|   |   +-- app.db
+|   |   +-- test.db
+|   +-- analytics/
+|   |   +-- reports.db
+|   |   +-- metrics.db
+|   +-- backups/
+|       +-- app_backup_20240812.db
++-- config.ini
 ```
 
 ### File Permissions
@@ -106,7 +106,7 @@ project/
 chmod 444 /path/to/readonly.db
 chown app:app /path/to/readonly.db
 
-# Read-write for development  
+# Read-write for development 
 chmod 644 /path/to/development.db
 chown developer:developer /path/to/development.db
 ```
@@ -119,11 +119,11 @@ The adapter uses optimized SQLite settings:
 
 ```sql
 -- Automatically applied optimizations
-PRAGMA journal_mode = WAL;          -- Write-Ahead Logging
-PRAGMA synchronous = NORMAL;        -- Balanced durability/performance
-PRAGMA cache_size = 10000;          -- 10MB page cache
-PRAGMA foreign_keys = ON;           -- Enforce foreign keys
-PRAGMA temp_store = MEMORY;         -- Use memory for temporary tables
+PRAGMA journal_mode = WAL; -- Write-Ahead Logging
+PRAGMA synchronous = NORMAL; -- Balanced durability/performance
+PRAGMA cache_size = 10000; -- 10MB page cache
+PRAGMA foreign_keys = ON; -- Enforce foreign keys
+PRAGMA temp_store = MEMORY; -- Use memory for temporary tables
 ```
 
 ### Query Optimization
@@ -186,9 +186,9 @@ FROM orders;
 ```sql
 -- Text manipulation
 SELECT 
-  upper(name) as uppercase_name,
-  length(description) as desc_length,
-  substr(email, 1, instr(email, '@') - 1) as username
+ upper(name) as uppercase_name,
+ length(description) as desc_length,
+ substr(email, 1, instr(email, '@') - 1) as username
 FROM users;
 ```
 
@@ -196,12 +196,12 @@ FROM users;
 ```sql
 -- Statistical functions
 SELECT 
-  count(*) as total_orders,
-  avg(total_amount) as avg_order_value,
-  sum(total_amount) as total_revenue,
-  min(created_at) as first_order,
-  max(created_at) as latest_order,
-  group_concat(product_name, ', ') as products
+ count(*) as total_orders,
+ avg(total_amount) as avg_order_value,
+ sum(total_amount) as total_revenue,
+ min(created_at) as first_order,
+ max(created_at) as latest_order,
+ group_concat(product_name, ', ') as products
 FROM orders;
 ```
 
@@ -212,14 +212,14 @@ Modern SQLite versions support JSON operations:
 ```sql
 -- JSON data querying
 SELECT 
-  json_extract(metadata, '$.user_id') as user_id,
-  json_extract(metadata, '$.preferences') as preferences
+ json_extract(metadata, '$.user_id') as user_id,
+ json_extract(metadata, '$.preferences') as preferences
 FROM user_profiles
 WHERE json_extract(metadata, '$.active') = 1;
 
 -- JSON aggregation
 SELECT json_group_array(
-  json_object('name', name, 'email', email)
+ json_object('name', name, 'email', email)
 ) as users_json
 FROM users
 WHERE active = 1;
@@ -232,17 +232,17 @@ SQLite 3.8.3+ supports CTEs:
 ```sql
 -- Recursive query example
 WITH RECURSIVE category_hierarchy(id, name, parent_id, level) AS (
-  -- Base case: top-level categories
-  SELECT id, name, parent_id, 0
-  FROM categories 
-  WHERE parent_id IS NULL
-  
-  UNION ALL
-  
-  -- Recursive case: child categories
-  SELECT c.id, c.name, c.parent_id, ch.level + 1
-  FROM categories c
-  JOIN category_hierarchy ch ON c.parent_id = ch.id
+ -- Base case: top-level categories
+ SELECT id, name, parent_id, 0
+ FROM categories 
+ WHERE parent_id IS NULL
+ 
+ UNION ALL
+ 
+ -- Recursive case: child categories
+ SELECT c.id, c.name, c.parent_id, ch.level + 1
+ FROM categories c
+ JOIN category_hierarchy ch ON c.parent_id = ch.id
 )
 SELECT * FROM category_hierarchy ORDER BY level, name;
 ```
@@ -267,13 +267,13 @@ The adapter recognizes these common column declarations:
 
 ```sql
 CREATE TABLE products (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    price REAL,
-    weight NUMERIC,
-    image BLOB,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    is_active INTEGER DEFAULT 1  -- Boolean as INTEGER
+ id INTEGER PRIMARY KEY,
+ name TEXT NOT NULL,
+ price REAL,
+ weight NUMERIC,
+ image BLOB,
+ created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+ is_active INTEGER DEFAULT 1 -- Boolean as INTEGER
 );
 ```
 
@@ -281,13 +281,13 @@ CREATE TABLE products (
 
 ```sql
 CREATE TABLE orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    order_date TEXT DEFAULT CURRENT_TIMESTAMP,
-    total_amount REAL CHECK (total_amount >= 0),
-    status TEXT CHECK (status IN ('pending', 'shipped', 'delivered')),
-    
-    FOREIGN KEY (user_id) REFERENCES users(id)
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ user_id INTEGER NOT NULL,
+ order_date TEXT DEFAULT CURRENT_TIMESTAMP,
+ total_amount REAL CHECK (total_amount >= 0),
+ status TEXT CHECK (status IN ('pending', 'shipped', 'delivered')),
+ 
+ FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- Indexes for performance
@@ -369,11 +369,11 @@ INSERT INTO orders (user_id, total_amount, created_at) VALUES
 
 ```bash
 # Secure database files
-chmod 600 sensitive.db          # Owner read/write only
-chown app:app sensitive.db      # Correct ownership
+chmod 600 sensitive.db # Owner read/write only
+chown app:app sensitive.db # Correct ownership
 
 # Secure directory
-chmod 700 /var/lib/sqlite/      # Directory access restricted
+chmod 700 /var/lib/sqlite/ # Directory access restricted
 ```
 
 ### Read-Only Mode
@@ -486,17 +486,17 @@ await adapter.vacuum(connection);
 ```sql
 -- Database size and page information
 SELECT 
-  page_count * page_size as size_bytes,
-  page_count,
-  page_size,
-  freelist_count
+ page_count * page_size as size_bytes,
+ page_count,
+ page_size,
+ freelist_count
 FROM pragma_page_count(), pragma_page_size(), pragma_freelist_count();
 
 -- Table sizes
 SELECT 
-  name,
-  pgsize as size_bytes,
-  pgsize / 1024.0 as size_kb
+ name,
+ pgsize as size_bytes,
+ pgsize / 1024.0 as size_kb
 FROM dbstat
 WHERE aggregate = TRUE
 ORDER BY pgsize DESC;
@@ -539,10 +539,10 @@ sqlite3 application.db .dump > backup.sql
 ```sql
 -- Sales trends
 SELECT 
-  date(created_at) as order_date,
-  count(*) as order_count,
-  sum(total_amount) as daily_revenue,
-  avg(total_amount) as avg_order_value
+ date(created_at) as order_date,
+ count(*) as order_count,
+ sum(total_amount) as daily_revenue,
+ avg(total_amount) as avg_order_value
 FROM orders
 WHERE created_at >= date('now', '-30 days')
 GROUP BY date(created_at)
@@ -550,19 +550,19 @@ ORDER BY order_date;
 
 -- Customer segmentation
 SELECT 
-  CASE 
-    WHEN total_spent >= 1000 THEN 'High Value'
-    WHEN total_spent >= 500 THEN 'Medium Value'
-    ELSE 'Low Value'
-  END as customer_segment,
-  count(*) as customer_count,
-  avg(total_spent) as avg_spent
+ CASE 
+ WHEN total_spent >= 1000 THEN 'High Value'
+ WHEN total_spent >= 500 THEN 'Medium Value'
+ ELSE 'Low Value'
+ END as customer_segment,
+ count(*) as customer_count,
+ avg(total_spent) as avg_spent
 FROM (
-  SELECT 
-    user_id,
-    sum(total_amount) as total_spent
-  FROM orders
-  GROUP BY user_id
+ SELECT 
+ user_id,
+ sum(total_amount) as total_spent
+ FROM orders
+ GROUP BY user_id
 ) customer_totals
 GROUP BY customer_segment;
 ```
@@ -572,24 +572,24 @@ GROUP BY customer_segment;
 ```sql
 -- Monthly summary with growth
 WITH monthly_sales AS (
-  SELECT 
-    strftime('%Y-%m', created_at) as month,
-    count(*) as orders,
-    sum(total_amount) as revenue
-  FROM orders
-  GROUP BY strftime('%Y-%m', created_at)
+ SELECT 
+ strftime('%Y-%m', created_at) as month,
+ count(*) as orders,
+ sum(total_amount) as revenue
+ FROM orders
+ GROUP BY strftime('%Y-%m', created_at)
 )
 SELECT 
-  month,
-  orders,
-  revenue,
-  LAG(revenue) OVER (ORDER BY month) as prev_month_revenue,
-  CASE 
-    WHEN LAG(revenue) OVER (ORDER BY month) > 0 THEN
-      ROUND((revenue - LAG(revenue) OVER (ORDER BY month)) / 
-            LAG(revenue) OVER (ORDER BY month) * 100, 2)
-    ELSE NULL
-  END as growth_rate
+ month,
+ orders,
+ revenue,
+ LAG(revenue) OVER (ORDER BY month) as prev_month_revenue,
+ CASE 
+ WHEN LAG(revenue) OVER (ORDER BY month) > 0 THEN
+ ROUND((revenue - LAG(revenue) OVER (ORDER BY month)) / 
+ LAG(revenue) OVER (ORDER BY month) * 100, 2)
+ ELSE NULL
+ END as growth_rate
 FROM monthly_sales
 ORDER BY month DESC;
 ```

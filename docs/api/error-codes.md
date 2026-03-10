@@ -2,7 +2,7 @@
 
 This document provides a comprehensive reference for all error codes and error handling patterns used in the SQL MCP Server.
 
-## 📋 Error Code Categories
+## Error Code Categories
 
 ### MCP Protocol Errors (-32xxx)
 Following JSON-RPC 2.0 specification for MCP protocol errors.
@@ -13,12 +13,12 @@ Application-specific database operation errors.
 ### Security Errors (4xxx - 5xxx)
 Security validation and access control errors.
 
-### Configuration Errors (6xxx - 7xxx)  
+### Configuration Errors (6xxx - 7xxx) 
 Configuration and setup related errors.
 
 ---
 
-## 🔧 MCP Protocol Errors
+## MCP Protocol Errors
 
 ### -32700 Parse Error
 **Description**: Invalid JSON was received by the server.
@@ -27,12 +27,12 @@ Configuration and setup related errors.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": null,
-  "error": {
-    "code": -32700,
-    "message": "Parse error"
-  }
+ "jsonrpc": "2.0",
+ "id": null,
+ "error": {
+ "code": -32700,
+ "message": "Parse error"
+ }
 }
 ```
 
@@ -43,12 +43,12 @@ Configuration and setup related errors.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": {
-    "code": -32600,
-    "message": "Invalid Request"
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "error": {
+ "code": -32600,
+ "message": "Invalid Request"
+ }
 }
 ```
 
@@ -59,12 +59,12 @@ Configuration and setup related errors.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": {
-    "code": -32601,
-    "message": "Method not found: unknown_method"
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "error": {
+ "code": -32601,
+ "message": "Method not found: unknown_method"
+ }
 }
 ```
 
@@ -75,12 +75,12 @@ Configuration and setup related errors.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": {
-    "code": -32602,
-    "message": "Invalid tool call request"
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "error": {
+ "code": -32602,
+ "message": "Invalid tool call request"
+ }
 }
 ```
 
@@ -91,18 +91,18 @@ Configuration and setup related errors.
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": {
-    "code": -32603,
-    "message": "Internal error: Connection failed"
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "error": {
+ "code": -32603,
+ "message": "Internal error: Connection failed"
+ }
 }
 ```
 
 ---
 
-## 🗄️ Database Errors
+## Database Errors
 
 ### 1001 Connection Failed
 **Description**: Failed to establish database connection
@@ -120,15 +120,15 @@ Configuration and setup related errors.
 
 ```typescript
 interface ConnectionError {
-  code: 1001;
-  message: string;
-  details: {
-    database: string;
-    host?: string;
-    port?: number;
-    timeout?: number;
-    originalError: string;
-  };
+ code: 1001;
+ message: string;
+ details: {
+ database: string;
+ host?: string;
+ port?: number;
+ timeout?: number;
+ originalError: string;
+ };
 }
 ```
 
@@ -186,7 +186,7 @@ interface ConnectionError {
 
 ---
 
-## 📊 Query Execution Errors
+## Query Execution Errors
 
 ### 2001 Query Execution Failed
 **Description**: SQL query execution failed
@@ -204,15 +204,15 @@ interface ConnectionError {
 
 ```typescript
 interface QueryExecutionError {
-  code: 2001;
-  message: string;
-  details: {
-    database: string;
-    query: string;
-    position?: number;
-    sqlState?: string;
-    originalError: string;
-  };
+ code: 2001;
+ message: string;
+ details: {
+ database: string;
+ query: string;
+ position?: number;
+ sqlState?: string;
+ originalError: string;
+ };
 }
 ```
 
@@ -259,7 +259,7 @@ interface QueryExecutionError {
 
 ---
 
-## 🛡️ Security Errors
+## Security Errors
 
 ### 4001 Query Blocked - SELECT Only Mode
 **Description**: Non-SELECT query blocked in SELECT-only mode
@@ -272,14 +272,14 @@ interface QueryExecutionError {
 
 ```typescript
 interface SecurityViolationError {
-  code: 4001;
-  message: string;
-  details: {
-    database: string;
-    query: string;
-    reason: string;
-    blockedOperation: string;
-  };
+ code: 4001;
+ message: string;
+ details: {
+ database: string;
+ query: string;
+ reason: string;
+ blockedOperation: string;
+ };
 }
 ```
 
@@ -336,7 +336,7 @@ interface SecurityViolationError {
 
 ---
 
-## 🔐 SSH Tunnel Errors
+## SSH Tunnel Errors
 
 ### 5001 SSH Connection Failed
 **Description**: Failed to establish SSH tunnel connection
@@ -396,7 +396,7 @@ interface SecurityViolationError {
 
 ---
 
-## ⚙️ Configuration Errors
+## Configuration Errors
 
 ### 6001 Configuration File Missing
 **Description**: config.ini file not found
@@ -438,15 +438,15 @@ interface SecurityViolationError {
 
 ```typescript
 interface ConfigurationError {
-  code: 6003;
-  message: string;
-  details: {
-    database: string;
-    field: string;
-    value?: any;
-    expectedType?: string;
-    validValues?: string[];
-  };
+ code: 6003;
+ message: string;
+ details: {
+ database: string;
+ field: string;
+ value?: any;
+ expectedType?: string;
+ validValues?: string[];
+ };
 }
 ```
 
@@ -478,7 +478,7 @@ interface ConfigurationError {
 
 ---
 
-## 🔍 Schema Errors
+## Schema Errors
 
 ### 7001 Schema Capture Failed
 **Description**: Failed to capture database schema information
@@ -524,44 +524,44 @@ interface ConfigurationError {
 
 ---
 
-## 🛠️ Error Response Format
+## Error Response Format
 
 All errors follow a consistent format:
 
 ### MCP Error Response
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "error": {
-    "code": -32603,
-    "message": "Database connection failed",
-    "data": {
-      "database": "production",
-      "host": "db.example.com",
-      "originalError": "Connection timeout"
-    }
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "error": {
+ "code": -32603,
+ "message": "Database connection failed",
+ "data": {
+ "database": "production",
+ "host": "db.example.com",
+ "originalError": "Connection timeout"
+ }
+ }
 }
 ```
 
 ### Tool Error Response
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": {
-    "content": [
-      {
-        "type": "text",
-        "text": "❌ Error in sql_query: Connection failed to database 'production'"
-      }
-    ],
-    "isError": true,
-    "_meta": {
-      "progressToken": null
-    }
-  }
+ "jsonrpc": "2.0",
+ "id": 1,
+ "result": {
+ "content": [
+ {
+ "type": "text",
+ "text": " Error in sql_query: Connection failed to database 'production'"
+ }
+ ],
+ "isError": true,
+ "_meta": {
+ "progressToken": null
+ }
+ }
 }
 ```
 
@@ -569,45 +569,45 @@ All errors follow a consistent format:
 ```typescript
 // Base error class
 export class SQLMCPError extends Error {
-  code: number;
-  details?: Record<string, any>;
-  
-  constructor(message: string, code: number, details?: Record<string, any>) {
-    super(message);
-    this.name = 'SQLMCPError';
-    this.code = code;
-    this.details = details;
-  }
+ code: number;
+ details?: Record<string, any>;
+ 
+ constructor(message: string, code: number, details?: Record<string, any>) {
+ super(message);
+ this.name = 'SQLMCPError';
+ this.code = code;
+ this.details = details;
+ }
 }
 
 // Security violation error
 export class SecurityViolationError extends SQLMCPError {
-  constructor(message: string, details?: Record<string, any>) {
-    super(message, 4001, details);
-    this.name = 'SecurityViolationError';
-  }
+ constructor(message: string, details?: Record<string, any>) {
+ super(message, 4001, details);
+ this.name = 'SecurityViolationError';
+ }
 }
 
 // Connection error
 export class ConnectionError extends SQLMCPError {
-  constructor(message: string, details?: Record<string, any>) {
-    super(message, 1001, details);
-    this.name = 'ConnectionError';
-  }
+ constructor(message: string, details?: Record<string, any>) {
+ super(message, 1001, details);
+ this.name = 'ConnectionError';
+ }
 }
 
 // Query execution error
 export class QueryExecutionError extends SQLMCPError {
-  constructor(message: string, details?: Record<string, any>) {
-    super(message, 2001, details);
-    this.name = 'QueryExecutionError';
-  }
+ constructor(message: string, details?: Record<string, any>) {
+ super(message, 2001, details);
+ this.name = 'QueryExecutionError';
+ }
 }
 ```
 
 ---
 
-## 🔄 Error Recovery Strategies
+## Error Recovery Strategies
 
 ### Automatic Retry Logic
 - Connection errors: 3 retries with exponential backoff
@@ -626,7 +626,7 @@ export class QueryExecutionError extends SQLMCPError {
 
 ---
 
-## 📊 Error Monitoring
+## Error Monitoring
 
 ### Recommended Monitoring
 - Error rate by error code

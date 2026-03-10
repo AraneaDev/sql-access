@@ -2,12 +2,13 @@
 
 This comprehensive guide covers all configuration options for the SQL MCP Server, from basic setup to advanced enterprise deployments.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Configuration Overview](#configuration-overview)
 - [Database Configuration](#database-configuration)
 - [Security Configuration](#security-configuration)
 - [Extension Configuration](#extension-configuration)
+- [Dynamic Database Management via MCP](#dynamic-database-management-via-mcp)
 - [SSH Tunnel Configuration](#ssh-tunnel-configuration)
 - [Configuration Examples](#configuration-examples)
 - [Configuration Validation](#configuration-validation)
@@ -16,7 +17,7 @@ This comprehensive guide covers all configuration options for the SQL MCP Server
 
 ---
 
-## 🔧 Configuration Overview
+## Configuration Overview
 
 ### Configuration File Location
 The SQL MCP Server uses an INI-format configuration file:
@@ -31,7 +32,7 @@ type=postgresql
 host=localhost
 # ... database-specific options
 
-[database.name2] 
+[database.name2]
 type=mysql
 host=mysql.example.com
 # ... database-specific options
@@ -58,20 +59,20 @@ Settings are resolved in this order (highest priority first):
 
 ---
 
-## 🗄️ Database Configuration
+## Database Configuration
 
 ### Basic Database Section
 Each database requires its own section with the naming pattern `[database.name]`:
 
 ```ini
 [database.mydb]
-type=postgresql  # Required: Database type
-host=localhost   # Required: Database host (except SQLite)
+type=postgresql # Required: Database type
+host=localhost # Required: Database host (except SQLite)
 ```
 
 ### Supported Database Types
 - `postgresql` / `postgres`
-- `mysql` 
+- `mysql`
 - `sqlite`
 - `mssql` / `sqlserver`
 
@@ -97,6 +98,7 @@ host=localhost   # Required: Database host (except SQLite)
 |-----------|---------|-------------|---------|
 | `ssl` | `false` | Enable SSL/TLS | `true` |
 | `timeout` | `30000` | Connection timeout (ms) | `15000` |
+| `mcp_configurable` | `false` | Allow MCP tools to modify this database config | `true` |
 
 #### SQLite-Specific Parameters
 | Parameter | Description | Example |
@@ -105,13 +107,13 @@ host=localhost   # Required: Database host (except SQLite)
 
 ### Default Port Numbers
 - **PostgreSQL**: 5432
-- **MySQL**: 3306  
+- **MySQL**: 3306
 - **SQL Server**: 1433
 - **SQLite**: N/A (file-based)
 
 ---
 
-## 🛡️ Security Configuration
+## Security Configuration
 
 ### Security Section
 Global security settings apply to all databases:
@@ -144,17 +146,17 @@ Configure per database:
 [database.production]
 type=postgresql
 host=prod-db.com
-select_only=true  # Recommended for production
+select_only=true # Recommended for production
 
-[database.development] 
+[database.development]
 type=postgresql
 host=dev-db.com
-select_only=false  # Allow writes in development
+select_only=false # Allow writes in development
 ```
 
 ---
 
-## ⚙️ Extension Configuration
+## Extension Configuration
 
 ### Extension Section
 Server operational settings:
@@ -184,7 +186,56 @@ query_timeout=30000
 
 ---
 
-## 🔐 SSH Tunnel Configuration
+## Dynamic Database Management via MCP
+
+### Overview
+Databases can be added, updated, and removed at runtime using MCP tools. This is controlled by the `mcp_configurable` flag on each database.
+
+### The `mcp_configurable` Flag
+| Value | Meaning |
+|-------|---------|
+| `true` | Database can be modified/removed via MCP tools |
+| `false` (default) | Database is locked -- only manual config.ini editing can change it |
+
+**Security design:**
+- Databases added via MCP tools (`sql_add_database`) always start with `mcp_configurable=true`
+- Databases defined manually in config.ini default to `mcp_configurable=false`
+- The `sql_set_mcp_configurable` tool can only set the value to `false` (lock)
+- Re-enabling `mcp_configurable=true` requires manual config.ini editing -- this prevents an AI from re-enabling its own access after a human locks it
+
+### Configuration Example
+```ini
+[database.production]
+type=postgresql
+host=db.company.com
+database=production
+username=readonly
+password=secret
+select_only=true
+mcp_configurable=false ; Locked - manual config only
+
+[database.sandbox]
+type=postgresql
+host=sandbox-db.company.com
+database=sandbox
+username=dev_user
+password=dev_pass
+select_only=false
+mcp_configurable=true ; Can be modified via MCP tools
+```
+
+### Available MCP Tools
+| Tool | Description | Requires mcp_configurable |
+|------|-------------|--------------------------|
+| `sql_add_database` | Add a new database | N/A (always creates with true) |
+| `sql_update_database` | Update database settings | Yes |
+| `sql_remove_database` | Remove a database | Yes |
+| `sql_get_config` | View config (passwords redacted) | No |
+| `sql_set_mcp_configurable` | Lock database from MCP changes | N/A (one-way lock) |
+
+---
+
+## SSH Tunnel Configuration
 
 ### SSH Parameters per Database
 Add SSH tunnel settings to any database configuration:
@@ -192,18 +243,18 @@ Add SSH tunnel settings to any database configuration:
 ```ini
 [database.remote_db]
 type=postgresql
-host=internal-db.company.local  # Internal database host
+host=internal-db.company.local # Internal database host
 port=5432
 database=production
 username=readonly_user
 password=db_password
 
 # SSH Tunnel Configuration
-ssh_host=bastion.company.com     # SSH bastion host
-ssh_port=22                      # SSH port
-ssh_username=tunnel_user         # SSH username
-ssh_private_key=/path/to/key     # SSH private key path
-ssh_passphrase=key_passphrase    # SSH key passphrase (if encrypted)
+ssh_host=bastion.company.com # SSH bastion host
+ssh_port=22 # SSH port
+ssh_username=tunnel_user # SSH username
+ssh_private_key=/path/to/key # SSH private key path
+ssh_passphrase=key_passphrase # SSH key passphrase (if encrypted)
 ```
 
 ### SSH Authentication Methods
@@ -218,7 +269,7 @@ ssh_passphrase=optional_passphrase
 
 #### Password Authentication
 ```ini
-ssh_host=bastion.example.com  
+ssh_host=bastion.example.com
 ssh_username=tunnel_user
 ssh_password=ssh_password
 ```
@@ -238,7 +289,7 @@ ssh-copy-id -i ~/.ssh/sql_mcp_key.pub user@bastion.host.com
 
 ---
 
-## 💡 Configuration Examples
+## Configuration Examples
 
 ### Local Development Setup
 ```ini
@@ -247,7 +298,7 @@ type=sqlite
 file=./dev.sqlite
 select_only=false
 
-[database.test_postgres] 
+[database.test_postgres]
 type=postgresql
 host=localhost
 port=5432
@@ -281,7 +332,7 @@ select_only=true
 timeout=15000
 
 [database.analytics]
-type=postgresql  
+type=postgresql
 host=analytics-db.company.com
 port=5432
 database=data_warehouse
@@ -316,7 +367,7 @@ select_only=true
 
 [database.users]
 type=mysql
-host=user-db.company.com  
+host=user-db.company.com
 database=users
 username=analytics_readonly
 password=user_password
@@ -327,7 +378,7 @@ select_only=true
 type=postgresql
 host=events-db.company.com
 database=events
-username=analytics_readonly  
+username=analytics_readonly
 password=events_password
 ssl=true
 select_only=true
@@ -346,7 +397,7 @@ max_batch_size=15
 ```ini
 [database.secure_production]
 type=postgresql
-host=10.0.1.100            # Internal database IP
+host=10.0.1.100 # Internal database IP
 port=5432
 database=production
 username=readonly_user
@@ -362,7 +413,7 @@ ssh_private_key=/etc/sql-mcp/keys/production.key
 
 [database.multi_hop]
 type=mysql
-host=192.168.1.50          # Database behind multiple firewalls  
+host=192.168.1.50 # Database behind multiple firewalls
 port=3306
 database=internal_app
 username=readonly_user
@@ -378,14 +429,14 @@ ssh_passphrase=key_encryption_password
 
 ---
 
-## ✅ Configuration Validation
+## Configuration Validation
 
 ### Interactive Setup Wizard
 Use the built-in wizard for guided configuration:
 
 ```bash
 # Start configuration wizard
-sql-mcp-setup
+sql-setup
 
 # Follow prompts:
 ? Select database type: PostgreSQL
@@ -421,21 +472,21 @@ await server.testConnection('analytics');
 
 #### Missing Required Fields
 ```
-❌ Database 'mydb' missing required field 'type'
-❌ PostgreSQL database 'prod' missing required field 'host'
-❌ SQLite database 'cache' missing required field 'file'
+ Database 'mydb' missing required field 'type'
+ PostgreSQL database 'prod' missing required field 'host'
+ SQLite database 'cache' missing required field 'file'
 ```
 
 #### Invalid Configuration Values
 ```
-❌ Invalid database type 'postgress' (did you mean 'postgresql'?)
-❌ Invalid port '5432abc' - must be a number
-❌ Security limit 'max_joins' must be between 1 and 100
+ Invalid database type 'postgress' (did you mean 'postgresql'?)
+ Invalid port '5432abc' - must be a number
+ Security limit 'max_joins' must be between 1 and 100
 ```
 
 ---
 
-## 🌍 Environment Variables
+## Environment Variables
 
 ### Override Configuration with Environment Variables
 
@@ -457,7 +508,7 @@ export SQL_MCP_DATABASE_PRODUCTION_SSH_HOST=new-bastion.example.com
 export SQL_MCP_SECURITY_MAX_JOINS=15
 export SQL_MCP_SECURITY_MAX_COMPLEXITY_SCORE=150
 
-# Override extension settings  
+# Override extension settings
 export SQL_MCP_EXTENSION_MAX_ROWS=2000
 export SQL_MCP_EXTENSION_QUERY_TIMEOUT=45000
 ```
@@ -469,7 +520,7 @@ export SQL_MCP_EXTENSION_QUERY_TIMEOUT=45000
 
 Examples:
 - `SQL_MCP_DATABASE_PROD_HOST`
-- `SQL_MCP_SECURITY_MAX_JOINS` 
+- `SQL_MCP_SECURITY_MAX_JOINS`
 - `SQL_MCP_EXTENSION_MAX_ROWS`
 
 ### Docker Environment Configuration
@@ -492,28 +543,28 @@ CMD ["node", "dist/index.js"]
 # docker-compose.yml
 version: '3.8'
 services:
-  sql-mcp-server:
-    image: sql-mcp-server
-    environment:
-      - SQL_MCP_DATABASE_APP_HOST=postgres
-      - SQL_MCP_DATABASE_APP_PASSWORD=docker_password
-    depends_on:
-      - postgres
-      
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_PASSWORD: docker_password
+ sql-mcp-server:
+ image: sql-mcp-server
+ environment:
+ - SQL_MCP_DATABASE_APP_HOST=postgres
+ - SQL_MCP_DATABASE_APP_PASSWORD=docker_password
+ depends_on:
+ - postgres
+
+ postgres:
+ image: postgres:15
+ environment:
+ POSTGRES_PASSWORD: docker_password
 ```
 
 ---
 
-## 🔧 Advanced Configuration (Planned Features)
+## Advanced Configuration (Planned Features)
 
 The following advanced configuration features are planned for future releases:
 
 - **Configuration Templates**: Reusable configuration templates for common setups
-- **Dynamic Configuration**: Runtime configuration updates without restart  
+- **Dynamic Configuration**: Now implemented via the `mcp_configurable` flag and the MCP config tools (`sql_add_database`, `sql_update_database`, `sql_remove_database`, `sql_get_config`, `sql_set_mcp_configurable`). See the [Dynamic Database Management via MCP](#dynamic-database-management-via-mcp) section for details.
 - **Configuration Encryption**: Encrypted storage for sensitive configuration values
 - **Profile-Based Configuration**: Environment-specific configuration profiles
 
@@ -521,22 +572,22 @@ For the current release, use environment variables for sensitive values and conf
 
 ---
 
-## 🔍 Configuration Troubleshooting
+## Configuration Troubleshooting
 
 ### Common Issues and Solutions
 
 #### Configuration File Not Found
 ```
-❌ Error: No config.ini found
+ Error: No config.ini found
 ```
 **Solutions:**
 1. Create configuration file: `touch config.ini`
-2. Run setup wizard: `sql-mcp-setup`
+2. Run setup wizard: `sql-setup`
 3. Specify custom path: `--config=/path/to/config.ini`
 
 #### Permission Denied Reading Configuration
 ```
-❌ Error: EACCES: permission denied, open 'config.ini'
+ Error: EACCES: permission denied, open 'config.ini'
 ```
 **Solutions:**
 1. Fix file permissions: `chmod 644 config.ini`
@@ -544,8 +595,8 @@ For the current release, use environment variables for sensitive values and conf
 3. Run as appropriate user
 
 #### Invalid Configuration Syntax
-```  
-❌ Error: Invalid INI syntax at line 15
+```
+ Error: Invalid INI syntax at line 15
 ```
 **Solutions:**
 1. Validate INI syntax
@@ -554,7 +605,7 @@ For the current release, use environment variables for sensitive values and conf
 
 #### Database Connection Failed
 ```
-❌ Error: Connection failed to database 'production'
+ Error: Connection failed to database 'production'
 ```
 **Solutions:**
 1. Verify all required parameters are provided

@@ -3,7 +3,7 @@
 
 set -e
 
-echo "📊 Creating SQLite demo database..."
+echo "[DATA] Creating SQLite demo database..."
 
 # Remove existing database if it exists
 if [ -f "demo.db" ]; then
@@ -120,13 +120,13 @@ USER_COUNT=$(sqlite3 demo.db "SELECT COUNT(*) FROM users;")
 ORDER_COUNT=$(sqlite3 demo.db "SELECT COUNT(*) FROM orders;")
 DEPT_COUNT=$(sqlite3 demo.db "SELECT COUNT(*) FROM departments;")
 
-echo "✅ Database created successfully:"
-echo "   📊 $DEPT_COUNT departments"
-echo "   👥 $USER_COUNT users"
-echo "   🛒 $ORDER_COUNT orders"
+echo "[OK] Database created successfully:"
+echo "   $DEPT_COUNT departments"
+echo "   $USER_COUNT users"
+echo "   $ORDER_COUNT orders"
 
 # Create configuration file
-echo "📝 Creating configuration file..."
+echo "[NOTE] Creating configuration file..."
 cat > config.ini << 'EOF'
 # SQLite Demo Configuration
 [database.demo]
@@ -150,10 +150,10 @@ max_batch_size=10
 debug=true
 EOF
 
-echo "✅ Configuration created: config.ini"
+echo "[OK] Configuration created: config.ini"
 
 # Create Claude Desktop integration config
-echo "🖥️ Creating Claude Desktop configuration..."
+echo "[CONFIG] Creating Claude Desktop configuration..."
 cat > claude-config.json << EOF
 {
   "mcpServers": {
@@ -170,11 +170,11 @@ cat > claude-config.json << EOF
 }
 EOF
 
-echo "✅ Claude Desktop config created: claude-config.json"
+echo "[OK] Claude Desktop config created: claude-config.json"
 echo "   Copy to: ~/.config/Claude/claude_desktop_config.json"
 
 # Create sample queries file
-echo "📋 Creating sample queries..."
+echo "[INFO] Creating sample queries..."
 cat > sample-queries.sql << 'EOF'
 -- Sample queries for SQLite demo
 
@@ -230,9 +230,9 @@ GROUP BY u.id
 ORDER BY total_spent DESC;
 EOF
 
-echo "✅ Sample queries created: sample-queries.sql"
+echo "[OK] Sample queries created: sample-queries.sql"
 
-echo "📁 Demo setup complete! Files created:"
+echo "[FILES] Demo setup complete! Files created:"
 echo "   - demo.db (SQLite database)"
 echo "   - config.ini (MCP server config)"
 echo "   - claude-config.json (Claude Desktop config)"

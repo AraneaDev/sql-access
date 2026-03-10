@@ -6,38 +6,38 @@ This directory contains comprehensive examples for deploying, configuring, and i
 
 ```
 examples/
-├── README.md                          # This file
-├── basic-setup/                       # Quick start configurations
-│   ├── simple-sqlite.ini             # Minimal SQLite setup
-│   ├── single-postgresql.ini         # Basic PostgreSQL config
-│   ├── single-mysql.ini              # Basic MySQL config
-│   ├── multiple-databases.ini        # Multi-database setup
-│   ├── docker-compose-demo.yml       # Docker demo environment
-│   ├── claude-desktop-config.json    # Claude Desktop integration
-│   ├── test-queries.sql              # Sample test queries
-│   └── init-scripts/                 # Database initialization scripts
-├── claude-integrations/               # Claude integration examples
-│   ├── claude-desktop/               # Claude Desktop configurations
-│   ├── claude-api/                   # API integration examples
-│   ├── workflows/                    # Common workflow templates
-│   ├── prompt-engineering/           # Optimized prompts
-│   └── automation/                   # Automation scripts
-├── custom-adapters/                   # Database adapter examples
-│   ├── adapter-template.ts           # Base adapter template
-│   ├── oracle-adapter/               # Oracle Database example
-│   ├── redis-adapter/                # Redis NoSQL example
-│   ├── csv-adapter/                  # CSV file adapter
-│   └── snowflake-adapter/            # Snowflake DW adapter
-├── monitoring-setup/                  # Monitoring and observability
-│   ├── prometheus/                   # Prometheus configuration
-│   ├── grafana/                      # Grafana dashboards
-│   ├── logging/                      # Centralized logging
-│   ├── alerts/                       # Alerting setup
-│   ├── health-checks/                # Health monitoring scripts
-│   └── docker-compose-monitoring.yml # Complete monitoring stack
-├── enterprise-deployment/             # Production deployment examples
-│   └── kubernetes/                   # Kubernetes manifests
-└── interactive-tools/                 # Interactive configuration tools
+|-- README.md # This file
+|-- basic-setup/ # Quick start configurations
+| |-- simple-sqlite.ini # Minimal SQLite setup
+| |-- single-postgresql.ini # Basic PostgreSQL config
+| |-- single-mysql.ini # Basic MySQL config
+| |-- multiple-databases.ini # Multi-database setup
+| |-- docker-compose-demo.yml # Docker demo environment
+| |-- claude-desktop-config.json # Claude Desktop integration
+| |-- test-queries.sql # Sample test queries
+| \-- init-scripts/ # Database initialization scripts
+|-- claude-integrations/ # Claude integration examples
+| |-- claude-desktop/ # Claude Desktop configurations
+| |-- claude-api/ # API integration examples
+| |-- workflows/ # Common workflow templates
+| |-- prompt-engineering/ # Optimized prompts
+| \-- automation/ # Automation scripts
+|-- custom-adapters/ # Database adapter examples
+| |-- adapter-template.ts # Base adapter template
+| |-- oracle-adapter/ # Oracle Database example
+| |-- redis-adapter/ # Redis NoSQL example
+| |-- csv-adapter/ # CSV file adapter
+| \-- snowflake-adapter/ # Snowflake DW adapter
+|-- monitoring-setup/ # Monitoring and observability
+| |-- prometheus/ # Prometheus configuration
+| |-- grafana/ # Grafana dashboards
+| |-- logging/ # Centralized logging
+| |-- alerts/ # Alerting setup
+| |-- health-checks/ # Health monitoring scripts
+| \-- docker-compose-monitoring.yml # Complete monitoring stack
+|-- enterprise-deployment/ # Production deployment examples
+| \-- kubernetes/ # Kubernetes manifests
+\-- interactive-tools/ # Interactive configuration tools
 ```
 
 ## Getting Started
@@ -62,7 +62,7 @@ npm start
 ```bash
 # Copy Claude Desktop configuration
 cp examples/basic-setup/claude-desktop-config.json \
-   ~/.config/Claude/claude_desktop_config.json
+ ~/.config/Claude/claude_desktop_config.json
 # Edit file paths and restart Claude Desktop
 ```
 
@@ -75,7 +75,7 @@ docker-compose -f examples/monitoring-setup/docker-compose-monitoring.yml up -d
 
 ## Example Categories
 
-### 🚀 Basic Setup Examples
+### Basic Setup Examples
 **Perfect for**: New users, quick testing, development
 
 - **Simple SQLite**: Zero-configuration local database
@@ -84,7 +84,7 @@ docker-compose -f examples/monitoring-setup/docker-compose-monitoring.yml up -d
 - **Docker Demo**: Containerized test environment
 - **Claude Integration**: Desktop app integration
 
-### 🔗 Claude Integration Examples
+### Claude Integration Examples
 **Perfect for**: Workflow optimization, automation, AI-powered analysis
 
 - **Desktop Configuration**: Multiple setup scenarios
@@ -93,7 +93,7 @@ docker-compose -f examples/monitoring-setup/docker-compose-monitoring.yml up -d
 - **Prompt Engineering**: Optimized queries and patterns
 - **Automation Scripts**: Scheduled reports, monitoring
 
-### 🔧 Custom Adapter Examples
+### Custom Adapter Examples
 **Perfect for**: Extending database support, specialized systems
 
 - **Adapter Template**: Base template for new databases
@@ -102,7 +102,7 @@ docker-compose -f examples/monitoring-setup/docker-compose-monitoring.yml up -d
 - **CSV Adapter**: File-based data querying
 - **Cloud Adapters**: Snowflake, BigQuery examples
 
-### 📊 Monitoring Examples
+### Monitoring Examples
 **Perfect for**: Production deployments, performance optimization
 
 - **Prometheus Stack**: Metrics collection and alerting
@@ -111,7 +111,7 @@ docker-compose -f examples/monitoring-setup/docker-compose-monitoring.yml up -d
 - **Log Management**: Centralized logging solutions
 - **Performance Monitoring**: Query and system metrics
 
-### 🏢 Enterprise Deployment
+### Enterprise Deployment
 **Perfect for**: Production environments, scalability, high availability
 
 - **Kubernetes**: Container orchestration deployment
@@ -133,7 +133,7 @@ cp examples/basic-setup/multiple-databases.ini config.ini
 ```bash
 # Claude integration for data analysis
 cp examples/claude-integrations/claude-desktop/advanced-config.json \
-   ~/.config/Claude/claude_desktop_config.json
+ ~/.config/Claude/claude_desktop_config.json
 # Review workflow templates in examples/claude-integrations/workflows/
 ```
 
@@ -159,25 +159,25 @@ kubectl apply -f examples/enterprise-deployment/kubernetes/
 [database.production]
 type=postgresql
 host=prod-db.company.com
-select_only=true  # Read-only access
-ssl=true          # Encrypted connections
-timeout=10000     # Conservative timeout
+select_only=true # Read-only access
+ssl=true # Encrypted connections
+timeout=10000 # Conservative timeout
 
 [security]
-max_complexity_score=50  # Limit query complexity
-max_query_length=5000    # Prevent large queries
+max_complexity_score=50 # Limit query complexity
+max_query_length=5000 # Prevent large queries
 ```
 
 ### Performance-Optimized Setup
 ```ini
 [extension]
-max_rows=5000           # Larger result sets
-query_timeout=60000     # Extended timeout
-max_batch_size=20       # More concurrent queries
+max_rows=5000 # Larger result sets
+query_timeout=60000 # Extended timeout
+max_batch_size=20 # More concurrent queries
 
 [security]
-max_joins=20           # Allow complex joins
-max_complexity_score=200  # Higher complexity limit
+max_joins=20 # Allow complex joins
+max_complexity_score=200 # Higher complexity limit
 ```
 
 ### Multi-Environment Setup
@@ -190,7 +190,7 @@ ssl=true
 
 # Development (Full access)
 [database.dev]
-type=postgresql  
+type=postgresql 
 select_only=false
 ssl=false
 
@@ -209,9 +209,9 @@ const { SQLMCPClient } = require('@modelcontextprotocol/client');
 const client = new SQLMCPClient('ws://localhost:3001');
 
 const result = await client.query({
-  database: 'production',
-  query: 'SELECT COUNT(*) as user_count FROM users',
-  params: []
+ database: 'production',
+ query: 'SELECT COUNT(*) as user_count FROM users',
+ params: []
 });
 ```
 
@@ -223,9 +223,9 @@ import time
 from sql_mcp_client import SQLMCPClient
 
 def generate_daily_report():
-    client = SQLMCPClient('http://localhost:3001')
-    result = client.query('production', 'SELECT * FROM daily_stats WHERE date = CURRENT_DATE')
-    # Process and send report
+ client = SQLMCPClient('http://localhost:3001')
+ result = client.query('production', 'SELECT * FROM daily_stats WHERE date = CURRENT_DATE')
+ # Process and send report
 
 schedule.every().day.at("09:00").do(generate_daily_report)
 ```
@@ -234,13 +234,13 @@ schedule.every().day.at("09:00").do(generate_daily_report)
 ```javascript
 // Custom health check
 const healthCheck = async () => {
-  try {
-    const response = await fetch('http://localhost:3001/health');
-    const status = response.ok ? 'healthy' : 'unhealthy';
-    console.log(`SQL MCP Server: ${status}`);
-  } catch (error) {
-    console.error('Health check failed:', error.message);
-  }
+ try {
+ const response = await fetch('http://localhost:3001/health');
+ const status = response.ok ? 'healthy' : 'unhealthy';
+ console.log(`SQL MCP Server: ${status}`);
+ } catch (error) {
+ console.error('Health check failed:', error.message);
+ }
 };
 
 setInterval(healthCheck, 30000); // Check every 30 seconds
@@ -251,19 +251,19 @@ setInterval(healthCheck, 30000); // Check every 30 seconds
 ### Common Issues
 
 1. **Connection Failures**
-   - Check database credentials and connectivity
-   - Verify firewall rules and network access
-   - Review SSL/TLS configuration
+ - Check database credentials and connectivity
+ - Verify firewall rules and network access
+ - Review SSL/TLS configuration
 
 2. **Performance Issues**
-   - Check query complexity and result set sizes
-   - Monitor connection pool usage
-   - Review timeout settings
+ - Check query complexity and result set sizes
+ - Monitor connection pool usage
+ - Review timeout settings
 
 3. **Integration Problems**
-   - Verify file paths in Claude Desktop config
-   - Check MCP server startup logs
-   - Test with simple queries first
+ - Verify file paths in Claude Desktop config
+ - Check MCP server startup logs
+ - Test with simple queries first
 
 ### Debug Steps
 

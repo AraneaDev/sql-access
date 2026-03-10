@@ -14,63 +14,63 @@ import { Logger, initializeLogger } from './utils/logger.js';
 
 // Initialize logger for main process with console disabled for MCP mode
 const logger = new Logger({ 
-  component: 'Main',
-  enableConsole: false  // Disable console output for MCP protocol
+ component: 'Main',
+ enableConsole: false // Disable console output for MCP protocol
 });
 
 /**
  * Main application entry point
  */
 async function main(): Promise<void> {
-  // Initialize global logger for all components BEFORE creating any other components
-  await initializeLogger({ 
-    enableConsole: false,  // Critical: Disable console output to prevent JSON-RPC interference
-    logFile: './sql-mcp-server.log',
-    logLevel: 'INFO'
-  });
-  // Handle uncaught exceptions gracefully
-  process.on('uncaughtException', (error) => {
-    logger.error('Uncaught exception', error);
-    process.exit(1);
-  });
+ // Initialize global logger for all components BEFORE creating any other components
+ await initializeLogger({ 
+ enableConsole: false, // Critical: Disable console output to prevent JSON-RPC interference
+ logFile: './sql-mcp-server.log',
+ logLevel: 'INFO'
+ });
+ // Handle uncaught exceptions gracefully
+ process.on('uncaughtException', (error) => {
+ logger.error('Uncaught exception', error);
+ process.exit(1);
+ });
 
-  process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled promise rejection', { reason, promise });
-    process.exit(1);
-  });
+ process.on('unhandledRejection', (reason, promise) => {
+ logger.error('Unhandled promise rejection', { reason, promise });
+ process.exit(1);
+ });
 
-  // Initialize and run server
-  const server = new SQLMCPServer();
+ // Initialize and run server
+ const server = new SQLMCPServer();
 
-  // Handle graceful shutdown
-  const gracefulShutdown = async (signal: string) => {
-    logger.info(`Received ${signal}, initiating graceful shutdown...`);
-    
-    try {
-      await server.cleanup();
-      logger.info('Server shutdown complete');
-      process.exit(0);
-    } catch (error) {
-      logger.error('Error during shutdown', error as Error);
-      process.exit(1);
-    }
-  };
+ // Handle graceful shutdown
+ const gracefulShutdown = async (signal: string) => {
+ logger.info(`Received ${signal}, initiating graceful shutdown...`);
+ 
+ try {
+ await server.cleanup();
+ logger.info('Server shutdown complete');
+ process.exit(0);
+ } catch (error) {
+ logger.error('Error during shutdown', error as Error);
+ process.exit(1);
+ }
+ };
 
-  // Register shutdown handlers
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+ // Register shutdown handlers
+ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-  // Start the server
-  try {
-    await server.run();
-  } catch (error) {
-    logger.error('Failed to start server', error as Error);
-    process.exit(1);
-  }
+ // Start the server
+ try {
+ await server.run();
+ } catch (error) {
+ logger.error('Failed to start server', error as Error);
+ process.exit(1);
+ }
 }
 
 // Start the application
 main().catch((error) => {
-  console.error('Fatal error in main process:', error);
-  process.exit(1);
+ console.error('Fatal error in main process:', error);
+ process.exit(1);
 });
