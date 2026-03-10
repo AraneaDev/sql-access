@@ -46,16 +46,17 @@ npm link
 
 > **Note:** `npm link` makes the CLI commands (`sql-install`, `sql-server`, `sql-setup`) available globally. Alternatively, you can run them directly with `node dist/install.js`.
 
-### 2. Setup & Connect
+### 2. Connect to Claude
 ```bash
 sql-install
 ```
-The `sql-install` wizard handles everything: database configuration, security setup, and Claude Desktop integration in one step.
+Registers the MCP server with Claude Code and/or Claude Desktop. Use `--client=claude-code` or `--client=claude-desktop` to target a specific client.
 
-For manual database configuration only (without Claude Desktop integration), you can use:
+### 3. Configure Databases
 ```bash
 sql-setup
 ```
+Interactive wizard for adding database connections, security settings, and SSH tunnels. You can also add databases at runtime using the `sql_add_database` MCP tool.
 
 ## Use Cases
 
