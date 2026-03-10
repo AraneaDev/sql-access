@@ -11,6 +11,9 @@ Welcome to the comprehensive documentation for the SQL MCP Server - a high-perfo
 - **[Configuration Guide](guides/configuration-guide.md)** - Complete configuration reference
 - **[Troubleshooting](guides/troubleshooting-guide.md)** - Common issues and solutions
 
+### Features
+- **[Field Redaction](features/field-redaction.md)** - Automatic masking of sensitive data (emails, phones, SSNs) in query results
+
 ### Architecture & Design
 - **[System Architecture](architecture/system-architecture.md)** - High-level system design
 - **[Database Layer](architecture/database-layer.md)** - Database adapter pattern
@@ -95,6 +98,7 @@ Welcome to the comprehensive documentation for the SQL MCP Server - a high-perfo
 | Contribute to the project | [Contributing Guide](development/contributing.md) |
 | Monitor and troubleshoot | [Monitoring](operations/monitoring.md) |
 | Optimize performance | [Performance Tuning](operations/performance-tuning.md) |
+| Redact sensitive fields | [Field Redaction](features/field-redaction.md) |
 | Manage databases via MCP | [MCP Tools Reference](api/mcp-tools-reference.md#sql_add_database) |
 
 ## External Resources

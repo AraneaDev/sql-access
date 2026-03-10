@@ -224,7 +224,39 @@ query_timeout=30000
 3. **SELECT-Only Mode** - Read-only database access for production safety
 4. **Connection Encryption** - SSL/TLS and SSH tunnel support
 5. **Audit Logging** - Comprehensive security event tracking
-6. **Field Redaction** - Configurable masking patterns for sensitive data
+6. **[Field Redaction](docs/features/field-redaction.md)** - Automatic masking of sensitive data in query results
+
+### Field Redaction
+
+Automatically mask, replace, or partially obscure sensitive fields (emails, phone numbers, SSNs, etc.) in query results before they reach Claude or other clients. Redaction is configured per-database in `config.ini`:
+
+```ini
+[database.production]
+type=postgresql
+host=prod-db.company.com
+database=app_db
+username=readonly_user
+password=secure_pass
+select_only=true
+
+# Field Redaction
+redaction_enabled=true
+redaction_rules=*email*:partial_mask,*phone*:full_mask,ssn:replace:[PROTECTED]
+redaction_case_sensitive=false
+redaction_log_access=true
+```
+
+**Redaction types:**
+| Type | Example Input | Example Output |
+|------|--------------|----------------|
+| `partial_mask` | `john.doe@example.com` | `j******.e@*****.com` |
+| `full_mask` | `555-123-4567` | `************` |
+| `replace` | `123-45-6789` | `[PROTECTED]` |
+| `custom` | Regex-based | Custom pattern |
+
+**Field patterns:** exact match (`email`), wildcard (`*email*`), or regex (`/^user_.+$/`).
+
+**[Full Redaction Guide](docs/features/field-redaction.md)**
 
 ### Enterprise Security Compliance
 - **SOC 2 Type II** compatible logging and monitoring

@@ -9,6 +9,7 @@ This comprehensive guide covers all configuration options for the SQL MCP Server
 - [Security Configuration](#security-configuration)
 - [Extension Configuration](#extension-configuration)
 - [Dynamic Database Management via MCP](#dynamic-database-management-via-mcp)
+- [Field Redaction](#field-redaction)
 - [SSH Tunnel Configuration](#ssh-tunnel-configuration)
 - [Configuration Examples](#configuration-examples)
 - [Configuration Validation](#configuration-validation)
@@ -232,6 +233,63 @@ mcp_configurable=true ; Can be modified via MCP tools
 | `sql_remove_database` | Remove a database | Yes |
 | `sql_get_config` | View config (passwords redacted) | No |
 | `sql_set_mcp_configurable` | Lock database from MCP changes | N/A (one-way lock) |
+
+---
+
+## Field Redaction
+
+Automatically mask sensitive data in query results before they reach Claude or other clients. Redaction is configured per-database. For the full guide with examples, see **[Field Redaction](../features/field-redaction.md)**.
+
+### Enabling Redaction
+
+Add redaction settings to any `[database.*]` section:
+
+```ini
+[database.production]
+type=postgresql
+host=prod-db.company.com
+database=app_db
+username=readonly_user
+password=secure_pass
+
+# Field Redaction
+redaction_enabled=true
+redaction_rules=*email*:partial_mask,*phone*:full_mask,ssn:replace:[PROTECTED]
+```
+
+### Redaction Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `redaction_enabled` | `false` | Enable redaction for this database |
+| `redaction_rules` | - | Comma-separated rules in `field:type[:options]` format |
+| `redaction_replacement_text` | `[REDACTED]` | Default text for `replace` type |
+| `redaction_log_access` | `false` | Log when redacted fields are accessed |
+| `redaction_case_sensitive` | `false` | Case-sensitive field name matching |
+| `redaction_audit_queries` | `false` | Audit trail for queries touching redacted fields |
+
+### Rule Format
+
+Rules use the format `field_pattern:redaction_type[:options]`:
+
+**Field patterns:**
+- **Exact**: `email` — matches only fields named "email"
+- **Wildcard**: `*email*` — matches any field containing "email"
+- **Regex**: `/^user_.+$/` — regex matching
+
+**Redaction types:**
+| Type | Effect | Example |
+|------|--------|---------|
+| `full_mask` | Replace entire value with `*` | `john@email.com` -> `**********` |
+| `partial_mask` | Smart format-preserving mask | `john.doe@example.com` -> `j******.e@*****.com` |
+| `replace` | Fixed text replacement | `123-45-6789` -> `[PROTECTED]` |
+| `custom` | Regex pattern replacement | Custom regex match/replace |
+
+### Example: Multi-Rule Configuration
+
+```ini
+redaction_rules=*email*:partial_mask,*phone*:full_mask,*ssn*:replace:[SSN],*password*:replace:[HIDDEN],customer_id:replace:[CUST_ID]
+```
 
 ---
 
