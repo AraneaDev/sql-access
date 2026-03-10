@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migration Guide
 No migration required. Existing configurations work without changes. To enable MCP configuration for existing databases, add `mcp_configurable=true` to the desired `[database.*]` sections in config.ini.
 
-## [2.2.0] - 2024-09-23
+## [2.2.0] - 2026-02-23
 
 ### Added
 - **Field Redaction Implementation** - Automatic masking/replacement of sensitive data in query results
@@ -94,7 +94,7 @@ No migration required. Existing configurations work without changes. To enable M
 ### Migration Guide
 No migration is required for this release. Field redaction is an opt-in feature that can be enabled through configuration. All existing configurations and integrations continue to work without changes.
 
-## [2.1.0] - 2024-08-29
+## [2.1.0] - 2025-08-29
 
 ### Added
 - **Enhanced SSH Tunneling** with connection pooling and health monitoring
@@ -164,7 +164,7 @@ No migration is required for this release. All existing configurations, scripts,
 - Legacy SSH tunnel configuration format will be deprecated in v3.0.0 (still supported in v2.1.0)
 - Some internal API methods may be deprecated in future releases (no user impact)
 
-## [2.0.0] - 2024-08-14
+## [2.0.0] - 2025-08-14
 
 ### Added
 - Initial release with comprehensive database support
