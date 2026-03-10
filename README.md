@@ -41,6 +41,7 @@ git clone https://forgejo.aranea.dev/ContextForge/sql-access.git
 cd sql-access
 npm install
 npm run build
+npm link
 ```
 
 ### 2. Automatic Installation (Recommended)
@@ -48,6 +49,8 @@ npm run build
 sql-install
 ```
 The `sql-install` command handles database configuration, security setup, and Claude Desktop integration automatically. This is the easiest way to get up and running.
+
+> **Note:** `sql-install` (and other CLI commands like `sql-server`, `sql-setup`) require `npm link` to be run first. Alternatively, you can run them directly with `node dist/install.js`.
 
 ### 3. Configure (Manual)
 ```bash
