@@ -476,15 +476,45 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  private async establishTunnel(
- dbName: string, 
- options: SSHTunnelCreateOptions, 
+ dbName: string,
+ options: SSHTunnelCreateOptions,
  portAssignment: PortAssignmentResult,
  databaseType?: string
  ): Promise<EnhancedTunnelInfo> {
+ const TUNNEL_TIMEOUT = 45000; // 45 second overall timeout
+
  return new Promise<EnhancedTunnelInfo>((resolve, reject) => {
  const sshClient = new SSHClient();
  let server: net.Server;
  let assignedPort: number;
+ let settled = false;
+
+ const timeoutId = setTimeout(() => {
+ if (!settled) {
+ settled = true;
+ sshClient.end();
+ if (portAssignment.assignedPort) {
+ this.portManager.releasePort(portAssignment.assignedPort);
+ }
+ reject(new Error(`SSH tunnel creation timed out after ${TUNNEL_TIMEOUT / 1000}s for '${dbName}'`));
+ }
+ }, TUNNEL_TIMEOUT);
+
+ const safeResolve = (value: EnhancedTunnelInfo) => {
+ if (!settled) {
+ settled = true;
+ clearTimeout(timeoutId);
+ resolve(value);
+ }
+ };
+
+ const safeReject = (error: Error) => {
+ if (!settled) {
+ settled = true;
+ clearTimeout(timeoutId);
+ reject(error);
+ }
+ };
 
  // Set up SSH client event handlers
  sshClient.on('ready', () => {
@@ -559,30 +589,30 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  // Set up tunnel monitoring
  this.setupTunnelMonitoring(dbName, enhancedTunnelInfo);
  
- resolve(enhancedTunnelInfo);
+ safeResolve(enhancedTunnelInfo);
  });
 
  server.on('error', (serverError) => {
  this.logger.error(`Enhanced SSH tunnel server error for '${dbName}'`, serverError);
- 
+
  // Release the reserved port on server error
  if (portAssignment.assignedPort) {
  this.portManager.releasePort(portAssignment.assignedPort);
  }
- 
- reject(new Error(`SSH tunnel server failed: ${serverError.message}`));
+
+ safeReject(new Error(`SSH tunnel server failed: ${serverError.message}`));
  });
  });
 
  sshClient.on('error', (sshError) => {
  this.logger.error(`SSH client error for '${dbName}'`, sshError);
- 
+
  // Release the reserved port on connection error
  if (portAssignment.assignedPort) {
  this.portManager.releasePort(portAssignment.assignedPort);
  }
- 
- reject(new Error(`SSH connection failed: ${sshError.message}`));
+
+ safeReject(new Error(`SSH connection failed: ${sshError.message}`));
  });
 
  sshClient.on('end', () => {
@@ -617,10 +647,31 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  readyTimeout: 30000,
  keepaliveInterval: 10000, // Send keepalive every 10 seconds
  keepaliveCountMax: 3, // Max 3 failed keepalives before disconnect
- algorithms: { // Use reliable algorithms
- kex: ['diffie-hellman-group14-sha256', 'diffie-hellman-group16-sha512'],
- cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr'],
- hmac: ['hmac-sha2-256', 'hmac-sha2-512']
+ algorithms: {
+ kex: [
+ 'curve25519-sha256',
+ 'curve25519-sha256@libssh.org',
+ 'ecdh-sha2-nistp256',
+ 'ecdh-sha2-nistp384',
+ 'ecdh-sha2-nistp521',
+ 'diffie-hellman-group14-sha256',
+ 'diffie-hellman-group16-sha512',
+ 'diffie-hellman-group14-sha1'
+ ],
+ cipher: [
+ 'aes128-gcm',
+ 'aes128-gcm@openssh.com',
+ 'aes256-gcm',
+ 'aes256-gcm@openssh.com',
+ 'aes128-ctr',
+ 'aes192-ctr',
+ 'aes256-ctr'
+ ],
+ hmac: [
+ 'hmac-sha2-256',
+ 'hmac-sha2-512',
+ 'hmac-sha1'
+ ]
  }
  };
 

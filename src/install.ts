@@ -52,14 +52,15 @@ function getClaudeCodeConfigPath(): string {
  return join(homedir(), '.claude.json');
 }
 
-function getDefaultSqlConfigPath(): string {
- const home = homedir();
- const os = platform();
+function getProjectRoot(): string {
+ // Resolve from the install script's location (dist/install.js -> project root)
+ const scriptDir = dirname(new URL(import.meta.url).pathname);
+ return dirname(scriptDir);
+}
 
- if (os === 'win32') {
- return join(process.env.APPDATA || join(home, 'AppData', 'Roaming'), 'sql-access', 'config.ini');
- }
- return join(home, '.config', 'sql-access', 'config.ini');
+function getDefaultSqlConfigPath(): string {
+ // Default to config.ini in the project root
+ return join(getProjectRoot(), 'config.ini');
 }
 
 // ============================================================================
@@ -129,9 +130,12 @@ query_timeout=30000
 // ============================================================================
 
 function buildMcpServerEntry(configIniPath: string): MCPServerEntry {
+ const projectRoot = getProjectRoot();
+ const entryPoint = join(projectRoot, 'dist', 'index.js');
+
  return {
- command: 'sql-server',
- args: ['--config', configIniPath],
+ command: 'node',
+ args: [entryPoint, '--config', configIniPath],
  env: {
  NODE_ENV: 'production'
  }

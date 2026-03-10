@@ -7,6 +7,12 @@ import { EventEmitter } from 'events';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { parse as parseIni } from 'ini';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+ CallToolRequestSchema,
+ ListToolsRequestSchema
+} from '@modelcontextprotocol/sdk/types.js';
 
 import type {
  MCPMessage,
@@ -59,11 +65,12 @@ export class SQLMCPServer extends EventEmitter {
  private readonly schemaManager: SchemaManager;
  private readonly sshTunnelManager: EnhancedSSHTunnelManager;
  private readonly logger: Logger;
- 
+ private mcpServer: Server;
+
  private config: ParsedServerConfig | null = null;
  private configPath: string = '';
  private initialized = false;
- 
+
  // MCP protocol constants
  private readonly protocolVersion = MCP_PROTOCOL_VERSION;
  private readonly serverName = SERVER_NAME;
@@ -71,23 +78,30 @@ export class SQLMCPServer extends EventEmitter {
 
  constructor() {
  super();
- 
+
  // Create logger with proper config object
  // Disable console output for MCP mode to prevent stdout interference
- this.logger = new Logger({ 
- logFile: './sql-mcp-server.log', 
+ this.logger = new Logger({
+ logFile: './sql-mcp-server.log',
  logLevel: 'INFO',
  component: 'SQLMCPServer',
  enableConsole: false // Disable console output for MCP protocol
  });
- 
+
+ // Initialize MCP SDK server
+ this.mcpServer = new Server(
+ { name: SERVER_NAME, version: SERVER_VERSION },
+ { capabilities: { tools: {}, logging: {} } }
+ );
+
  // Initialize managers with proper dependencies
  this.sshTunnelManager = new EnhancedSSHTunnelManager();
  this.securityManager = new SecurityManager();
  this.connectionManager = new ConnectionManager(this.sshTunnelManager);
  this.schemaManager = new SchemaManager(this.connectionManager);
- 
+
  this.setupEventListeners();
+ this.registerMCPHandlers();
  }
 
  /**
@@ -95,22 +109,17 @@ export class SQLMCPServer extends EventEmitter {
  */
  public async initialize(configPath?: string): Promise<void> {
  this.logger.info('Initializing SQL MCP Server...');
- 
+
  try {
  // Load configuration
  this.loadConfig(configPath);
- 
+
  // Initialize all managers with configuration
  await this.initializeManagers();
- 
- // Setup stdio handling for MCP protocol (only if no config path provided)
- if (!configPath) {
- this.setupStdioHandling();
- }
- 
+
  this.initialized = true;
  this.logger.info('SQL MCP Server initialization complete');
- 
+
  this.emit('initialized');
  } catch (error) {
  this.logger.error('Failed to initialize server', error as Error);
@@ -344,143 +353,57 @@ export class SQLMCPServer extends EventEmitter {
  }
 
  /**
- * Setup stdio handling for MCP protocol communication
+ * Register MCP SDK request handlers
  */
- private setupStdioHandling(): void {
- process.stdin.setEncoding('utf8');
-
- let buffer = '';
- process.stdin.on('data', (chunk: string) => {
- buffer += chunk;
- const lines = buffer.split('\n');
- buffer = lines.pop() || '';
-
- for (const line of lines) {
- if (line.trim()) {
- this.handleMessage(line.trim()).catch(error => {
- this.logger.error('Error handling message', { error, message: line });
- });
- }
- }
- });
-
- process.stdin.on('end', () => {
- this.logger.info('stdin ended, exiting');
- this.cleanup().then(() => process.exit(0));
- });
-
- process.on('SIGINT', () => {
- this.logger.info('Received SIGINT, exiting');
- this.cleanup().then(() => process.exit(0));
- });
-
- process.on('SIGTERM', () => {
- this.logger.info('Received SIGTERM, exiting');
- this.cleanup().then(() => process.exit(0));
- });
-
- this.logger.info('Stdio handling setup complete');
- }
-
- /**
- * Handle incoming MCP message
- */
- private async handleMessage(messageStr: string): Promise<void> {
- try {
- this.logger.debug(`Received message: ${messageStr}`);
- const message: MCPMessage = JSON.parse(messageStr);
-
- if (isMCPRequest(message)) {
- const response = await this.handleRequest(message);
- if (response) {
- this.sendMessage(response);
- }
- } else {
- this.logger.warning('Received non-request message', { message });
- }
- } catch (error) {
- this.logger.error('Error parsing message', { error, messageStr });
- 
- // Try to extract ID for error response
- let messageId: string | number | null = null;
- try {
- const message = JSON.parse(messageStr);
- messageId = message.id || null;
- } catch (e) {
- // ignore parse error
- }
- 
- this.sendErrorResponse(messageId, -32700, 'Parse error');
- }
- }
-
- /**
- * Handle MCP request (public for testing)
- */
- public async handleRequest(request: MCPRequest): Promise<MCPResponse | null> {
- try {
- switch (request.method) {
- case 'initialize':
- return await this.handleInitialize(request);
- case 'tools/list':
- return await this.handleToolsList(request);
- case 'tools/call':
- return await this.handleToolCall(request);
- case 'notifications/initialized':
- this.initialized = true;
- this.logger.info('Client initialization acknowledged');
- return null; // No response needed for notifications
- default:
- this.logger.warning(`Unknown method: ${request.method}`);
- return this.createErrorResponse(request.id, -32601, `Method not found: ${request.method}`);
- }
- } catch (error) {
- this.logger.error(`Error handling request ${request.method}`, { error, requestId: request.id });
- return this.createErrorResponse(
- request.id, 
- -32603, 
- `Internal error: ${error instanceof Error ? error.message : 'Unknown error'}`
- );
- }
- }
-
- /**
- * Handle initialize request
- */
- private async handleInitialize(request: MCPRequest): Promise<MCPResponse> {
- this.logger.info('Handling initialize request');
- 
- const result: MCPInitializeResult = {
- protocolVersion: this.protocolVersion,
- capabilities: {
- tools: {},
- logging: {}
- },
- serverInfo: {
- name: this.serverName,
- version: this.serverVersion
- }
- };
-
- const response: MCPResponse = {
- jsonrpc: '2.0',
- id: request.id,
- result
- };
-
- return response;
- }
-
- /**
- * Handle tools/list request
- */
- private async handleToolsList(request: MCPRequest): Promise<MCPResponse> {
+ private registerMCPHandlers(): void {
+ // Register tools/list handler
+ this.mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
  this.logger.info('Handling tools/list request');
+ return { tools: this.getToolDefinitions() };
+ });
 
- const tools: MCPTool[] = [
+ // Register tools/call handler
+ this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+ const { name, arguments: args } = request.params;
+ this.logger.info(`Handling tool call: ${name}`, { args });
+
+ try {
+ if (!args || typeof args !== 'object') {
+ throw new Error(`Invalid arguments provided for tool '${name}'. Expected object, got ${typeof args}`);
+ }
+
+ const result = await this.dispatchToolCall(name, args as Record<string, unknown>);
+ return {
+ content: result.content.map(c => ({ type: "text" as const, text: (c as any).text || '' })),
+ isError: result.isError || false
+ };
+ } catch (error) {
+ this.logger.error(`Error in tool call ${name}`, { error, args });
+ const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ const troubleshooting = [
+ '**Troubleshooting:**',
+ '- Ensure all required arguments are provided',
+ '- Check that the database name exists in your configuration',
+ '- Verify your database connection is working',
+ '- Review the server logs for more details'
+ ].join('\n');
+
+ return {
+ content: [{ type: "text" as const, text: ` Error in ${name}: ${errorMessage}\n\n${troubleshooting}` }],
+ isError: true
+ };
+ }
+ });
+ }
+
+ /**
+ * Get tool definitions for MCP SDK
+ */
+ private getToolDefinitions() {
+ return [
  {
  name: "sql_query",
- description: "Execute a single SQL query on a configured database with automatic schema awareness and SELECT-only security enforcement",
+ description: "Execute a single SQL query on a configured database with automatic schema awareness and SELECT-only security enforcement. IMPORTANT: Always call sql_get_schema for the target database before your first query to learn the correct table and column names.",
  inputSchema: {
  type: "object",
  properties: {
@@ -504,7 +427,7 @@ export class SQLMCPServer extends EventEmitter {
  },
  {
  name: "sql_batch_query",
- description: "Execute multiple SQL queries in batch on a configured database for improved performance. All queries must pass security validation.",
+ description: "Execute multiple SQL queries in batch on a configured database for improved performance. All queries must pass security validation. IMPORTANT: Always call sql_get_schema for the target database before your first query to learn the correct table and column names.",
  inputSchema: {
  type: "object",
  properties: {
@@ -712,35 +635,12 @@ export class SQLMCPServer extends EventEmitter {
  }
  }
  ];
-
- const result: MCPToolsListResult = { tools };
-
- const response: MCPResponse = {
- jsonrpc: '2.0',
- id: request.id,
- result
- };
-
- return response;
  }
 
  /**
- * Handle tools/call request
+ * Dispatch tool call to appropriate handler
  */
- private async handleToolCall(request: MCPRequest): Promise<MCPResponse> {
- if (!isMCPToolCallRequest(request)) {
- return this.createErrorResponse(request.id, -32602, 'Invalid tool call request');
- }
-
- const { name, arguments: args } = request.params;
- this.logger.info(`Handling tool call: ${name}`, { args });
-
- try {
- // Enhanced argument validation
- if (!args || typeof args !== 'object') {
- throw new Error(`Invalid arguments provided for tool '${name}'. Expected object, got ${typeof args}`);
- }
-
+ private async dispatchToolCall(name: string, args: Record<string, unknown>): Promise<MCPToolResponse> {
  let result: MCPToolResponse;
 
  switch (name) {
@@ -750,14 +650,14 @@ export class SQLMCPServer extends EventEmitter {
  }
  result = await this.handleSqlQuery(args);
  break;
- 
+
  case "sql_batch_query":
  if (!isSQLBatchQueryArgs(args)) {
  throw new Error("Missing required arguments: 'database' and 'queries' are required");
  }
  result = await this.handleBatchQuery(args);
  break;
- 
+
  case "sql_analyze_performance":
  if (!args.database || !args.query) {
  throw new Error("Missing required arguments: 'database' and 'query' are required");
@@ -767,25 +667,25 @@ export class SQLMCPServer extends EventEmitter {
  query: args.query as string
  });
  break;
- 
+
  case "sql_list_databases":
  result = await this.handleListDatabases();
  break;
- 
+
  case "sql_get_schema":
  if (!isSQLGetSchemaArgs(args)) {
  throw new Error("Missing required argument: 'database' is required");
  }
  result = await this.handleGetSchema(args);
  break;
- 
+
  case "sql_test_connection":
  if (!isSQLTestConnectionArgs(args)) {
  throw new Error("Missing required argument: 'database' is required");
  }
  result = await this.handleTestConnection(args);
  break;
- 
+
  case "sql_refresh_schema":
  if (!args.database) {
  throw new Error("Missing required argument: 'database' is required");
@@ -834,47 +734,7 @@ export class SQLMCPServer extends EventEmitter {
  throw new Error(`Unknown tool: ${name}`);
  }
 
- const response: MCPResponse = {
- jsonrpc: '2.0',
- id: request.id,
- result
- };
-
- return response;
-
- } catch (error) {
- this.logger.error(`Error in tool call ${name}`, { error, args });
- 
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
- const troubleshooting = [
- '**Troubleshooting:**',
- '- Ensure all required arguments are provided',
- '- Check that the database name exists in your configuration',
- '- Verify your database connection is working',
- '- Review the server logs for more details'
- ].join('\n');
-
- const result: MCPToolResponse = {
- content: [
- {
- type: "text",
- text: ` Error in ${name}: ${errorMessage}\n\n${troubleshooting}`
- }
- ],
- isError: true,
- _meta: {
- progressToken: null
- }
- };
-
- const response: MCPResponse = {
- jsonrpc: '2.0',
- id: request.id,
- result
- };
-
- return response;
- }
+ return result;
  }
 
  // Tool implementation methods continue in next part...
@@ -1761,53 +1621,14 @@ export class SQLMCPServer extends EventEmitter {
  }
 
  /**
- * Send MCP message
- */
- private sendMessage(message: MCPMessage): void {
- try {
- const messageStr = JSON.stringify(message);
- this.logger.debug(`Sending message: ${messageStr}`);
- process.stdout.write(messageStr + '\n');
- } catch (error) {
- this.logger.error('Error sending message', { error, messageId: typeof message === 'object' ? JSON.stringify(message) : String(message) });
- }
- }
-
- /**
- * Send error response
- */
- private sendErrorResponse(id: string | number | null, code: number, message: string): void {
- this.sendMessage({
- jsonrpc: '2.0',
- id,
- error: {
- code,
- message
- }
- });
- }
-
- /**
- * Create error response (for testing)
- */
- private createErrorResponse(id: string | number | null, code: number, message: string): MCPResponse {
- return {
- jsonrpc: '2.0',
- id,
- error: {
- code,
- message
- }
- };
- }
-
- /**
- * Run the MCP server
+ * Run the MCP server using SDK stdio transport
  */
  public async run(): Promise<void> {
  try {
  await this.initialize();
- this.logger.info("SQL MCP Server running on stdio");
+ const transport = new StdioServerTransport();
+ await this.mcpServer.connect(transport);
+ this.logger.info("SQL MCP Server running on stdio (MCP SDK transport)");
  } catch (error) {
  this.logger.error('Server initialization failed', error as Error);
  process.exit(1);

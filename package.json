@@ -47,6 +47,7 @@
     "ai"
   ],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "ini": "^4.1.1",
     "mssql": "^10.0.1",
     "mysql2": "^3.6.0",
@@ -86,7 +87,9 @@
   ],
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
-    "plugins": ["@typescript-eslint"],
+    "plugins": [
+      "@typescript-eslint"
+    ],
     "extends": [
       "eslint:recommended"
     ],
@@ -107,11 +110,27 @@
       "__filename": "readonly"
     },
     "rules": {
-      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+      "no-unused-vars": [
+        "warn",
+        {
+          "argsIgnorePattern": "^_"
+        }
+      ],
       "prefer-const": "error",
-      "no-console": ["warn", { "allow": ["error"] }],
+      "no-console": [
+        "warn",
+        {
+          "allow": [
+            "error"
+          ]
+        }
+      ],
       "no-useless-escape": "warn"
     },
-    "ignorePatterns": ["dist/", "node_modules/", "coverage/"]
+    "ignorePatterns": [
+      "dist/",
+      "node_modules/",
+      "coverage/"
+    ]
   }
 }
