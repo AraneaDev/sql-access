@@ -61,38 +61,10 @@ The interactive wizard guides you through database setup, security configuration
 ### 4. Connect Claude Desktop
 Add to your Claude Desktop configuration:
 
-You can use either `sql-install` (automatic, recommended) or manually configure Claude Desktop as shown below.
-
-**Automatic (Recommended):**
 ```bash
 sql-install
 ```
 This will detect your platform, configure the database, and set up Claude Desktop integration in one step.
-
-**Manual - Windows:**
-```json
-{
- "mcpServers": {
- "sql-database": {
- "command": "d:\\path\\to\\sql-access\\start.bat"
- }
- }
-}
-```
-
-**Manual - macOS/Linux:**
-```json
-{
- "mcpServers": {
- "sql-database": {
- "command": "sql-server",
- "args": []
- }
- }
-}
-```
-
-**That's it!** Claude Desktop will automatically start the MCP server when needed and connect to your databases.
 
 ## Use Cases
 
