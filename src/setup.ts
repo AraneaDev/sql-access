@@ -121,7 +121,7 @@ function showVersion(): void {
  console.log(`Claude SQL MCP Server v${packageJson.version}`);
  } catch (error) {
  // eslint-disable-next-line no-console
- console.log('Claude SQL MCP Server v2.3.0');
+ console.log('Claude SQL MCP Server v2.3.1');
  }
 }
 

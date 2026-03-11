@@ -446,11 +446,11 @@ git push origin --delete release/2.1.0
 git checkout main
 
 # Update version to next development version
-sed -i 's/"version": "2.2.0"/"version": "2.3.0-dev"/' package.json
+sed -i 's/"version": "2.3.1"/"version": "2.3.1-dev"/' package.json
 
 # Commit development version
 git add package.json
-git commit -m "Bump version to 2.3.0-dev for next development cycle"
+git commit -m "Bump version to 2.3.1-dev for next development cycle"
 git push origin main
 ```
 

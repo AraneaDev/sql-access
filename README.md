@@ -1,13 +1,13 @@
-# MCP SQL Access Server v2.3.0
+# MCP SQL Access Server v2.3.1
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Test Coverage](https://img.shields.io/badge/Coverage-92%25-brightgreen)](https://github.com/your-org/sql-ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tests](https://img.shields.io/badge/Tests-456%20passing-success)](https://github.com/your-org/sql-ts)
 
-**Enterprise-grade MCP SQL Access Server v2.3.0** - Connect Claude Desktop to your databases with bulletproof security, comprehensive monitoring, and seamless multi-database support.
+**Enterprise-grade MCP SQL Access Server v2.3.1** - Connect Claude Desktop to your databases with bulletproof security, comprehensive monitoring, and seamless multi-database support.
 
-## Why Choose MCP SQL Access Server v2.3.0?
+## Why Choose MCP SQL Access Server v2.3.1?
 
 ### **Security First**
 - **SELECT-Only Mode** - Production-safe read-only database access

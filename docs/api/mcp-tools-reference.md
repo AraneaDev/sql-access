@@ -219,61 +219,38 @@ Retrieve detailed schema information for a database including tables, columns, a
 - **Cached Results**: Fast retrieval from schema cache
 
 #### Response Format
-For complete database schema:
+
+The output format adapts based on schema size to stay within token limits.
+
+**Large schemas (>200 columns) — compact summary:**
 ```
- **Database Schema: production** (postgresql)
+production (postgresql) - 45T 8V 1247C
+TABLES:
+users(5c keys:[id,email])
+posts(6c keys:[id,user_id])
+comments(5c keys:[id,post_id,user_id])
+orders(8c keys:[id,user_id])
+...
 
- **Tables (45)**
-
- **users**
- \-- id: bigint (PK, NOT NULL, AUTO_INCREMENT)
- \-- name: varchar(255) (NOT NULL)
- \-- email: varchar(255) (UNIQUE, NOT NULL)
- \-- created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
- \-- updated_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
-
- **posts**
- \-- id: bigint (PK, NOT NULL, AUTO_INCREMENT)
- \-- user_id: bigint (FK -> users.id, NOT NULL)
- \-- title: varchar(500) (NOT NULL)
- \-- content: text
- \-- published: boolean (NOT NULL, DEFAULT: false)
- \-- created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
-
- **Views (8)**
-... [additional tables and views]
-
- **Summary**
- - Tables: 45
- - Views: 8
- - Total Columns: 1,247
- - Foreign Keys: 23
+Use sql_get_schema with table parameter to see full column details for a specific table.
 ```
 
-For single table:
+Each table shows: `name(column_count keys:[key_columns]) //comment`
+
+**Small schemas (≤200 columns) — full inline detail:**
 ```
- **Table: users** (production)
+mydb (mysql) - 5T 0V 28C
+TABLES:
+users: id int [PRI,NN], name varchar(255) [NN], email varchar(255) [PRI,NN], created_at timestamp [NN,d:CURRENT_TIMESTAMP]
+posts: id int [PRI,NN], user_id int [MUL,NN], title varchar(500) [NN], content text, published tinyint [NN,d:0]
+```
 
-**Columns:**
-|-- id: bigint (PRIMARY KEY, NOT NULL, AUTO_INCREMENT)
-|-- name: varchar(255) (NOT NULL)
-|-- email: varchar(255) (UNIQUE, NOT NULL)
-|-- status: enum('active','inactive','suspended') (NOT NULL, DEFAULT: 'active')
-|-- created_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
-\-- updated_at: timestamp (NOT NULL, DEFAULT: CURRENT_TIMESTAMP)
+Column flags: `PRI`=primary key, `MUL`=indexed, `UNI`=unique, `NN`=not null, `d:val`=default value. Comments appear as `//comment`.
 
-**Indexes:**
-|-- PRIMARY KEY (id)
-|-- UNIQUE KEY uk_users_email (email)
-\-- KEY idx_users_status (status)
-
-**Foreign Keys:**
-\-- No foreign key relationships
-
-**Referenced By:**
-|-- posts.user_id -> users.id
-|-- orders.user_id -> users.id
-\-- user_sessions.user_id -> users.id
+**Single table request** (always shows full detail regardless of schema size):
+```
+production (postgresql) - 45T 8V 1247C
+users: id bigint [PRI,NN], name varchar(255) [NN], email varchar(255) [PRI,NN], status varchar(50) [NN,d:'active'], created_at timestamp [NN,d:CURRENT_TIMESTAMP], updated_at timestamp [NN,d:CURRENT_TIMESTAMP]
 ```
 
 ---

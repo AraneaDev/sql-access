@@ -177,76 +177,80 @@ export class SchemaManager extends EventEmitter {
  return `No schema information available for database '${dbName}'.`;
  }
 
- let context = `Database Schema for '${dbName}' (${schema.type}):\n`;
- context += `Captured: ${new Date(schema.captured_at).toLocaleDateString()}\n`;
- context += `Summary: ${schema.summary.table_count} tables, ${schema.summary.view_count} views, ${schema.summary.total_columns} total columns\n\n`;
+ const parts: string[] = [];
+ parts.push(`${dbName} (${schema.type}) - ${schema.summary.table_count}T ${schema.summary.view_count}V ${schema.summary.total_columns}C`);
 
- // If specific table requested, show only that table
+ // Format a single column compactly: name type[flags]
+ const fmtCol = (col: any): string => {
+ let s = col.name + ' ' + col.type;
+ if (col.max_length) s += `(${col.max_length})`;
+ else if (col.precision) s += `(${col.precision},${col.scale || 0})`;
+ const flags: string[] = [];
+ if (col.key && col.key !== '') flags.push(col.key);
+ if (!col.nullable) flags.push('NN');
+ if (col.default) flags.push(`d:${col.default}`);
+ if (flags.length) s += ' [' + flags.join(',') + ']';
+ if (col.comment) s += ' //' + col.comment;
+ return s;
+ };
+
+ // Format a table/view with full column details
+ const fmtTableFull = (name: string, info: any): string => {
+ const cols = info.columns.map(fmtCol).join(', ');
+ const comment = info.comment ? ` //${info.comment}` : '';
+ return `${name}${comment}: ${cols}`;
+ };
+
+ // Format a table/view as summary (name + column count + key columns only)
+ const fmtTableSummary = (name: string, info: any): string => {
+ const keyColumns = info.columns
+ .filter((c: any) => c.key && c.key !== '')
+ .map((c: any) => c.name)
+ .join(',');
+ const comment = info.comment ? ` //${info.comment}` : '';
+ const keys = keyColumns ? ` keys:[${keyColumns}]` : '';
+ return `${name}(${info.columns.length}c${keys})${comment}`;
+ };
+
+ // If specific table requested, show full column details
  if (tableName) {
  const tableInfo = schema.tables[tableName] || schema.views[tableName];
  if (tableInfo) {
- context += `**${tableName}**:\n`;
- if (tableInfo.comment) context += ` Description: ${tableInfo.comment}\n`;
- context += ` Columns:\n`;
- 
- for (const col of tableInfo.columns) {
- let colInfo = ` ${col.name} (${col.type}`;
- if (col.max_length) colInfo += `(${col.max_length})`;
- if (col.precision) colInfo += `(${col.precision},${col.scale || 0})`;
- colInfo += col.nullable ? ', nullable' : ', not null';
- if (col.default) colInfo += `, default: ${col.default}`;
- if (col.key && col.key !== '') colInfo += `, key: ${col.key}`;
- colInfo += ')';
- if (col.comment) colInfo += ` -- ${col.comment}`;
- context += colInfo + '\n';
- }
+ parts.push(fmtTableFull(tableName, tableInfo));
  } else {
- context += `Table '${tableName}' not found in schema.`;
+ parts.push(`Table '${tableName}' not found.`);
  }
- return context;
+ return parts.join('\n');
  }
 
+ // For full schema: estimate output size to decide format
+ // Use compact summary for large schemas, full details for small ones
+ const totalColumns = schema.summary.total_columns;
+ const useFullFormat = totalColumns <= 200;
+
  // Show all tables
- if (Object.keys(schema.tables).length > 0) {
- context += "TABLES:\n";
- for (const [name, table] of Object.entries(schema.tables)) {
- context += `\n**${name}**:\n`;
- if (table.comment) context += ` Description: ${table.comment}\n`;
- context += ` Columns:\n`;
- 
- for (const col of table.columns) {
- let colInfo = ` ${col.name} (${col.type}`;
- if (col.max_length) colInfo += `(${col.max_length})`;
- if (col.precision) colInfo += `(${col.precision},${col.scale || 0})`;
- colInfo += col.nullable ? ', nullable' : ', not null';
- if (col.default) colInfo += `, default: ${col.default}`;
- if (col.key && col.key !== '') colInfo += `, key: ${col.key}`;
- colInfo += ')';
- if (col.comment) colInfo += ` -- ${col.comment}`;
- context += colInfo + '\n';
- }
+ const tableEntries = Object.entries(schema.tables);
+ if (tableEntries.length > 0) {
+ parts.push('TABLES:');
+ for (const [name, table] of tableEntries) {
+ parts.push(useFullFormat ? fmtTableFull(name, table) : fmtTableSummary(name, table));
  }
  }
 
  // Show all views
- if (Object.keys(schema.views).length > 0) {
- context += "\nVIEWS:\n";
- for (const [name, view] of Object.entries(schema.views)) {
- context += `\n**${name}**:\n`;
- if (view.comment) context += ` Description: ${view.comment}\n`;
- context += ` Columns:\n`;
- 
- for (const col of view.columns) {
- let colInfo = ` ${col.name} (${col.type}`;
- if (col.max_length) colInfo += `(${col.max_length})`;
- colInfo += ')';
- if (col.comment) colInfo += ` -- ${col.comment}`;
- context += colInfo + '\n';
- }
+ const viewEntries = Object.entries(schema.views);
+ if (viewEntries.length > 0) {
+ parts.push('VIEWS:');
+ for (const [name, view] of viewEntries) {
+ parts.push(useFullFormat ? fmtTableFull(name, view) : fmtTableSummary(name, view));
  }
  }
 
- return context;
+ if (!useFullFormat) {
+ parts.push(`\nUse sql_get_schema with table parameter to see full column details for a specific table.`);
+ }
+
+ return parts.join('\n');
  }
 
  /**

@@ -5,6 +5,11 @@ All notable changes to the SQL MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-03-11
+
+### Changed
+- **`sql_get_schema` Compact Output** - Schema output now adapts based on size: large schemas (>200 columns) show a compact summary with table names, column counts, and key columns; small schemas show full inline column details. This prevents output from exceeding MCP token limits on large databases.
+
 ## [2.3.0] - 2026-03-10
 
 ### Added

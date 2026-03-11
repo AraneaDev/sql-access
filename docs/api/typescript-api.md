@@ -6,7 +6,7 @@ This document provides comprehensive TypeScript API documentation for the SQL MC
 
 ## Implementation Status Guide
 
-This documentation reflects the **actual implementation** as of v2.3.0. Status indicators show the current state:
+This documentation reflects the **actual implementation** as of v2.3.1. Status indicators show the current state:
 
 - **Fully Implemented** - Complete and ready for use (90%+ test coverage)
 - **Partially Implemented** - Basic functionality available, advanced features planned
@@ -785,7 +785,7 @@ Server and protocol version constants.
 
 ```typescript
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
-export const SERVER_VERSION = '2.3.0';
+export const SERVER_VERSION = '2.3.1';
 export const SERVER_NAME = 'mcp-sql-access-server';
 ```
 

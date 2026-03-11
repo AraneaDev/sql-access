@@ -53,25 +53,22 @@ This ensures safe, read-only access to your production data.
 "Show me all tables in the production database"
 ```
 
-**Claude will respond with a structured overview:**
+**Claude will use `sql_get_schema` to retrieve a compact overview:**
+
+For large databases (>200 columns), you'll see a summary listing:
 ```
-Here are the tables in your production database:
+production (postgresql) - 45T 8V 1247C
+TABLES:
+users(8c keys:[id,email])
+user_profiles(6c keys:[id,user_id])
+user_sessions(5c keys:[id,user_id])
+posts(6c keys:[id,user_id])
+comments(5c keys:[id,post_id,user_id])
+categories(4c keys:[id,slug])
+page_views(4c keys:[id])
+user_actions(5c keys:[id,user_id])
 
-**User Management:**
-- users - Main user accounts (id, name, email, created_at, updated_at)
-- user_profiles - Extended user information (user_id, bio, avatar_url, settings)
-- user_sessions - Active user sessions (id, user_id, token, expires_at)
-
-**Content Management:** 
-- posts - User-generated content (id, user_id, title, content, published_at)
-- comments - Comments on posts (id, post_id, user_id, content, created_at)
-- categories - Content categories (id, name, description, slug)
-
-**Analytics & Tracking:**
-- page_views - Page view tracking (id, page_url, visitor_id, viewed_at)
-- user_actions - User behavior tracking (id, user_id, action_type, metadata)
-
-Would you like me to examine any specific table in detail?
+Use sql_get_schema with table parameter to see full column details for a specific table.
 ```
 
 **Examine Specific Table:**
@@ -79,23 +76,13 @@ Would you like me to examine any specific table in detail?
 "Show me the structure of the users table"
 ```
 
-**Claude's response:**
-```sql
--- Users table structure:
--- 
--- Column Name | Data Type | Nullable | Default | Comment
--- --------------|-------------|----------|---------|--------
--- id | integer | NOT NULL | nextval | Primary key
--- name | varchar(255) | NOT NULL | | User's full name
--- email | varchar(255) | NOT NULL | | Unique email address
--- password_hash | varchar(255) | NOT NULL | | Encrypted password
--- created_at | timestamp | NOT NULL | now() | Account creation time
--- updated_at | timestamp | NOT NULL | now() | Last modification time
--- is_active | boolean | NOT NULL | true | Account status
--- role | varchar(50) | NOT NULL | 'user' | User role/permissions
-
-The table has 8 columns with proper constraints and indexing on email for uniqueness.
+**Claude will call `sql_get_schema` with `table: "users"` for full column details:**
 ```
+production (postgresql) - 45T 8V 1247C
+users: id integer [PRI,NN,d:nextval], name varchar(255) [NN], email varchar(255) [PRI,NN], password_hash varchar(255) [NN], created_at timestamp [NN,d:now()], updated_at timestamp [NN,d:now()], is_active boolean [NN,d:true], role varchar(50) [NN,d:'user']
+```
+
+Column flags: `PRI`=primary key, `NN`=not null, `d:val`=default value, `MUL`=indexed.
 
 ### 2. Simple Data Queries
 
