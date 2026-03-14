@@ -235,6 +235,9 @@ export interface StandardErrorResponse {
  };
 }
 
+/**
+ *
+ */
 export class SQLMCPError extends Error {
  public code: string;
  public details?: Record<string, unknown>;
@@ -247,6 +250,9 @@ export class SQLMCPError extends Error {
  }
 }
 
+/**
+ *
+ */
 export class SecurityViolationError extends SQLMCPError {
  constructor(message: string, details?: Record<string, unknown>) {
  super(message, 'SECURITY_VIOLATION', details);
@@ -254,6 +260,9 @@ export class SecurityViolationError extends SQLMCPError {
  }
 }
 
+/**
+ *
+ */
 export class ConnectionError extends SQLMCPError {
  constructor(message: string, details?: Record<string, unknown>) {
  super(message, 'CONNECTION_ERROR', details);
@@ -261,6 +270,9 @@ export class ConnectionError extends SQLMCPError {
  }
 }
 
+/**
+ *
+ */
 export class QueryExecutionError extends SQLMCPError {
  constructor(message: string, details?: Record<string, unknown>) {
  super(message, 'QUERY_EXECUTION_ERROR', details);
@@ -378,10 +390,16 @@ export interface RedactionAuditEntry {
 // Type Guards
 // ============================================================================
 
+/**
+ *
+ */
 export function isDatabaseType(value: string): value is DatabaseTypeString {
  return ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'].includes(value);
 }
 
+/**
+ *
+ */
 export function isQueryObject(value: unknown): value is QueryObject {
  return (
  typeof value === 'object' &&
@@ -391,18 +409,30 @@ export function isQueryObject(value: unknown): value is QueryObject {
  );
 }
 
+/**
+ *
+ */
 export function isSecurityViolationError(error: unknown): error is SecurityViolationError {
  return error instanceof SecurityViolationError;
 }
 
+/**
+ *
+ */
 export function isValidRedactionType(value: string): value is RedactionType {
  return ['full_mask', 'partial_mask', 'replace', 'custom'].includes(value);
 }
 
+/**
+ *
+ */
 export function isValidFieldPatternType(value: string): value is FieldPatternType {
  return ['exact', 'wildcard', 'regex'].includes(value);
 }
 
+/**
+ *
+ */
 export function isFieldRedactionRule(value: unknown): value is FieldRedactionRule {
  return (
  typeof value === 'object' &&
@@ -416,6 +446,9 @@ export function isFieldRedactionRule(value: unknown): value is FieldRedactionRul
  );
 }
 
+/**
+ *
+ */
 export function isDatabaseRedactionConfig(value: unknown): value is DatabaseRedactionConfig {
  return (
  typeof value === 'object' &&

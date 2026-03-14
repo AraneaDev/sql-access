@@ -397,38 +397,43 @@ describe('SchemaManager', () => {
 
  it('should generate context for entire database', () => {
  const context = schemaManager.generateSchemaContext('testdb');
- 
- expect(context).toContain("Database Schema for 'testdb' (postgresql):");
- expect(context).toContain('Summary: 1 tables, 1 views, 3 total columns');
- expect(context).toContain('**users**:');
- expect(context).toContain('id (int, not null, key: PRI)');
- expect(context).toContain('name (varchar(100), not null)');
- expect(context).toContain('**active_users**:');
+
+ expect(context).toContain('testdb (postgresql) - 1T 1V 3C');
+ expect(context).toContain('TABLES:');
+ expect(context).toContain('users');
+ expect(context).toContain('id int');
+ expect(context).toContain('[PRI,NN]');
+ expect(context).toContain('name varchar(100)');
+ expect(context).toContain('VIEWS:');
+ expect(context).toContain('active_users');
  });
 
  it('should generate context for specific table', () => {
  const context = schemaManager.generateSchemaContext('testdb', 'users');
- 
- expect(context).toContain("Database Schema for 'testdb' (postgresql):");
- expect(context).toContain('**users**:');
- expect(context).toContain('Description: User accounts');
- expect(context).toContain('id (int, not null, key: PRI) -- Primary key');
- expect(context).toContain('name (varchar(100), not null) -- User name');
- expect(context).not.toContain('**active_users**:');
+
+ expect(context).toContain('testdb (postgresql) - 1T 1V 3C');
+ expect(context).toContain('users');
+ expect(context).toContain('//User accounts');
+ expect(context).toContain('id int [PRI,NN]');
+ expect(context).toContain('//Primary key');
+ expect(context).toContain('name varchar(100) [NN]');
+ expect(context).toContain('//User name');
+ expect(context).not.toContain('active_users');
  });
 
  it('should generate context for specific view', () => {
  const context = schemaManager.generateSchemaContext('testdb', 'active_users');
- 
- expect(context).toContain('**active_users**:');
- expect(context).toContain('Description: Active users view');
- expect(context).toContain('id (int, not null) -- User ID'); // Views show full nullable information in implementation
+
+ expect(context).toContain('active_users');
+ expect(context).toContain('//Active users view');
+ expect(context).toContain('id int [NN]');
+ expect(context).toContain('//User ID');
  });
 
  it('should handle non-existent table', () => {
  const context = schemaManager.generateSchemaContext('testdb', 'nonexistent');
- 
- expect(context).toContain("Table 'nonexistent' not found in schema.");
+
+ expect(context).toContain("Table 'nonexistent' not found.");
  });
 
  it('should handle non-existent database', () => {
@@ -478,9 +483,11 @@ describe('SchemaManager', () => {
  (schemaManager as any).schemas.set('testdb', complexSchema);
  
  const context = schemaManager.generateSchemaContext('testdb', 'complex_table');
- 
- expect(context).toContain('decimal_col (decimal(10,2), nullable, default: 0.00)');
- expect(context).toContain("char_col (char(1), not null, default: 'A')");
+
+ expect(context).toContain('decimal_col decimal(10,2)');
+ expect(context).toContain('d:0.00');
+ expect(context).toContain('char_col char(1)');
+ expect(context).toContain('NN');
  });
  });
 
@@ -841,11 +848,11 @@ describe('SchemaManager', () => {
  views: {},
  summary: { table_count: 0, view_count: 0, total_columns: 0 }
  };
- 
+
  (schemaManager as any).schemas.set('empty', emptySchema);
- 
+
  const context = schemaManager.generateSchemaContext('empty');
- expect(context).toContain('Summary: 0 tables, 0 views, 0 total columns');
+ expect(context).toContain('0T 0V 0C');
  expect(context).not.toContain('TABLES:');
  expect(context).not.toContain('VIEWS:');
  });
@@ -907,7 +914,7 @@ describe('SchemaManager', () => {
  (schemaManager as any).schemas.set('minimal', minimalSchema);
  
  const context = schemaManager.generateSchemaContext('minimal', 'minimal_table');
- expect(context).toContain('simple_col (text, nullable)');
+ expect(context).toContain('simple_col text');
  });
 
  it('should handle concurrent schema operations', async () => {

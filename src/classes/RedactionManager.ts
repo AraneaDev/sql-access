@@ -2,12 +2,9 @@
  * RedactionManager - Handles field redaction for sensitive data protection
  */
 
-import { createHash } from 'crypto';
 import type {
  DatabaseRedactionConfig,
  FieldRedactionRule,
- RedactionType,
- FieldPatternType,
  QueryResult,
  QueryResultWithRedaction,
  RedactionResult,
@@ -19,18 +16,21 @@ import { getLogger } from '../utils/logger.js';
 // Redaction Pattern Implementations
 // ============================================================================
 
+/**
+ *
+ */
 export class RedactionPatterns {
  /**
- * Full masking - replace entire value with mask characters
- */
+  * Full masking - replace entire value with mask characters
+  */
  static fullMask(value: string, maskChar = '*'): string {
  if (typeof value !== 'string') return String(value);
  return maskChar.repeat(Math.min(value.length, 10));
  }
 
  /**
- * Partial masking for emails - preserve structure but mask content
- */
+  * Partial masking for emails - preserve structure but mask content
+  */
  static partialMaskEmail(email: string, maskChar = '*'): string {
  if (typeof email !== 'string' || !email.includes('@')) {
  return this.fullMask(email, maskChar);
@@ -77,8 +77,8 @@ export class RedactionPatterns {
  }
 
  /**
- * Partial masking for phone numbers
- */
+  * Partial masking for phone numbers
+  */
  static partialMaskPhone(phone: string, maskChar = '*'): string {
  if (typeof phone !== 'string') return String(phone);
  
@@ -106,8 +106,8 @@ export class RedactionPatterns {
  }
 
  /**
- * Partial masking for generic strings - preserve first and last characters
- */
+  * Partial masking for generic strings - preserve first and last characters
+  */
  static partialMaskGeneric(value: string, maskChar = '*'): string {
  if (typeof value !== 'string') return String(value);
  
@@ -123,8 +123,8 @@ export class RedactionPatterns {
  }
 
  /**
- * Custom pattern replacement using regex
- */
+  * Custom pattern replacement using regex
+  */
  static customPattern(value: string, pattern: string, replacement = '[REDACTED]'): string {
  if (typeof value !== 'string') return String(value);
  
@@ -137,8 +137,8 @@ export class RedactionPatterns {
  }
 
  /**
- * Smart partial masking that detects content type
- */
+  * Smart partial masking that detects content type
+  */
  static smartPartialMask(value: string, maskChar = '*'): string {
  if (typeof value !== 'string') return String(value);
  
@@ -162,6 +162,9 @@ export class RedactionPatterns {
 // RedactionManager Implementation
 // ============================================================================
 
+/**
+ *
+ */
 export class RedactionManager {
  private rules: Map<string, FieldRedactionRule>;
  private defaultRedaction?: DatabaseRedactionConfig['default_redaction'];
@@ -191,8 +194,8 @@ export class RedactionManager {
  }
 
  /**
- * Apply redaction rules to a query result
- */
+  * Apply redaction rules to a query result
+  */
  redactResults(results: QueryResult): QueryResultWithRedaction {
  if (!results.rows || results.rows.length === 0) {
  return results;
@@ -231,8 +234,8 @@ export class RedactionManager {
  }
 
  /**
- * Apply redaction rules to a single row
- */
+  * Apply redaction rules to a single row
+  */
  private redactRow(
  row: Record<string, unknown>, 
  fieldNames: string[], 
@@ -268,8 +271,8 @@ export class RedactionManager {
  }
 
  /**
- * Check if a field should be redacted and return the matching rule
- */
+  * Check if a field should be redacted and return the matching rule
+  */
  shouldRedactField(fieldName: string): FieldRedactionRule | null {
  const searchName = this.caseSensitive ? fieldName : fieldName.toLowerCase();
 
@@ -311,11 +314,11 @@ export class RedactionManager {
  }
 
  /**
- * Apply specific redaction pattern to a value
- */
+  * Apply specific redaction pattern to a value
+  */
  private applyRedaction(value: unknown, rule: FieldRedactionRule): unknown {
  // Handle null/undefined values - should not happen due to earlier check
- if (value == null) return value;
+ if (value === null || value === undefined) return value;
 
  // Convert to string for redaction
  const stringValue = String(value);
@@ -354,8 +357,8 @@ export class RedactionManager {
  }
 
  /**
- * Check if a field name matches a wildcard pattern
- */
+  * Check if a field name matches a wildcard pattern
+  */
  private matchesWildcard(fieldName: string, pattern: string): boolean {
  // Convert wildcard pattern to regex
  const regexPattern = pattern
@@ -372,8 +375,8 @@ export class RedactionManager {
  }
 
  /**
- * Add a redaction rule
- */
+  * Add a redaction rule
+  */
  private addRule(rule: FieldRedactionRule): void {
  // Validate rule
  if (!rule.field_pattern) {
@@ -385,8 +388,8 @@ export class RedactionManager {
  }
 
  /**
- * Create audit log entry for redacted query
- */
+  * Create audit log entry for redacted query
+  */
  createAuditEntry(database: string, queryHash: string, redactionResult: RedactionResult): RedactionAuditEntry {
  return {
  timestamp: new Date().toISOString(),
@@ -399,8 +402,8 @@ export class RedactionManager {
  }
 
  /**
- * Get current configuration summary
- */
+  * Get current configuration summary
+  */
  getConfigurationSummary(): {
  enabled: boolean;
  rule_count: number;
@@ -430,8 +433,8 @@ export class RedactionManager {
  }
 
  /**
- * Update redaction rules at runtime
- */
+  * Update redaction rules at runtime
+  */
  updateRules(config: DatabaseRedactionConfig): void {
  this.rules.clear();
  this.logAccess = config.log_redacted_access ?? false;
@@ -449,8 +452,8 @@ export class RedactionManager {
  }
 
  /**
- * Test redaction rules against sample data
- */
+  * Test redaction rules against sample data
+  */
  testRedaction(sampleData: Record<string, unknown>): {
  original: Record<string, unknown>;
  redacted: Record<string, unknown>;

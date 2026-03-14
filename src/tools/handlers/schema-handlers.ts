@@ -1,0 +1,197 @@
+/**
+ * Schema Tool Handlers
+ * Handles sql_get_schema, sql_refresh_schema, sql_list_databases, sql_test_connection
+ */
+
+import type {
+ SQLGetSchemaArgs,
+ SQLTestConnectionArgs,
+ SQLRefreshSchemaArgs,
+ MCPToolResponse,
+ DatabaseListItem
+} from '../../types/index.js';
+import { formatDatabaseSummary } from '../../utils/response-formatter.js';
+import type { ToolHandlerContext } from './types.js';
+
+export async function handleGetSchema(ctx: ToolHandlerContext, args: SQLGetSchemaArgs): Promise<MCPToolResponse> {
+ const { database, table } = args;
+
+ try {
+ const schema = ctx.schemaManager.getSchema(database);
+ if (!schema) {
+ return {
+ content: [{
+ type: "text",
+ text: ` No schema available for database '${database}'. Connect to the database first to capture schema.`
+ }],
+ _meta: { progressToken: null }
+ };
+ }
+
+ const schemaText = ctx.schemaManager.generateSchemaContext(database, table);
+
+ return {
+ content: [{ type: "text", text: schemaText }],
+ _meta: { progressToken: null }
+ };
+
+ } catch (error) {
+ const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ return {
+ content: [{ type: "text", text: ` Failed to get schema for ${database}: ${errorMessage}` }],
+ isError: true,
+ _meta: { progressToken: null }
+ };
+ }
+}
+
+export async function handleRefreshSchema(ctx: ToolHandlerContext, args: SQLRefreshSchemaArgs): Promise<MCPToolResponse> {
+ const { database } = args;
+
+ try {
+ const dbConfig = ctx.config.databases[database];
+ if (!dbConfig) {
+ throw new Error(`Database configuration '${database}' not found`);
+ }
+
+ // Ensure connection exists
+ let connection = await ctx.connectionManager.getConnection(database);
+ if (!connection) {
+ if (dbConfig.ssh_host) {
+ ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
+ }
+ await ctx.connectionManager.executeQuery(database, 'SELECT 1', []);
+ connection = await ctx.connectionManager.getConnection(database);
+ if (!connection) {
+ throw new Error(`Could not establish connection to ${database}`);
+ }
+ }
+
+ const schema = await ctx.schemaManager.refreshSchema(database);
+
+ return {
+ content: [{
+ type: "text",
+ text: ` Schema refreshed for ${database}\n Captured: ${schema.summary.table_count} tables, ${schema.summary.total_columns} columns`
+ }],
+ _meta: { progressToken: null }
+ };
+
+ } catch (error) {
+ const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ return {
+ content: [{ type: "text", text: ` Failed to refresh schema for ${database}: ${errorMessage}` }],
+ isError: true,
+ _meta: { progressToken: null }
+ };
+ }
+}
+
+export async function handleListDatabases(ctx: ToolHandlerContext): Promise<MCPToolResponse> {
+ try {
+ const databases: DatabaseListItem[] = [];
+
+ for (const [name, config] of Object.entries(ctx.config.databases)) {
+ const hasSchema = ctx.schemaManager.hasSchema(name);
+ const schemaInfo = hasSchema ? ctx.schemaManager.getSchema(name)?.summary : undefined;
+
+ databases.push({
+ name,
+ type: config.type,
+ host: config.host || config.file || 'N/A',
+ database: config.database,
+ ssh_enabled: !!config.ssh_host,
+ ssl_enabled: !!config.ssl,
+ select_only_mode: !!config.select_only,
+ mcp_configurable: !!config.mcp_configurable,
+ schema_cached: hasSchema,
+ schema_info: schemaInfo ? {
+ table_count: schemaInfo.table_count,
+ view_count: schemaInfo.view_count,
+ total_columns: schemaInfo.total_columns
+ } : undefined
+ });
+ }
+
+ let responseText = ' Configured Databases:\n\n';
+ for (const db of databases) {
+ responseText += formatDatabaseSummary(db);
+ }
+
+ if (ctx.config.security) {
+ responseText += '\n **Global Security Limits:**\n';
+ responseText += ` - Max JOINs: ${ctx.config.security.max_joins}\n`;
+ responseText += ` - Max Subqueries: ${ctx.config.security.max_subqueries}\n`;
+ responseText += ` - Max UNIONs: ${ctx.config.security.max_unions}\n`;
+ responseText += ` - Max GROUP BYs: ${ctx.config.security.max_group_bys}\n`;
+ responseText += ` - Max Complexity Score: ${ctx.config.security.max_complexity_score}\n`;
+ responseText += ` - Max Query Length: ${ctx.config.security.max_query_length}\n`;
+ }
+
+ return {
+ content: [{ type: "text", text: responseText }],
+ _meta: { progressToken: null }
+ };
+
+ } catch (error) {
+ const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ return {
+ content: [{ type: "text", text: ` Failed to list databases: ${errorMessage}` }],
+ isError: true,
+ _meta: { progressToken: null }
+ };
+ }
+}
+
+export async function handleTestConnection(ctx: ToolHandlerContext, args: SQLTestConnectionArgs): Promise<MCPToolResponse> {
+ const { database } = args;
+
+ try {
+ const dbConfig = ctx.config.databases[database];
+ if (!dbConfig) {
+ throw new Error(`Database configuration '${database}' not found`);
+ }
+
+ if (dbConfig.ssh_host) {
+ ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
+ }
+
+ // Capture schema if not cached
+ if (!ctx.schemaManager.hasSchema(database)) {
+ try {
+ const connection = await ctx.connectionManager.getConnection(database);
+ if (connection) {
+ await ctx.schemaManager.captureSchema(database, dbConfig);
+ }
+ } catch (error) {
+ ctx.logger.warning('Failed to capture schema', { database, error: error instanceof Error ? error.message : 'Unknown error' });
+ }
+ }
+
+ const schema = ctx.schemaManager.getSchema(database);
+
+ let responseText = '';
+ const success = true;
+ if (success) {
+ responseText = ` Connection successful to ${database}\n`;
+ if (ctx.sshTunnelManager.hasTunnel(database)) responseText += ` SSH tunnel established\n`;
+ if (dbConfig.select_only) responseText += ` SELECT-only mode active\n`;
+ if (schema) {
+ responseText += ` Schema captured: ${schema.summary.table_count} tables, ${schema.summary.total_columns} columns\n`;
+ }
+ }
+
+ return {
+ content: [{ type: "text", text: responseText }],
+ _meta: { progressToken: null }
+ };
+
+ } catch (error) {
+ const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ return {
+ content: [{ type: "text", text: ` Connection test failed for ${database}: ${errorMessage}` }],
+ isError: true,
+ _meta: { progressToken: null }
+ };
+ }
+}

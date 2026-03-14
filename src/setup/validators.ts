@@ -36,10 +36,13 @@ export interface SetupInput {
  maxQueryLength?: string;
 }
 
+/**
+ *
+ */
 export class SetupValidator {
  /**
- * Validate database name
- */
+  * Validate database name
+  */
  static validateDatabaseName(name: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -79,8 +82,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate database type
- */
+  * Validate database type
+  */
  static validateDatabaseType(type: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -102,8 +105,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate host
- */
+  * Validate host
+  */
  static validateHost(host: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -132,8 +135,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate port
- */
+  * Validate port
+  */
  static validatePort(port: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -165,8 +168,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate file path for SQLite
- */
+  * Validate file path for SQLite
+  */
  static validateFilePath(filePath: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -204,8 +207,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate timeout value
- */
+  * Validate timeout value
+  */
  static validateTimeout(timeout: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -233,8 +236,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate SSH configuration
- */
+  * Validate SSH configuration
+  */
  static validateSSHConfig(sshHost?: string, sshPort?: string, sshUsername?: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -270,8 +273,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate private key path
- */
+  * Validate private key path
+  */
  static validatePrivateKeyPath(keyPath: string): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -312,8 +315,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate complete database configuration
- */
+  * Validate complete database configuration
+  */
  static validateDatabaseConfig(config: Partial<DatabaseConfig>): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -402,8 +405,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate numeric input within range
- */
+  * Validate numeric input within range
+  */
  static validateNumericInput(value: string, fieldName: string, min: number, max: number, defaultValue?: number): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -435,8 +438,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate extension configuration
- */
+  * Validate extension configuration
+  */
  static validateExtensionConfig(config: Partial<ExtensionConfig>): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 
@@ -471,8 +474,8 @@ export class SetupValidator {
  }
 
  /**
- * Validate security configuration
- */
+  * Validate security configuration
+  */
  static validateSecurityConfig(config: Partial<SecurityConfig>): ValidationResult {
  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
 

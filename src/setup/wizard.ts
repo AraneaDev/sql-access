@@ -23,6 +23,9 @@ export interface SetupWizardOptions {
  skipTests?: boolean;
 }
 
+/**
+ *
+ */
 export class SetupWizard {
  private rl: readline.Interface;
  private config: SetupConfig = {};
@@ -40,6 +43,9 @@ export class SetupWizard {
  this.skipTests = options.skipTests || false;
  }
 
+ /**
+  *
+  */
  async loadExistingConfig(): Promise<boolean> {
  try {
  if (fs.existsSync(this.configPath)) {
@@ -82,6 +88,9 @@ export class SetupWizard {
  }
  }
 
+ /**
+  *
+  */
  async showExistingDatabases(): Promise<void> {
  ui.printHeader(' Current Database Configurations:');
 
@@ -109,6 +118,9 @@ export class SetupWizard {
  ui.printSeparator();
  }
 
+ /**
+  *
+  */
  async handleExistingConfig(): Promise<SetupWizardAction> {
  await this.showExistingDatabases();
 
@@ -142,6 +154,9 @@ export class SetupWizard {
  }
  }
 
+ /**
+  *
+  */
  async modifyDatabasePermissions(): Promise<SetupWizardAction> {
  ui.printSection(' Database Access Permissions:');
  ui.print(' SELECT-only mode restricts databases to SELECT, WITH, SHOW, EXPLAIN, and DESCRIBE statements only.');
@@ -181,6 +196,9 @@ export class SetupWizard {
  return { action: 'save_and_test', databases: this.existingDatabases };
  }
 
+ /**
+  *
+  */
  async addMoreDatabases(): Promise<SetupWizardAction> {
  ui.printSection(' Adding New Database Connections');
  ui.printEmptyLine();
@@ -305,6 +323,9 @@ export class SetupWizard {
  return dbConfig as DatabaseConfig;
  }
 
+ /**
+  *
+  */
  async modifyExtensionSettings(): Promise<SetupWizardAction> {
  const currentExtension = (this.config.extension as ExtensionConfig) || {};
  const currentSecurity = (this.config.security as SecurityConfig) || {};
@@ -366,6 +387,9 @@ export class SetupWizard {
  return { action: 'save_and_test', databases: this.existingDatabases };
  }
 
+ /**
+  *
+  */
  async setupDatabase(): Promise<SetupWizardAction> {
  ui.printHeader('=== Claude SQL Extension Configuration ===');
  ui.printEmptyLine();
@@ -638,6 +662,9 @@ export class SetupWizard {
  return ports[dbType] || 5432;
  }
 
+ /**
+  *
+  */
  async saveConfig(): Promise<void> {
  try {
  // Validate configuration before saving
@@ -717,6 +744,9 @@ export class SetupWizard {
  }
  }
 
+ /**
+  *
+  */
  async testConnections(databases: string[]): Promise<void> {
  if (this.skipTests) {
  ui.printInfo('Skipping connection tests');
@@ -789,6 +819,9 @@ export class SetupWizard {
  }
  }
 
+ /**
+  *
+  */
  async run(): Promise<void> {
  ui.printInfo(' Claude SQL Extension Setup Starting...');
  ui.printEmptyLine();
@@ -854,6 +887,9 @@ export class SetupWizard {
  }
 
  // Clean up resources
+ /**
+  *
+  */
  close(): void {
  this.rl.close();
  }

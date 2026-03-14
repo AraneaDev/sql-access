@@ -248,7 +248,7 @@ export function formatPerformanceAnalysis(analysis: {
 /**
  * Format value based on type and options
  */
-function formatValue(value: any, options: Required<FormatOptions>): string {
+function formatValue(value: unknown, options: Required<FormatOptions>): string {
  if (value === null || value === undefined) {
  return 'NULL';
  }

@@ -20,8 +20,8 @@ export class SQLMCPError extends Error {
  }
 
  /**
- * Convert error to JSON representation
- */
+  * Convert error to JSON representation
+  */
  toJSON(): Record<string, unknown> {
  return {
  name: this.name,
@@ -166,8 +166,8 @@ export class ErrorHandler {
  }
 
  /**
- * Handle and classify errors
- */
+  * Handle and classify errors
+  */
  handleError(error: unknown, context?: string): ErrorInfo {
  const errorInfo = this.classifyError(error);
  
@@ -199,8 +199,8 @@ export class ErrorHandler {
  }
 
  /**
- * Classify errors into categories and determine severity
- */
+  * Classify errors into categories and determine severity
+  */
  private classifyError(error: unknown): ErrorInfo {
  if (error instanceof SecurityViolationError) {
  return {
@@ -433,8 +433,8 @@ export class ErrorHandler {
  }
 
  /**
- * Format error for user display
- */
+  * Format error for user display
+  */
  formatUserError(error: unknown, context?: string): string {
  const errorInfo = this.handleError(error, context);
  
@@ -456,8 +456,8 @@ export class ErrorHandler {
  }
 
  /**
- * Format error for MCP tool response
- */
+  * Format error for MCP tool response
+  */
  formatToolError(error: unknown, toolName: string): string {
  const errorInfo = this.handleError(error, `tool:${toolName}`);
  
@@ -476,24 +476,24 @@ export class ErrorHandler {
  }
 
  /**
- * Check if error is recoverable
- */
+  * Check if error is recoverable
+  */
  isRecoverable(error: unknown): boolean {
  const errorInfo = this.classifyError(error);
  return errorInfo.recoverable;
  }
 
  /**
- * Check if error is retryable
- */
+  * Check if error is retryable
+  */
  isRetryable(error: unknown): boolean {
  const errorInfo = this.classifyError(error);
  return errorInfo.retryable;
  }
 
  /**
- * Get error severity
- */
+  * Get error severity
+  */
  getErrorSeverity(error: unknown): ErrorSeverity {
  const errorInfo = this.classifyError(error);
  return errorInfo.severity;
@@ -533,7 +533,7 @@ export function sanitizeError(error: unknown): string {
 /**
  * Wrap async functions with error handling
  */
-export function withErrorHandling<T extends (..._args: any[]) => Promise<any>>(
+export function withErrorHandling<T extends (..._args: unknown[]) => Promise<unknown>>(
  fn: T,
  errorHandler: ErrorHandler,
  context: string

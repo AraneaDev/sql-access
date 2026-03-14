@@ -7,10 +7,13 @@ import type {
  GeneratedConfigFile
 } from '../types/config.js';
 
+/**
+ *
+ */
 export class ConfigGenerator {
  /**
- * Generate a configuration file string from config object
- */
+  * Generate a configuration file string from config object
+  */
  static generateConfigString(config: SetupConfig): string {
  let configString = '';
 
@@ -57,8 +60,8 @@ export class ConfigGenerator {
  }
 
  /**
- * Generate a complete configuration file with metadata
- */
+  * Generate a complete configuration file with metadata
+  */
  static generateConfigFile(config: SetupConfig, metadata?: {
  version?: string;
  generated?: Date;
@@ -102,8 +105,8 @@ export class ConfigGenerator {
  }
 
  /**
- * Generate a sample configuration for documentation
- */
+  * Generate a sample configuration for documentation
+  */
  static generateSampleConfig(): GeneratedConfigFile {
  const sampleConfig: SetupConfig = {
  'database.primary': {
@@ -162,8 +165,8 @@ export class ConfigGenerator {
  }
 
  /**
- * Generate configuration templates for different use cases
- */
+  * Generate configuration templates for different use cases
+  */
  static generateTemplate(templateType: 'production' | 'development' | 'minimal'): GeneratedConfigFile {
  let config: SetupConfig = {};
  let description = '';
@@ -277,7 +280,7 @@ export class ConfigGenerator {
  };
  }
 
- private static formatConfigValue(value: any): string {
+ private static formatConfigValue(value: string | number | boolean): string {
  if (typeof value === 'boolean') {
  return value ? 'true' : 'false';
  }
@@ -297,8 +300,8 @@ export class ConfigGenerator {
  }
 
  /**
- * Generate configuration with validation
- */
+  * Generate configuration with validation
+  */
  static generateValidatedConfig(config: SetupConfig): GeneratedConfigFile {
  // Basic validation
  const databases = Object.keys(config).filter(key => key.startsWith('database.'));

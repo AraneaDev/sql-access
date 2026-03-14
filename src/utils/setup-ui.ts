@@ -4,11 +4,15 @@
  */
 
 import { getLogger } from './logger.js';
+import type { DatabaseConfig, ExtensionConfig, SecurityConfig } from '../types/database.js';
 
 // ============================================================================
 // Setup UI Class
 // ============================================================================
 
+/**
+ *
+ */
 export class SetupUI {
  private static instance: SetupUI | undefined;
  private readonly logger = getLogger({ 
@@ -23,6 +27,9 @@ export class SetupUI {
  // Singleton pattern
  }
 
+ /**
+  *
+  */
  public static getInstance(): SetupUI {
  if (!SetupUI.instance) {
  SetupUI.instance = new SetupUI();
@@ -34,12 +41,18 @@ export class SetupUI {
  // Console Output Methods (for interactive setup only)
  // ============================================================================
 
+ /**
+  *
+  */
  public print(message: string): void {
  // eslint-disable-next-line no-console
  console.log(message);
  // Don't log routine UI output to avoid noise
  }
 
+ /**
+  *
+  */
  public printHeader(title: string): void {
  const separator = '='.repeat(50);
  // eslint-disable-next-line no-console
@@ -49,48 +62,72 @@ export class SetupUI {
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printSection(title: string): void {
  // eslint-disable-next-line no-console
  console.log(`\n${title}`);
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printSubsection(title: string): void {
  // eslint-disable-next-line no-console
  console.log(`\n ${title}:`);
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printInfo(message: string): void {
  // eslint-disable-next-line no-console
  console.log(` ${message}`);
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printSuccess(message: string): void {
  // eslint-disable-next-line no-console
  console.log(` ${message}`);
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printWarning(message: string): void {
  // eslint-disable-next-line no-console
  console.log(` ${message}`);
  this.logger.warning(`UI Warning: ${message}`);
  }
 
+ /**
+  *
+  */
  public printError(message: string): void {
  // eslint-disable-next-line no-console
  console.log(` ${message}`);
  this.logger.error(`UI Error: ${message}`);
  }
 
+ /**
+  *
+  */
  public printOption(number: number | string, description: string): void {
  // eslint-disable-next-line no-console
  console.log(`${number}. ${description}`);
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printDetail(label: string, value: string | number | boolean): void {
  const displayValue = typeof value === 'boolean' 
  ? (value ? '' : '')
@@ -100,6 +137,9 @@ export class SetupUI {
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printDetailWithStatus(label: string, value: string | number | boolean, enabled: boolean): void {
  const status = enabled ? '' : '';
  const displayValue = typeof value === 'boolean' 
@@ -110,6 +150,9 @@ export class SetupUI {
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printSeparator(): void {
  const separator = '='.repeat(50);
  // eslint-disable-next-line no-console
@@ -117,6 +160,9 @@ export class SetupUI {
  // Don't log routine UI output
  }
 
+ /**
+  *
+  */
  public printEmptyLine(): void {
  // eslint-disable-next-line no-console
  console.log('');
@@ -126,25 +172,31 @@ export class SetupUI {
  // Configuration Display Methods
  // ============================================================================
 
- public printDatabaseConfig(name: string, config: any): void {
+ /**
+  *
+  */
+ public printDatabaseConfig(name: string, config: DatabaseConfig): void {
  this.printSubsection(name);
  this.printDetail('Type', config.type);
  
  if (config.type !== 'sqlite') {
  this.printDetail('Host', `${config.host}:${config.port}`);
- this.printDetail('Database', config.database);
- this.printDetail('Username', config.username);
+ this.printDetail('Database', config.database || 'N/A');
+ this.printDetail('Username', config.username || 'N/A');
  this.printDetail('SSL', config.ssl || false);
  this.printDetailWithStatus('SSH Tunnel', config.ssh_host || 'None', !!config.ssh_host);
  } else {
- this.printDetail('File', config.file);
+ this.printDetail('File', config.file || 'N/A');
  }
  
  const isSelectOnly = config.select_only === true;
  this.printDetail('SELECT-only Mode', isSelectOnly ? ' ENABLED' : ' DISABLED');
  }
 
- public printExtensionConfig(config: any): void {
+ /**
+  *
+  */
+ public printExtensionConfig(config: Partial<ExtensionConfig>): void {
  this.printSection(' Extension Settings:');
  this.printDetail('Max Rows', config.max_rows || 1000);
  this.printDetail('Query Timeout', `${config.query_timeout || 30000}ms`);
@@ -152,7 +204,10 @@ export class SetupUI {
  this.printDetail('Debug Mode', config.debug || false);
  }
 
- public printSecurityConfig(config: any): void {
+ /**
+  *
+  */
+ public printSecurityConfig(config: Partial<SecurityConfig>): void {
  this.printSection(' Security Settings:');
  this.printDetail('Max JOINs', config.max_joins || 10);
  this.printDetail('Max Subqueries', config.max_subqueries || 5);
@@ -166,7 +221,10 @@ export class SetupUI {
  // Debug Methods
  // ============================================================================
 
- public printDebug(message: string, data?: any): void {
+ /**
+  *
+  */
+ public printDebug(message: string, data?: unknown): void {
  // Only show debug output if explicitly enabled via environment variable
  if (process.env.DEBUG_SETUP === 'true') {
  if (data) {
@@ -188,10 +246,16 @@ export class SetupUI {
  // Logging Integration
  // ============================================================================
 
+ /**
+  *
+  */
  public logUserAction(action: string, details?: Record<string, unknown>): void {
  this.logger.info(`User Action: ${action}`, details);
  }
 
+ /**
+  *
+  */
  public logError(error: Error, context?: string): void {
  const message = context ? `${context}: ${error.message}` : error.message;
  this.printError(message);
@@ -203,6 +267,9 @@ export class SetupUI {
 // Convenience Functions
 // ============================================================================
 
+/**
+ *
+ */
 export function getSetupUI(): SetupUI {
  return SetupUI.getInstance();
 }

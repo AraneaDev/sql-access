@@ -2,7 +2,7 @@
  * Enhanced logging utilities for SQL MCP Server
  */
 import { createWriteStream, existsSync, unlinkSync } from 'fs';
-import { WriteStream } from 'fs';
+import type { WriteStream } from 'fs';
 
 /**
  * Logger configuration interface
@@ -32,6 +32,9 @@ interface LogEntry {
 // Logger Class
 // ============================================================================
 
+/**
+ *
+ */
 export class Logger {
  private config: Required<LoggerConfig>;
  private logStream?: WriteStream;
@@ -52,8 +55,8 @@ export class Logger {
  }
 
  /**
- * Initialize the logger
- */
+  * Initialize the logger
+  */
  async initialize(): Promise<void> {
  if (this.initialized) return;
 
@@ -69,8 +72,8 @@ export class Logger {
  }
 
  /**
- * Clean up logger resources
- */
+  * Clean up logger resources
+  */
  async cleanup(): Promise<void> {
  if (this.logStream) {
  await new Promise<void>((resolve) => {
@@ -85,14 +88,23 @@ export class Logger {
  // Logging Methods
  // ============================================================================
 
+ /**
+  *
+  */
  info(message: string, context?: Record<string, unknown>): void {
  this.log('INFO', message, context);
  }
 
+ /**
+  *
+  */
  warning(message: string, context?: Record<string, unknown>): void {
  this.log('WARNING', message, context);
  }
 
+ /**
+  *
+  */
  error(message: string, contextOrError?: Record<string, unknown> | Error): void {
  let actualContext: Record<string, unknown> = {};
  
@@ -107,6 +119,9 @@ export class Logger {
  this.log('ERROR', message, actualContext);
  }
 
+ /**
+  *
+  */
  critical(message: string, contextOrError?: Record<string, unknown> | Error): void {
  let actualContext: Record<string, unknown> = {};
  
@@ -121,6 +136,9 @@ export class Logger {
  this.log('CRITICAL', message, actualContext);
  }
 
+ /**
+  *
+  */
  debug(message: string, context?: Record<string, unknown>): void {
  // Debug logs are only shown when log level is INFO or lower
  if (this.shouldLog('INFO')) {
@@ -207,8 +225,8 @@ export class Logger {
  }
 
  /**
- * Safe console output that handles EPIPE errors gracefully
- */
+  * Safe console output that handles EPIPE errors gracefully
+  */
  private safeConsoleOutput(level: LogEntry['level'], message: string): void {
  try {
  const consoleMethod = this.getConsoleMethod(level);
@@ -234,7 +252,7 @@ export class Logger {
  }
  }
 
- private getConsoleMethod(level: LogEntry['level']): (..._args: any[]) => void {
+ private getConsoleMethod(level: LogEntry['level']): (..._args: unknown[]) => void {
  switch (level) {
  case 'INFO':
  // eslint-disable-next-line no-console
@@ -305,6 +323,9 @@ export class Logger {
 
 let globalLogger: Logger | undefined;
 
+/**
+ *
+ */
 export function getLogger(config?: LoggerConfig): Logger {
  if (!globalLogger) {
  globalLogger = new Logger(config);
@@ -312,12 +333,18 @@ export function getLogger(config?: LoggerConfig): Logger {
  return globalLogger;
 }
 
+/**
+ *
+ */
 export async function initializeLogger(config?: LoggerConfig): Promise<Logger> {
  const logger = getLogger(config);
  await logger.initialize();
  return logger;
 }
 
+/**
+ *
+ */
 export async function cleanupLogger(): Promise<void> {
  if (globalLogger) {
  await globalLogger.cleanup();
@@ -329,22 +356,37 @@ export async function cleanupLogger(): Promise<void> {
 // Convenience Functions
 // ============================================================================
 
+/**
+ *
+ */
 export function log(message: string, context?: Record<string, unknown>): void {
  getLogger().info(message, context);
 }
 
+/**
+ *
+ */
 export function logError(message: string, contextOrError?: Record<string, unknown> | Error): void {
  getLogger().error(message, contextOrError);
 }
 
+/**
+ *
+ */
 export function logWarning(message: string, context?: Record<string, unknown>): void {
  getLogger().warning(message, context);
 }
 
+/**
+ *
+ */
 export function logCritical(message: string, contextOrError?: Record<string, unknown> | Error): void {
  getLogger().critical(message, contextOrError);
 }
 
+/**
+ *
+ */
 export function logDebug(message: string, context?: Record<string, unknown>): void {
  getLogger().debug(message, context);
 }

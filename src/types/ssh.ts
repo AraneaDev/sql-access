@@ -106,14 +106,23 @@ export interface SSHTunnelStatusInfo {
 // Type Guards
 // ============================================================================
 
+/**
+ *
+ */
 export function isSSHConnectionEvent(value: string): value is SSHConnectionEvent {
  return ['ready', 'error', 'close', 'end', 'timeout'].includes(value);
 }
 
+/**
+ *
+ */
 export function isSSHAuthMethod(value: string): value is SSHAuthMethod {
  return ['password', 'privateKey', 'agent'].includes(value);
 }
 
+/**
+ *
+ */
 export function isSSHTunnelStatus(value: string): value is SSHTunnelStatus {
  return ['connecting', 'connected', 'error', 'disconnected', 'reconnecting'].includes(value);
 }
@@ -128,6 +137,9 @@ export interface SSHTunnelValidationResult {
  warnings: string[];
 }
 
+/**
+ *
+ */
 export function validateSSHConfig(config: SSHConnectionConfig): SSHTunnelValidationResult {
  const errors: string[] = [];
  const warnings: string[] = [];

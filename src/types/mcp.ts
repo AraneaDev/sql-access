@@ -185,18 +185,30 @@ export interface MCPMessageHandlers {
 // Type Guards for MCP Messages
 // ============================================================================
 
+/**
+ *
+ */
 export function isMCPRequest(message: MCPMessage): message is MCPRequest {
  return 'id' in message && 'method' in message && message.id !== undefined;
 }
 
+/**
+ *
+ */
 export function isMCPResponse(message: MCPMessage): message is MCPResponse {
  return 'id' in message && ('result' in message || 'error' in message);
 }
 
+/**
+ *
+ */
 export function isMCPNotification(message: MCPMessage): message is MCPNotification {
  return 'method' in message && !('id' in message);
 }
 
+/**
+ *
+ */
 export function isMCPToolCallRequest(message: MCPMessage): message is MCPToolCallRequest {
  return (
  isMCPRequest(message) && 
@@ -212,6 +224,9 @@ export function isMCPToolCallRequest(message: MCPMessage): message is MCPToolCal
 // Tool-specific Type Guards
 // ============================================================================
 
+/**
+ *
+ */
 export function isSQLQueryArgs(args: unknown): args is SQLQueryArgs {
  return (
  typeof args === 'object' &&
@@ -223,6 +238,9 @@ export function isSQLQueryArgs(args: unknown): args is SQLQueryArgs {
  );
 }
 
+/**
+ *
+ */
 export function isSQLBatchQueryArgs(args: unknown): args is SQLBatchQueryArgs {
  return (
  typeof args === 'object' &&
@@ -234,6 +252,9 @@ export function isSQLBatchQueryArgs(args: unknown): args is SQLBatchQueryArgs {
  );
 }
 
+/**
+ *
+ */
 export function isSQLGetSchemaArgs(args: unknown): args is SQLGetSchemaArgs {
  return (
  typeof args === 'object' &&
@@ -243,6 +264,9 @@ export function isSQLGetSchemaArgs(args: unknown): args is SQLGetSchemaArgs {
  );
 }
 
+/**
+ *
+ */
 export function isSQLTestConnectionArgs(args: unknown): args is SQLTestConnectionArgs {
  return (
  typeof args === 'object' &&

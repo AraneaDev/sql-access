@@ -23,35 +23,35 @@ const logger = new Logger({
  */
 async function main(): Promise<void> {
  // Initialize global logger for all components BEFORE creating any other components
- await initializeLogger({ 
+ await initializeLogger({
  enableConsole: false, // Critical: Disable console output to prevent JSON-RPC interference
  logFile: './sql-mcp-server.log',
  logLevel: 'INFO'
- });
- // Handle uncaught exceptions gracefully
- process.on('uncaughtException', (error) => {
- logger.error('Uncaught exception', error);
- process.exit(1);
- });
-
- process.on('unhandledRejection', (reason, promise) => {
- logger.error('Unhandled promise rejection', { reason, promise });
- process.exit(1);
  });
 
  // Initialize and run server
  const server = new SQLMCPServer();
 
- // Handle graceful shutdown
+ const SHUTDOWN_TIMEOUT = 10000; // 10 seconds
+
+ // Handle graceful shutdown with timeout
+ let shuttingDown = false;
  const gracefulShutdown = async (signal: string) => {
+ if (shuttingDown) return; // Prevent re-entrance
+ shuttingDown = true;
  logger.info(`Received ${signal}, initiating graceful shutdown...`);
- 
+
  try {
- await server.cleanup();
+ await Promise.race([
+ server.cleanup(),
+ new Promise<never>((_, reject) =>
+ setTimeout(() => reject(new Error('Shutdown timed out')), SHUTDOWN_TIMEOUT)
+ )
+ ]);
  logger.info('Server shutdown complete');
  process.exit(0);
  } catch (error) {
- logger.error('Error during shutdown', error as Error);
+ logger.error('Error during shutdown (forcing exit)', error as Error);
  process.exit(1);
  }
  };
@@ -59,6 +59,17 @@ async function main(): Promise<void> {
  // Register shutdown handlers
  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+ // Handle uncaught exceptions gracefully - route through gracefulShutdown
+ process.on('uncaughtException', (error) => {
+ logger.error('Uncaught exception', error);
+ gracefulShutdown('uncaughtException');
+ });
+
+ process.on('unhandledRejection', (reason, promise) => {
+ logger.error('Unhandled promise rejection', { reason, promise });
+ gracefulShutdown('unhandledRejection');
+ });
 
  // Start the server
  try {

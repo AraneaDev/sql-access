@@ -2,7 +2,7 @@
  * Enhanced SSH Tunnel Manager with intelligent port management
  */
 
-import { Client as SSHClient } from 'ssh2';
+import { Client as SSHClient, type ConnectConfig } from 'ssh2';
 import * as net from 'net';
 import * as fs from 'fs';
 import { EventEmitter } from 'events';
@@ -44,6 +44,9 @@ export interface TunnelCreationResult {
 // Enhanced SSH Tunnel Manager Implementation
 // ============================================================================
 
+/**
+ *
+ */
 export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnelManager {
  private tunnels = new Map<string, EnhancedTunnelInfo>();
  private tunnelStatus = new Map<string, SSHTunnelStatusInfo>();
@@ -53,34 +56,20 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  constructor() {
  super();
  this.portManager = PortManager.getInstance();
- 
- // Set up cleanup on process exit
- process.on('exit', () => {
- this.closeAllTunnels().catch(error => {
- this.logger.error('Error during cleanup on exit', error);
- });
- });
-
- process.on('SIGINT', () => {
- this.closeAllTunnels().then(() => {
- process.exit(0);
- }).catch(error => {
- this.logger.error('Error during SIGINT cleanup', error);
- process.exit(1);
- });
- });
+ // Cleanup is handled centrally by gracefulShutdown() in index.ts
+ // via SQLMCPServer.cleanup() -> sshTunnelManager.closeAllTunnels()
  }
 
  /**
- * Initialize the SSH tunnel manager
- */
+  * Initialize the SSH tunnel manager
+  */
  async initialize(): Promise<void> {
  this.logger.info('Enhanced SSH tunnel manager initialized');
  }
 
  /**
- * Check if a tunnel exists for the given database
- */
+  * Check if a tunnel exists for the given database
+  */
  hasTunnel(dbName: string): boolean {
  return this.tunnels.has(dbName);
  }
@@ -90,16 +79,16 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  // ============================================================================
 
  /**
- * Create a new SSH tunnel with intelligent port assignment
- */
+  * Create a new SSH tunnel with intelligent port assignment
+  */
  async createTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo> {
  const result = await this.createEnhancedTunnel(dbName, options);
  return result.tunnel;
  }
 
  /**
- * Create a new SSH tunnel with detailed port information
- */
+  * Create a new SSH tunnel with detailed port information
+  */
  async createEnhancedTunnel(dbName: string, options: SSHTunnelCreateOptions): Promise<TunnelCreationResult> {
  try {
  // Validate SSH configuration
@@ -206,22 +195,22 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  /**
- * Get existing tunnel information
- */
+  * Get existing tunnel information
+  */
  getTunnel(dbName: string): SSHTunnelInfo | undefined {
  return this.tunnels.get(dbName);
  }
 
  /**
- * Get enhanced tunnel information with port details
- */
+  * Get enhanced tunnel information with port details
+  */
  getEnhancedTunnel(dbName: string): EnhancedTunnelInfo | undefined {
  return this.tunnels.get(dbName);
  }
 
  /**
- * Close a specific SSH tunnel with proper port cleanup
- */
+  * Close a specific SSH tunnel with proper port cleanup
+  */
  async closeTunnel(dbName: string): Promise<void> {
  const tunnel = this.tunnels.get(dbName);
  
@@ -271,33 +260,41 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  /**
- * Close all SSH tunnels
- */
+  * Close all SSH tunnels
+  */
  async closeAllTunnels(): Promise<void> {
  const dbNames = Array.from(this.tunnels.keys());
- 
+
  if (dbNames.length === 0) {
  return;
  }
 
  this.logger.info(`Closing ${dbNames.length} enhanced SSH tunnels`);
 
- await Promise.all(
- dbNames.map(async (dbName) => {
- try {
- await this.closeTunnel(dbName);
- } catch (error) {
- this.logger.error(`Error closing enhanced SSH tunnel for '${dbName}'`, error as Error);
- }
- })
+ const PER_TUNNEL_TIMEOUT = 5000;
+ const results = await Promise.allSettled(
+ dbNames.map(dbName =>
+ Promise.race([
+ this.closeTunnel(dbName),
+ new Promise<void>((_, reject) =>
+ setTimeout(() => reject(new Error(`Timeout closing tunnel '${dbName}'`)), PER_TUNNEL_TIMEOUT)
+ )
+ ])
+ )
  );
+
+ for (let i = 0; i < results.length; i++) {
+ if (results[i].status === 'rejected') {
+ this.logger.error(`Error closing enhanced SSH tunnel for '${dbNames[i]}'`, (results[i] as PromiseRejectedResult).reason);
+ }
+ }
 
  this.logger.info('All enhanced SSH tunnels closed');
  }
 
  /**
- * Check if a tunnel is connected
- */
+  * Check if a tunnel is connected
+  */
  isConnected(dbName: string): boolean {
  const tunnel = this.tunnels.get(dbName);
  const status = this.tunnelStatus.get(dbName);
@@ -311,7 +308,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  try {
  // SSH Client doesn't have readable/writable properties, so we use a different approach
  // Check if connection exists and has event listeners (indicates it's active)
- return !!(tunnel.connection && (tunnel.connection as any)._sock && !(tunnel.connection as any).destroyed);
+ return !!(tunnel.connection && (tunnel.connection as unknown as Record<string, unknown>)._sock && !(tunnel.connection as unknown as Record<string, unknown>).destroyed);
  } catch (error) {
  this.logger.debug(`Connection health check error for '${dbName}'`, { error: (error as Error).message });
  return false;
@@ -323,22 +320,22 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  // ============================================================================
 
  /**
- * Get tunnel status information
- */
+  * Get tunnel status information
+  */
  getTunnelStatus(dbName: string): SSHTunnelStatusInfo | undefined {
  return this.tunnelStatus.get(dbName);
  }
 
  /**
- * Get all active tunnels
- */
+  * Get all active tunnels
+  */
  getActiveTunnels(): string[] {
  return Array.from(this.tunnels.keys()).filter(dbName => this.isConnected(dbName));
  }
 
  /**
- * Get tunnel statistics including port information
- */
+  * Get tunnel statistics including port information
+  */
  getTunnelStats(): {
  total: number;
  active: number;
@@ -370,8 +367,8 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  /**
- * Get port recommendations for a database type
- */
+  * Get port recommendations for a database type
+  */
  async getPortRecommendations(databaseType: string): Promise<{
  recommended: number[];
  available: number[];
@@ -396,8 +393,8 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  /**
- * Check port availability
- */
+  * Check port availability
+  */
  async checkPortAvailability(port: number): Promise<{ 
  available: boolean; 
  reason?: string; 
@@ -620,7 +617,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  this.markTunnelInactive(dbName);
  });
 
- (sshClient as any).on('close', (_hadError: boolean) => {
+ (sshClient as unknown as NodeJS.EventEmitter).on('close', (_hadError: boolean) => {
  this.logger.info(`SSH connection closed for '${dbName}'`, { hadError: _hadError });
  this.markTunnelInactive(dbName);
  });
@@ -639,8 +636,8 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  });
  }
 
- private buildSSHConnectOptions(config: SSHConnectionConfig): any {
- const connectOptions: any = {
+ private buildSSHConnectOptions(config: SSHConnectionConfig): ConnectConfig {
+ const connectOptions: ConnectConfig = {
  host: config.host,
  port: config.port,
  username: config.username,
@@ -727,7 +724,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  });
  });
 
- (tunnel.connection as any).on('close', (_hadError: boolean) => {
+ (tunnel.connection as unknown as NodeJS.EventEmitter).on('close', (_hadError: boolean) => {
  this.handleTunnelEvent(dbName, {
  event: 'close',
  tunnel,
@@ -796,8 +793,8 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  /**
- * Test if a local port is accepting connections
- */
+  * Test if a local port is accepting connections
+  */
  private async testLocalPort(port: number): Promise<boolean> {
  return new Promise((resolve) => {
  const client = new net.Socket();
@@ -820,15 +817,15 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
  }
 
  /**
- * Validate tunnel health with comprehensive checks
- */
+  * Validate tunnel health with comprehensive checks
+  */
  private async validateTunnelHealth(dbName: string): Promise<boolean> {
  const tunnel = this.tunnels.get(dbName);
  if (!tunnel || !tunnel.connection) return false;
 
  try {
  // Check if SSH connection is readable and writable
- const sshHealthy = !!(tunnel.connection && (tunnel.connection as any)._sock && !(tunnel.connection as any).destroyed);
+ const sshHealthy = !!(tunnel.connection && (tunnel.connection as unknown as Record<string, unknown>)._sock && !(tunnel.connection as unknown as Record<string, unknown>).destroyed);
  
  // Check if local port is still bound
  const portHealthy = await this.testLocalPort(tunnel.localPort);

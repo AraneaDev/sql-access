@@ -14,14 +14,58 @@ import type {
  BatchResult
 } from '../types/index.js';
 import { ConnectionError } from '../types/index.js';
-import { AdapterFactory, DatabaseAdapter } from '../database/adapters/index.js';
-import { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
+import type { DatabaseAdapter } from '../database/adapters/index.js';
+import { AdapterFactory } from '../database/adapters/index.js';
+import type { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { getLogger } from '../utils/logger.js';
 
 // ============================================================================
 // Connection Manager Class
 // ============================================================================
 
+// Transient error patterns that are worth retrying
+const RETRYABLE_PATTERNS = [
+ 'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND',
+ 'EPIPE', 'EAI_AGAIN', 'EHOSTUNREACH', 'ENETUNREACH',
+ 'Connection lost', 'Connection terminated unexpectedly',
+ 'read ECONNRESET', 'socket hang up'
+];
+
+function isRetryableError(error: unknown): boolean {
+ const message = error instanceof Error ? error.message : String(error);
+ return RETRYABLE_PATTERNS.some(pattern => message.includes(pattern));
+}
+
+async function withRetry<T>(
+ operation: () => Promise<T>,
+ logger: ReturnType<typeof getLogger>,
+ context: string,
+ maxRetries = 2,
+ delayMs = 1000
+): Promise<T> {
+ let lastError: unknown;
+ for (let attempt = 0; attempt <= maxRetries; attempt++) {
+ try {
+ return await operation();
+ } catch (error) {
+ lastError = error;
+ if (attempt < maxRetries && isRetryableError(error)) {
+ const backoff = delayMs * (attempt + 1);
+ logger.warning(`Retryable error in ${context} (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${backoff}ms`, {
+ error: (error as Error).message
+ });
+ await new Promise(resolve => setTimeout(resolve, backoff));
+ } else {
+ throw error;
+ }
+ }
+ }
+ throw lastError; // unreachable, but satisfies TS
+}
+
+/**
+ *
+ */
 export class ConnectionManager extends EventEmitter {
  private connections = new Map<string, ConnectionInfo>();
  private adapters = new Map<string, DatabaseAdapter>();
@@ -35,23 +79,23 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Create database adapter (can be overridden for testing)
- */
+  * Create database adapter (can be overridden for testing)
+  */
  private createAdapter(config: DatabaseConfig): DatabaseAdapter {
  return AdapterFactory.createAdapter(config);
  }
 
  /**
- * Initialize the connection manager
- */
+  * Initialize the connection manager
+  */
  public initialize(databases: Record<string, DatabaseConfig>): void {
  this.databases = databases;
  this.emit('initialized', databases);
  }
 
  /**
- * Register a database configuration
- */
+  * Register a database configuration
+  */
  public registerDatabase(name: string, config: DatabaseConfig): void {
  // Validate configuration
  const validation = AdapterFactory.validateConfig(config);
@@ -64,8 +108,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Unregister a database configuration
- */
+  * Unregister a database configuration
+  */
  public unregisterDatabase(name: string): void {
  delete this.databases[name];
  
@@ -80,36 +124,36 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Check if database is registered
- */
+  * Check if database is registered
+  */
  public hasDatabase(name: string): boolean {
  return name in this.databases;
  }
 
  /**
- * Get list of registered database names
- */
+  * Get list of registered database names
+  */
  public getDatabaseNames(): string[] {
  return Object.keys(this.databases);
  }
 
  /**
- * Get database configuration
- */
+  * Get database configuration
+  */
  public getDatabaseConfig(name: string): DatabaseConfig | undefined {
  return this.databases[name];
  }
 
  /**
- * Close all connections
- */
+  * Close all connections
+  */
  public closeAll(): Promise<void> {
  return this.closeAllConnections();
  }
 
  /**
- * Check if connection is healthy
- */
+  * Check if connection is healthy
+  */
  public async isConnectionHealthy(name: string): Promise<boolean> {
  if (!this.isConnected(name)) {
  return false;
@@ -129,8 +173,8 @@ export class ConnectionManager extends EventEmitter {
  // ============================================================================
 
  /**
- * Create a new database connection
- */
+  * Create a new database connection
+  */
  async createConnection(dbName: string, config: DatabaseConfig): Promise<ConnectionInfo> {
  try {
  this.logger.info(`Creating connection to database '${dbName}'`, {
@@ -281,8 +325,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Get an existing connection or create a new one
- */
+  * Get an existing connection or create a new one
+  */
  async getConnection(dbName: string): Promise<ConnectionInfo> {
  // Check if connection already exists
  const existing = this.connections.get(dbName);
@@ -296,27 +340,31 @@ export class ConnectionManager extends EventEmitter {
  throw new Error(`Database ${dbName} is not registered`);
  }
 
- // Create new connection
- return await this.createConnection(dbName, config);
+ // Create new connection with retry for transient failures
+ return await withRetry(
+ () => this.createConnection(dbName, config),
+ this.logger,
+ `getConnection(${dbName})`
+ );
  }
 
  /**
- * Get existing connection (synchronous)
- */
+  * Get existing connection (synchronous)
+  */
  getExistingConnection(dbName: string): ConnectionInfo | undefined {
  return this.connections.get(dbName);
  }
 
  /**
- * Get database adapter
- */
+  * Get database adapter
+  */
  getAdapter(dbName: string): DatabaseAdapter | undefined {
  return this.adapters.get(dbName);
  }
 
  /**
- * Check if a connection exists and is active
- */
+  * Check if a connection exists and is active
+  */
  isConnected(dbName: string): boolean {
  const connectionInfo = this.connections.get(dbName);
  const adapter = this.adapters.get(dbName);
@@ -334,8 +382,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Close a specific connection
- */
+  * Close a specific connection
+  */
  async closeConnection(dbName: string): Promise<void> {
  const connectionInfo = this.connections.get(dbName);
  const adapter = this.adapters.get(dbName);
@@ -365,27 +413,35 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Close all connections
- */
+  * Close all connections
+  */
  async closeAllConnections(): Promise<void> {
  const dbNames = Array.from(this.connections.keys());
- 
- await Promise.all(
- dbNames.map(async (dbName) => {
- try {
- await this.closeConnection(dbName);
- } catch (error) {
- this.logger.error(`Error closing connection for '${dbName}'`, { error: (error as Error).message });
- }
- })
+
+ const PER_CONNECTION_TIMEOUT = 5000;
+ const results = await Promise.allSettled(
+ dbNames.map(dbName =>
+ Promise.race([
+ this.closeConnection(dbName),
+ new Promise<void>((_, reject) =>
+ setTimeout(() => reject(new Error(`Timeout closing connection '${dbName}'`)), PER_CONNECTION_TIMEOUT)
+ )
+ ])
+ )
  );
+
+ for (let i = 0; i < results.length; i++) {
+ if (results[i].status === 'rejected') {
+ this.logger.error(`Error closing connection for '${dbNames[i]}'`, { error: (results[i] as PromiseRejectedResult).reason?.message });
+ }
+ }
 
  this.logger.info('All database connections closed');
  }
 
  /**
- * Test connection to a database
- */
+  * Test connection to a database
+  */
  async testConnection(dbName: string, config?: DatabaseConfig): Promise<TestConnectionResult> {
  // Use provided config or get from registered databases
  const actualConfig = config || this.databases[dbName];
@@ -522,15 +578,15 @@ export class ConnectionManager extends EventEmitter {
  // ============================================================================
 
  /**
- * Get list of all active connections
- */
+  * Get list of all active connections
+  */
  getActiveConnections(): string[] {
  return Array.from(this.connections.keys()).filter(dbName => this.isConnected(dbName));
  }
 
  /**
- * Get connection statistics
- */
+  * Get connection statistics
+  */
  getConnectionStats(): {
  total: number;
  active: number;
@@ -551,8 +607,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Get connection statistics (alias for backwards compatibility)
- */
+  * Get connection statistics (alias for backwards compatibility)
+  */
  getConnectionStatistics(): {
  total: number;
  active: number;
@@ -563,8 +619,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Create database list items with connection status
- */
+  * Create database list items with connection status
+  */
  createDatabaseListItems(configs: Record<string, DatabaseConfig>): DatabaseListItem[] {
  return Object.entries(configs).map(([dbName, config]) => ({
  name: dbName,
@@ -585,8 +641,8 @@ export class ConnectionManager extends EventEmitter {
  // ============================================================================
 
  /**
- * Execute a single query on a database
- */
+  * Execute a single query on a database
+  */
  async executeQuery(dbName: string, query: string, params: unknown[] = []): Promise<QueryResult> {
  // Get connection (will create if doesn't exist)
  const connectionInfo = await this.getConnection(dbName);
@@ -606,8 +662,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Execute multiple queries in batch
- */
+  * Execute multiple queries in batch
+  */
  async executeBatch(
  dbName: string, 
  queries: Array<{ query: string; params?: unknown[]; label?: string }>,
@@ -713,8 +769,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Analyze query performance with database-specific recommendations
- */
+  * Analyze query performance with database-specific recommendations
+  */
  async analyzePerformance(dbName: string, query: string): Promise<{
  executionTime: number;
  explainTime: number;
@@ -771,8 +827,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Format execution plan based on database type
- */
+  * Format execution plan based on database type
+  */
  private formatExecutionPlan(explainResult: QueryResult, dbType: string): string {
  switch (dbType) {
  case 'postgresql':
@@ -801,8 +857,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Generate database-specific performance recommendations
- */
+  * Generate database-specific performance recommendations
+  */
  private generatePerformanceRecommendations(options: {
  query: string;
  result: QueryResult;
@@ -871,8 +927,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Add PostgreSQL-specific recommendations
- */
+  * Add PostgreSQL-specific recommendations
+  */
  private addPostgreSQLRecommendations(recommendations: string[], explainResult: QueryResult, query: string): void {
  const planText = explainResult.rows.map(row => Object.values(row).join(' ')).join(' ').toLowerCase();
  
@@ -890,8 +946,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Add MySQL-specific recommendations 
- */
+  * Add MySQL-specific recommendations 
+  */
  private addMySQLRecommendations(recommendations: string[], explainResult: QueryResult, _query: string): void {
  for (const row of explainResult.rows) {
  const rowData = row as Record<string, unknown>;
@@ -911,8 +967,8 @@ export class ConnectionManager extends EventEmitter {
  }
 
  /**
- * Add SQLite-specific recommendations
- */
+  * Add SQLite-specific recommendations
+  */
  private addSQLiteRecommendations(recommendations: string[], explainResult: QueryResult, _query: string): void {
  const planText = explainResult.rows.map(row => Object.values(row).join(' ')).join(' ').toLowerCase();
  

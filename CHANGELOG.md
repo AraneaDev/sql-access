@@ -5,6 +5,41 @@ All notable changes to the SQL MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-03-14
+
+### Added
+- Retry logic for transient connection failures (ECONNREFUSED, ETIMEDOUT, etc.) with exponential backoff
+- 10-second shutdown timeout to prevent hanging on disconnect
+- ESLint JSDoc plugin enforcing documentation on public API surface
+- `@typescript-eslint/recommended` ruleset with strict type checking
+- `eqeqeq` and `no-throw-literal` lint rules
+- Per-connection and per-tunnel 5-second timeouts during cleanup
+
+### Changed
+- **Breaking up the god class**: Extracted SQLMCPServer (1,637 lines) into focused modules:
+  - `src/tools/tool-definitions.ts` - MCP tool JSON schemas
+  - `src/tools/dispatcher.ts` - Tool call routing
+  - `src/tools/handlers/query-handlers.ts` - Query, batch, and performance tools
+  - `src/tools/handlers/schema-handlers.ts` - Schema, list, test, and refresh tools
+  - `src/tools/handlers/config-handlers.ts` - Database CRUD and config tools
+  - `src/utils/response-formatter.ts` - Table and summary formatting
+- SQLMCPServer reduced to ~330 lines (lifecycle + config parsing only)
+- `closeAllConnections()` and `closeAllTunnels()` now use `Promise.allSettled` instead of `Promise.all`
+- Uncaught exception/rejection handlers now route through `gracefulShutdown()` instead of `process.exit(1)`
+- Replaced all `any` types with proper types across the codebase (0 ESLint warnings)
+
+### Fixed
+- Duplicate `process.on('exit')` and `process.on('SIGINT')` handlers in EnhancedSSHTunnelManager competing with main shutdown handler
+- Async cleanup in sync `process.on('exit')` handler that could never complete
+- `server.cleanup()` hanging forever if a connection/tunnel refused to close
+- Schema manager tests updated to match compact schema output format
+- Integration test compilation errors restored
+- Strict equality violation in RedactionManager
+
+### Removed
+- Dead `SSHTunnelManager.ts` (512 lines) - never imported by production code, registered competing signal handlers
+- Unused imports: `createHash`, `RedactionType`, `FieldPatternType`, `isValidFieldPatternType`
+
 ## [2.3.1] - 2026-03-11
 
 ### Changed

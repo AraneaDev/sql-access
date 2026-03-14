@@ -9,13 +9,14 @@ import { parse as parseIni } from 'ini';
 
 import type {
  DatabaseConfig,
+ DatabaseTypeString,
  ParsedServerConfig,
  ParsedSecurityConfig,
  ParsedExtensionConfig,
  DatabaseRedactionConfig,
  FieldRedactionRule
 } from '../types/index.js';
-import { isValidRedactionType, isValidFieldPatternType } from '../types/index.js';
+import { isValidRedactionType } from '../types/index.js';
 
 /**
  * Configuration validation error
@@ -50,14 +51,14 @@ export function loadConfiguration(configPath?: string): ParsedServerConfig {
 /**
  * Parse raw INI configuration into typed configuration
  */
-export function parseConfiguration(rawConfig: Record<string, any>): ParsedServerConfig {
+export function parseConfiguration(rawConfig: Record<string, unknown>): ParsedServerConfig {
  const databases: Record<string, DatabaseConfig> = {};
  
  // Handle nested database configurations (database.name.property)
  if (rawConfig.database && typeof rawConfig.database === 'object') {
  for (const [name, config] of Object.entries(rawConfig.database)) {
  if (typeof config === 'object') {
- databases[name] = parseDatabaseConfig(name, config as Record<string, any>);
+ databases[name] = parseDatabaseConfig(name, config as Record<string, string>);
  }
  }
  }
@@ -67,7 +68,7 @@ export function parseConfiguration(rawConfig: Record<string, any>): ParsedServer
  for (const key of dbKeys) {
  const dbName = key.replace('database.', '');
  if (!databases[dbName] && typeof rawConfig[key] === 'object') {
- databases[dbName] = parseDatabaseConfig(dbName, rawConfig[key] as Record<string, any>);
+ databases[dbName] = parseDatabaseConfig(dbName, rawConfig[key] as Record<string, string>);
  }
  }
 
@@ -78,15 +79,15 @@ export function parseConfiguration(rawConfig: Record<string, any>): ParsedServer
 
  return {
  databases,
- security: parseSecurityConfig(rawConfig.security),
- extension: parseExtensionConfig(rawConfig.extension)
+ security: parseSecurityConfig(rawConfig.security as Record<string, string> | undefined),
+ extension: parseExtensionConfig(rawConfig.extension as Record<string, string> | undefined)
  };
 }
 
 /**
  * Parse individual database configuration
  */
-export function parseDatabaseConfig(name: string, config: Record<string, any>): DatabaseConfig {
+export function parseDatabaseConfig(name: string, config: Record<string, string>): DatabaseConfig {
  // Validate required type field
  if (!config.type) {
  throw new ConfigValidationError(`Database '${name}' missing required 'type' field`, 'type', name);
@@ -102,9 +103,9 @@ export function parseDatabaseConfig(name: string, config: Record<string, any>): 
  }
 
  const dbConfig: DatabaseConfig = {
- type: config.type.toLowerCase(),
- select_only: config.select_only === 'true' || config.select_only === true,
- mcp_configurable: config.mcp_configurable === 'true' || config.mcp_configurable === true
+ type: config.type.toLowerCase() as DatabaseTypeString,
+ select_only: config.select_only === 'true',
+ mcp_configurable: config.mcp_configurable === 'true'
  };
 
  // Handle SQLite specific configuration
@@ -124,7 +125,7 @@ export function parseDatabaseConfig(name: string, config: Record<string, any>): 
  }
 
  // Parse redaction configuration if present
- if (config.redaction_enabled === 'true' || config.redaction_enabled === true) {
+ if (config.redaction_enabled === 'true') {
  dbConfig.redaction = parseRedactionConfig(name, config);
  }
 
@@ -134,7 +135,7 @@ export function parseDatabaseConfig(name: string, config: Record<string, any>): 
 /**
  * Validate networked database configuration (non-SQLite)
  */
-function validateNetworkedDatabase(name: string, config: Record<string, any>, dbConfig: DatabaseConfig): void {
+function validateNetworkedDatabase(name: string, config: Record<string, string>, dbConfig: DatabaseConfig): void {
  // Validate required fields
  if (!config.host) {
  throw new ConfigValidationError(`Database '${name}' missing required 'host' field`, 'host', name);
@@ -148,7 +149,7 @@ function validateNetworkedDatabase(name: string, config: Record<string, any>, db
  dbConfig.database = config.database;
  dbConfig.username = config.username;
  dbConfig.password = config.password;
- dbConfig.ssl = config.ssl === 'true' || config.ssl === true;
+ dbConfig.ssl = config.ssl === 'true';
  
  // Validate timeout
  const timeout = parseInt(config.timeout);
@@ -167,7 +168,7 @@ function validateNetworkedDatabase(name: string, config: Record<string, any>, db
 /**
  * Parse SSH configuration
  */
-function parseSSHConfig(name: string, config: Record<string, any>, dbConfig: DatabaseConfig): void {
+function parseSSHConfig(name: string, config: Record<string, string>, dbConfig: DatabaseConfig): void {
  dbConfig.ssh_host = config.ssh_host;
  
  const sshPort = parseInt(config.ssh_port);
@@ -213,13 +214,13 @@ function parseSSHConfig(name: string, config: Record<string, any>, dbConfig: Dat
 /**
  * Parse redaction configuration from config section
  */
-function parseRedactionConfig(dbName: string, config: Record<string, any>): DatabaseRedactionConfig {
+function parseRedactionConfig(dbName: string, config: Record<string, string>): DatabaseRedactionConfig {
  const redactionConfig: DatabaseRedactionConfig = {
  enabled: true,
  rules: [],
- log_redacted_access: config.redaction_log_access === 'true' || config.redaction_log_access === true,
- audit_redacted_queries: config.redaction_audit_queries === 'true' || config.redaction_audit_queries === true,
- case_sensitive_matching: config.redaction_case_sensitive === 'true' || config.redaction_case_sensitive === true
+ log_redacted_access: config.redaction_log_access === 'true',
+ audit_redacted_queries: config.redaction_audit_queries === 'true',
+ case_sensitive_matching: config.redaction_case_sensitive === 'true'
  };
 
  // Parse redaction rules from configuration
@@ -318,7 +319,7 @@ function parseRedactionRules(rulesString: string): FieldRedactionRule[] {
 /**
  * Parse security configuration
  */
-function parseSecurityConfig(securityRaw?: Record<string, any>): ParsedSecurityConfig {
+function parseSecurityConfig(securityRaw?: Record<string, string>): ParsedSecurityConfig {
  if (!securityRaw || typeof securityRaw !== 'object') {
  return {
  max_joins: 10,
@@ -331,12 +332,12 @@ function parseSecurityConfig(securityRaw?: Record<string, any>): ParsedSecurityC
  }
 
  const security: ParsedSecurityConfig = {
- max_joins: parseInt(securityRaw.max_joins?.toString() || '10') || 10,
- max_subqueries: parseInt(securityRaw.max_subqueries?.toString() || '5') || 5,
- max_unions: parseInt(securityRaw.max_unions?.toString() || '3') || 3,
- max_group_bys: parseInt(securityRaw.max_group_bys?.toString() || '5') || 5,
- max_complexity_score: parseInt(securityRaw.max_complexity_score?.toString() || '100') || 100,
- max_query_length: parseInt(securityRaw.max_query_length?.toString() || '10000') || 10000
+ max_joins: parseInt(securityRaw.max_joins || '10') || 10,
+ max_subqueries: parseInt(securityRaw.max_subqueries || '5') || 5,
+ max_unions: parseInt(securityRaw.max_unions || '3') || 3,
+ max_group_bys: parseInt(securityRaw.max_group_bys || '5') || 5,
+ max_complexity_score: parseInt(securityRaw.max_complexity_score || '100') || 100,
+ max_query_length: parseInt(securityRaw.max_query_length || '10000') || 10000
  };
 
  // Validate security limits
@@ -365,7 +366,7 @@ function parseSecurityConfig(securityRaw?: Record<string, any>): ParsedSecurityC
 /**
  * Parse extension configuration
  */
-function parseExtensionConfig(extensionRaw?: Record<string, any>): ParsedExtensionConfig {
+function parseExtensionConfig(extensionRaw?: Record<string, string>): ParsedExtensionConfig {
  if (!extensionRaw || typeof extensionRaw !== 'object') {
  return {
  max_rows: 1000,
@@ -375,9 +376,9 @@ function parseExtensionConfig(extensionRaw?: Record<string, any>): ParsedExtensi
  }
 
  const extension: ParsedExtensionConfig = {
- max_rows: parseInt(extensionRaw.max_rows) || 1000,
- max_batch_size: parseInt(extensionRaw.max_batch_size) || 10,
- query_timeout: parseInt(extensionRaw.query_timeout) || 30000
+ max_rows: parseInt(extensionRaw.max_rows || '1000') || 1000,
+ max_batch_size: parseInt(extensionRaw.max_batch_size || '10') || 10,
+ query_timeout: parseInt(extensionRaw.query_timeout || '30000') || 30000
  };
 
  // Validate extension limits

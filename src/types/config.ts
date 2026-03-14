@@ -3,7 +3,7 @@
  */
 
 // import type { DatabaseType } from './database.js';
-import type { SecurityConfig, ExtensionConfig, DatabaseTypeString } from './database.js';
+import type { SecurityConfig, ExtensionConfig, DatabaseTypeString, DatabaseConfig } from './database.js';
 
 // Re-export types that should be available from config module
 export type { DatabaseType, DatabaseTypeString, SecurityConfig, ExtensionConfig, DatabaseConfig, DatabaseRedactionConfig, FieldRedactionRule } from './database.js';
@@ -118,7 +118,7 @@ export interface ParsedExtensionConfig {
 }
 
 export interface ParsedServerConfig {
- databases: Record<string, import('./database.js').DatabaseConfig>;
+ databases: Record<string, DatabaseConfig>;
  security?: ParsedSecurityConfig;
  extension?: ParsedExtensionConfig;
 }
@@ -189,6 +189,9 @@ export const DEFAULT_SSH_PORT = 22;
 // Type Guards and Validation
 // ============================================================================
 
+/**
+ *
+ */
 export function isDatabaseSectionConfig(value: unknown): value is DatabaseSectionConfig {
  return (
  typeof value === 'object' &&
@@ -198,6 +201,9 @@ export function isDatabaseSectionConfig(value: unknown): value is DatabaseSectio
  );
 }
 
+/**
+ *
+ */
 export function isRawConfigFile(value: unknown): value is RawConfigFile {
  return typeof value === 'object' && value !== null;
 }
@@ -206,6 +212,9 @@ export function isRawConfigFile(value: unknown): value is RawConfigFile {
 // Configuration Utilities
 // ============================================================================
 
+/**
+ *
+ */
 export function parseStringToNumber(value: string | number | undefined, defaultValue: number): number {
  if (typeof value === 'number') return value;
  if (typeof value === 'string') {
@@ -215,6 +224,9 @@ export function parseStringToNumber(value: string | number | undefined, defaultV
  return defaultValue;
 }
 
+/**
+ *
+ */
 export function parseStringToBoolean(value: string | boolean | undefined, defaultValue: boolean): boolean {
  if (typeof value === 'boolean') return value;
  if (typeof value === 'string') {
@@ -223,6 +235,9 @@ export function parseStringToBoolean(value: string | boolean | undefined, defaul
  return defaultValue;
 }
 
+/**
+ *
+ */
 export function validateDatabaseType(type: string): DatabaseTypeString | null {
  const lowerType = type.toLowerCase();
  const validTypes: DatabaseTypeString[] = ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'];
@@ -230,6 +245,9 @@ export function validateDatabaseType(type: string): DatabaseTypeString | null {
  return validTypes.find(t => t === lowerType) || null;
 }
 
+/**
+ *
+ */
 export function getRequiredFields(type: DatabaseTypeString): string[] {
  switch (type) {
  case 'sqlite':
@@ -245,6 +263,9 @@ export function getRequiredFields(type: DatabaseTypeString): string[] {
  }
 }
 
+/**
+ *
+ */
 export function validateRequiredFields(
  config: DatabaseSectionConfig,
  _dbName: string,

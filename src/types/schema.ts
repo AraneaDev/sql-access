@@ -352,6 +352,9 @@ export interface SchemaChange {
 // Type Guards
 // ============================================================================
 
+/**
+ *
+ */
 export function isEnhancedTableInfo(value: unknown): value is EnhancedTableInfo {
  return (
  typeof value === 'object' &&
@@ -365,6 +368,9 @@ export function isEnhancedTableInfo(value: unknown): value is EnhancedTableInfo 
  );
 }
 
+/**
+ *
+ */
 export function isForeignKeyInfo(value: unknown): value is BasicForeignKeyInfo {
  return (
  typeof value === 'object' &&
@@ -378,6 +384,9 @@ export function isForeignKeyInfo(value: unknown): value is BasicForeignKeyInfo {
  );
 }
 
+/**
+ *
+ */
 export function isIndexInfo(value: unknown): value is BasicIndexInfo {
  return (
  typeof value === 'object' &&
@@ -391,6 +400,9 @@ export function isIndexInfo(value: unknown): value is BasicIndexInfo {
  );
 }
 
+/**
+ *
+ */
 export function isConstraintType(value: string): value is ConstraintType {
  return [
  'PRIMARY KEY',
@@ -403,6 +415,9 @@ export function isConstraintType(value: string): value is ConstraintType {
  ].includes(value);
 }
 
+/**
+ *
+ */
 export function isIndexType(value: string): value is IndexType {
  return [
  'BTREE',
@@ -421,6 +436,9 @@ export function isIndexType(value: string): value is IndexType {
 // Utility Functions
 // ============================================================================
 
+/**
+ *
+ */
 export function calculateTableComplexity(table: EnhancedTableInfo): number {
  let complexity = 0;
  
@@ -445,6 +463,9 @@ export function calculateTableComplexity(table: EnhancedTableInfo): number {
  return complexity;
 }
 
+/**
+ *
+ */
 export function findMissingIndexes(table: EnhancedTableInfo): SchemaRecommendation[] {
  const recommendations: SchemaRecommendation[] = [];
  

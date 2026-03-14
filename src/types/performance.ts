@@ -206,6 +206,9 @@ export interface PerformanceHistorySummary {
 // Type Guards
 // ============================================================================
 
+/**
+ *
+ */
 export function isPerformanceAnalysisResult(value: unknown): value is PerformanceAnalysisResult {
  return (
  typeof value === 'object' &&
@@ -225,6 +228,9 @@ export function isPerformanceAnalysisResult(value: unknown): value is Performanc
  );
 }
 
+/**
+ *
+ */
 export function isRecommendationType(value: string): value is RecommendationType {
  return [
  'INDEX_SUGGESTION',
@@ -238,6 +244,9 @@ export function isRecommendationType(value: string): value is RecommendationType
  ].includes(value);
 }
 
+/**
+ *
+ */
 export function isPerformancePriority(value: string): value is 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
  return ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].includes(value);
 }
@@ -246,6 +255,9 @@ export function isPerformancePriority(value: string): value is 'LOW' | 'MEDIUM' 
 // Utility Functions
 // ============================================================================
 
+/**
+ *
+ */
 export function generateBasicRecommendations(
  metrics: QueryMetrics,
  thresholds: PerformanceThresholds

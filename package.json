@@ -1,6 +1,6 @@
 {
   "name": "sql-access",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "MCP server for accessing SQL databases, with support for PostgreSQL, MySQL, SQLite, MSSQL, and SSH tunnels",
   "type": "module",
   "main": "dist/index.js",
@@ -67,6 +67,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "esbuild": "^0.19.0",
     "eslint": "^8.0.0",
+    "eslint-plugin-jsdoc": "^62.8.0",
     "jest": "^29.0.0",
     "supertest": "^6.0.0",
     "ts-jest": "^29.0.0",
@@ -88,10 +89,13 @@
   "eslintConfig": {
     "parser": "@typescript-eslint/parser",
     "plugins": [
-      "@typescript-eslint"
+      "@typescript-eslint",
+      "jsdoc"
     ],
     "extends": [
-      "eslint:recommended"
+      "eslint:recommended",
+      "plugin:@typescript-eslint/recommended",
+      "plugin:jsdoc/recommended-typescript-flavor"
     ],
     "parserOptions": {
       "ecmaVersion": 2022,
@@ -110,10 +114,20 @@
       "__filename": "readonly"
     },
     "rules": {
-      "no-unused-vars": [
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
         "warn",
         {
-          "argsIgnorePattern": "^_"
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_"
+        }
+      ],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-empty-function": "warn",
+      "@typescript-eslint/consistent-type-imports": [
+        "warn",
+        {
+          "prefer": "type-imports"
         }
       ],
       "prefer-const": "error",
@@ -125,12 +139,36 @@
           ]
         }
       ],
-      "no-useless-escape": "warn"
+      "no-useless-escape": "warn",
+      "eqeqeq": [
+        "error",
+        "always"
+      ],
+      "no-throw-literal": "error",
+      "jsdoc/require-jsdoc": [
+        "warn",
+        {
+          "publicOnly": true,
+          "require": {
+            "FunctionDeclaration": true,
+            "MethodDefinition": true,
+            "ClassDeclaration": true
+          },
+          "checkConstructors": false
+        }
+      ],
+      "jsdoc/require-description": "off",
+      "jsdoc/require-param-type": "off",
+      "jsdoc/require-returns-type": "off",
+      "jsdoc/require-returns": "off",
+      "jsdoc/require-param": "off",
+      "jsdoc/require-param-description": "off"
     },
     "ignorePatterns": [
       "dist/",
       "node_modules/",
-      "coverage/"
+      "coverage/",
+      "examples/"
     ]
   }
 }

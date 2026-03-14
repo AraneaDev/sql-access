@@ -31,6 +31,9 @@ export interface PortAssignmentResult {
 // Port Management Class
 // ============================================================================
 
+/**
+ *
+ */
 export class PortManager {
  private static instance: PortManager;
  private logger = getLogger();
@@ -74,8 +77,13 @@ export class PortManager {
  27017 // MongoDB
  ];
 
- private constructor() {}
+ private constructor() {
+ // Singleton pattern
+ }
 
+ /**
+  *
+  */
  public static getInstance(): PortManager {
  if (!PortManager.instance) {
  PortManager.instance = new PortManager();
@@ -84,8 +92,8 @@ export class PortManager {
  }
 
  /**
- * Check if a specific port is available
- */
+  * Check if a specific port is available
+  */
  async isPortAvailable(port: number, host = '127.0.0.1'): Promise<PortCheckResult> {
  return new Promise<PortCheckResult>((resolve) => {
  const server = net.createServer();
@@ -96,9 +104,9 @@ export class PortManager {
  });
  });
 
- server.on('error', (error: any) => {
+ server.on('error', (error: NodeJS.ErrnoException) => {
  let reason = 'Unknown error';
- 
+
  if (error.code === 'EADDRINUSE') {
  reason = 'Port is already in use';
  } else if (error.code === 'EACCES') {
@@ -117,8 +125,8 @@ export class PortManager {
  }
 
  /**
- * Find an available port with intelligent assignment
- */
+  * Find an available port with intelligent assignment
+  */
  async findAvailablePort(options: PortAssignmentOptions = {}): Promise<PortAssignmentResult> {
  const {
  preferredPort,
@@ -212,8 +220,8 @@ export class PortManager {
  }
 
  /**
- * Generate alternative ports for a given database port
- */
+  * Generate alternative ports for a given database port
+  */
  private generateAlternativePorts(basePort: number): number[] {
  const alternatives: number[] = [];
  
@@ -236,8 +244,8 @@ export class PortManager {
  }
 
  /**
- * Generate a random port in the given range
- */
+  * Generate a random port in the given range
+  */
  private generateRandomPort(minPort: number, maxPort: number, excludePorts: number[], attemptedPorts: number[]): number {
  let port: number;
  let attempts = 0;
@@ -258,31 +266,31 @@ export class PortManager {
  }
 
  /**
- * Reserve a port to prevent conflicts with other tunnel operations
- */
+  * Reserve a port to prevent conflicts with other tunnel operations
+  */
  reservePort(port: number): void {
  this.reservedPorts.add(port);
  this.logger.debug(`Reserved port ${port}`);
  }
 
  /**
- * Release a reserved port
- */
+  * Release a reserved port
+  */
  releasePort(port: number): void {
  this.reservedPorts.delete(port);
  this.logger.debug(`Released port ${port}`);
  }
 
  /**
- * Get list of reserved ports
- */
+  * Get list of reserved ports
+  */
  getReservedPorts(): number[] {
  return Array.from(this.reservedPorts);
  }
 
  /**
- * Check multiple ports for availability
- */
+  * Check multiple ports for availability
+  */
  async checkMultiplePorts(ports: number[]): Promise<PortCheckResult[]> {
  const results: PortCheckResult[] = [];
  
@@ -295,8 +303,8 @@ export class PortManager {
  }
 
  /**
- * Get port recommendations for a database type
- */
+  * Get port recommendations for a database type
+  */
  getPortRecommendations(databaseType: string, excludeUsed = true): number[] {
  const dbPort = this.DATABASE_PORTS[databaseType as keyof typeof this.DATABASE_PORTS];
  if (!dbPort) return [];
@@ -311,8 +319,8 @@ export class PortManager {
  }
 
  /**
- * Suggest a good port for SSH tunneling based on database type
- */
+  * Suggest a good port for SSH tunneling based on database type
+  */
  async suggestTunnelPort(databaseType: string, preferredPort?: number): Promise<PortAssignmentResult> {
  const options: PortAssignmentOptions = {
  databaseType,
@@ -326,22 +334,22 @@ export class PortManager {
  }
 
  /**
- * Validate port range
- */
+  * Validate port range
+  */
  isValidPort(port: number): boolean {
  return port >= 1 && port <= 65535;
  }
 
  /**
- * Check if port is in privileged range
- */
+  * Check if port is in privileged range
+  */
  isPrivilegedPort(port: number): boolean {
  return port < 1024;
  }
 
  /**
- * Get human-readable port status
- */
+  * Get human-readable port status
+  */
  async getPortStatus(port: number): Promise<string> {
  const result = await this.isPortAvailable(port);
  
@@ -362,8 +370,8 @@ export class PortManager {
  }
 
  /**
- * Clear all reserved ports (useful for testing)
- */
+  * Clear all reserved ports (useful for testing)
+  */
  clearReservedPorts(): void {
  this.reservedPorts.clear();
  this.logger.debug('Cleared all reserved ports');

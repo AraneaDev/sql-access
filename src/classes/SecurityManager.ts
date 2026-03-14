@@ -24,6 +24,9 @@ import { getLogger } from '../utils/logger.js';
 // SQL Security Manager Implementation
 // ============================================================================
 
+/**
+ *
+ */
 export class SecurityManager extends EventEmitter implements ISecurityManager {
  private readonly blockedKeywords = new Set<string>([
  'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER',
@@ -90,19 +93,19 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  // ============================================================================
 
  /**
- * Initialize the security manager with server configuration
- */
+  * Initialize the security manager with server configuration
+  */
  public initialize(config: ParsedServerConfig): void {
  // Update complexity limits from configuration if provided
  if (config.security) {
  const securityConfig = config.security;
  
- this.complexityLimits.maxJoins = securityConfig.max_joins || this.complexityLimits.maxJoins;
- this.complexityLimits.maxSubqueries = securityConfig.max_subqueries || this.complexityLimits.maxSubqueries;
- this.complexityLimits.maxUnions = securityConfig.max_unions || this.complexityLimits.maxUnions;
- this.complexityLimits.maxGroupBys = securityConfig.max_group_bys || this.complexityLimits.maxGroupBys;
- this.complexityLimits.maxComplexityScore = securityConfig.max_complexity_score || this.complexityLimits.maxComplexityScore;
- this.complexityLimits.maxQueryLength = securityConfig.max_query_length || this.complexityLimits.maxQueryLength;
+ this.complexityLimits.maxJoins = Number(securityConfig.max_joins) || this.complexityLimits.maxJoins;
+ this.complexityLimits.maxSubqueries = Number(securityConfig.max_subqueries) || this.complexityLimits.maxSubqueries;
+ this.complexityLimits.maxUnions = Number(securityConfig.max_unions) || this.complexityLimits.maxUnions;
+ this.complexityLimits.maxGroupBys = Number(securityConfig.max_group_bys) || this.complexityLimits.maxGroupBys;
+ this.complexityLimits.maxComplexityScore = Number(securityConfig.max_complexity_score) || this.complexityLimits.maxComplexityScore;
+ this.complexityLimits.maxQueryLength = Number(securityConfig.max_query_length) || this.complexityLimits.maxQueryLength;
 
  this.logger.info('Security manager configuration updated', {
  limits: this.complexityLimits
@@ -113,8 +116,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Validate a single SELECT-only query
- */
+  * Validate a single SELECT-only query
+  */
  validateQuery(query: string, dbType = 'mysql'): Promise<SecurityValidation> {
  this.updateStatistics();
  const result = this.selectOnlyMode ? 
@@ -133,8 +136,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Validate any query (not just SELECT-only) 
- */
+  * Validate any query (not just SELECT-only) 
+  */
  validateAnyQuery(query: string, _dbType = 'mysql'): SecurityValidation {
  if (!query || typeof query !== 'string') {
  return {
@@ -228,15 +231,15 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Analyze query performance characteristics 
- */
+  * Analyze query performance characteristics 
+  */
  analyzeQuery(query: string): Promise<QueryComplexityAnalysis> {
  return Promise.resolve(this.analyzeQueryComplexity(query));
  }
 
  /**
- * Analyze performance impact of query
- */
+  * Analyze performance impact of query
+  */
  analyzePerformance(_query: string): Promise<{
  executionTime: number;
  explainTime: number;
@@ -257,19 +260,19 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Update configuration at runtime
- */
+  * Update configuration at runtime
+  */
  updateConfig(config: SecurityManagerConfig): void {
  if (config.security) {
  // Update complexity limits
  const securityConfig = config.security;
  
- (this.complexityLimits as any).maxJoins = securityConfig.max_joins || this.complexityLimits.maxJoins;
- (this.complexityLimits as any).maxSubqueries = securityConfig.max_subqueries || this.complexityLimits.maxSubqueries;
- (this.complexityLimits as any).maxUnions = securityConfig.max_unions || this.complexityLimits.maxUnions;
- (this.complexityLimits as any).maxGroupBys = securityConfig.max_group_bys || this.complexityLimits.maxGroupBys;
- (this.complexityLimits as any).maxComplexityScore = securityConfig.max_complexity_score || this.complexityLimits.maxComplexityScore;
- (this.complexityLimits as any).maxQueryLength = securityConfig.max_query_length || this.complexityLimits.maxQueryLength;
+ this.complexityLimits.maxJoins = Number(securityConfig.max_joins) || this.complexityLimits.maxJoins;
+ this.complexityLimits.maxSubqueries = Number(securityConfig.max_subqueries) || this.complexityLimits.maxSubqueries;
+ this.complexityLimits.maxUnions = Number(securityConfig.max_unions) || this.complexityLimits.maxUnions;
+ this.complexityLimits.maxGroupBys = Number(securityConfig.max_group_bys) || this.complexityLimits.maxGroupBys;
+ this.complexityLimits.maxComplexityScore = Number(securityConfig.max_complexity_score) || this.complexityLimits.maxComplexityScore;
+ this.complexityLimits.maxQueryLength = Number(securityConfig.max_query_length) || this.complexityLimits.maxQueryLength;
 
  this.logger.info('Security manager configuration updated', {
  limits: this.complexityLimits
@@ -278,8 +281,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Get current configuration
- */
+  * Get current configuration
+  */
  getConfig(): SecurityManagerConfig {
  return {
  security: {
@@ -294,30 +297,30 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Set SELECT-only mode
- */
+  * Set SELECT-only mode
+  */
  setSelectOnlyMode(enabled: boolean): void {
  this.selectOnlyMode = enabled;
  this.logger.info(`SELECT-only mode ${enabled ? 'enabled' : 'disabled'}`);
  }
 
  /**
- * Check if in SELECT-only mode
- */
+  * Check if in SELECT-only mode
+  */
  isSelectOnlyMode(): boolean {
  return this.selectOnlyMode;
  }
 
  /**
- * Get security statistics
- */
+  * Get security statistics
+  */
  getStatistics(): typeof this.statistics {
  return { ...this.statistics };
  }
 
  /**
- * Update statistics (private helper)
- */
+  * Update statistics (private helper)
+  */
  private updateStatistics(): void {
  this.statistics.queriesValidated++;
  if (this.statistics.queriesValidated > 0) {
@@ -326,8 +329,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Validate a single SELECT-only query with enhanced feedback
- */
+  * Validate a single SELECT-only query with enhanced feedback
+  */
  validateSelectOnlyQuery(query: string, _dbType = 'mysql'): SecurityValidation {
  if (!query || typeof query !== 'string') {
  return {
@@ -431,8 +434,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Validate multiple SQL queries in batch against SELECT-only restrictions
- */
+  * Validate multiple SQL queries in batch against SELECT-only restrictions
+  */
  validateBatchSelectOnlyQueries(
  queries: Array<{ query: string; params?: unknown[]; label?: string }>, 
  dbType = 'mysql'
@@ -484,8 +487,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Analyze query complexity and potential performance impact
- */
+  * Analyze query complexity and potential performance impact
+  */
  analyzeQueryComplexity(query: string): QueryComplexityAnalysis {
  const upperQuery = query.toUpperCase();
  let score = 0;
@@ -539,8 +542,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Create comprehensive audit log entry
- */
+  * Create comprehensive audit log entry
+  */
  createAuditLog(
  database: string, 
  query: string | string[], 
@@ -570,8 +573,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
  }
 
  /**
- * Sanitize error messages to prevent information disclosure
- */
+  * Sanitize error messages to prevent information disclosure
+  */
  sanitizeErrorMessage(errorMessage: string): string {
  // Remove potentially sensitive information from error messages
  return errorMessage
