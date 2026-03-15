@@ -82,6 +82,12 @@ async function main(): Promise<void> {
 
 // Start the application
 main().catch((error) => {
- console.error('Fatal error in main process:', error);
+ // CRITICAL: Never use console.error here — it writes to stdout/stderr
+ // and corrupts the MCP JSON-RPC stream, causing random connection failures
+ try {
+  process.stderr.write(`Fatal error in main process: ${error}\n`);
+ } catch {
+  // If stderr is broken, exit silently
+ }
  process.exit(1);
 });

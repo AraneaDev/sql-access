@@ -255,16 +255,13 @@ export class Logger {
  private getConsoleMethod(level: LogEntry['level']): (..._args: unknown[]) => void {
  switch (level) {
  case 'INFO':
- // eslint-disable-next-line no-console
  return console.log;
  case 'WARNING':
- // eslint-disable-next-line no-console
  return console.warn;
  case 'ERROR':
  case 'CRITICAL':
  return console.error;
  default:
- // eslint-disable-next-line no-console
  return console.log;
  }
  }
@@ -275,8 +272,7 @@ export class Logger {
  unlinkSync(this.config.logFile);
  }
  } catch (error) {
- // eslint-disable-next-line no-console
- console.error(`Log rotation failed: ${error}`);
+ try { process.stderr.write(`Log rotation failed: ${error}\n`); } catch { /* ignore */ }
  }
  }
 
@@ -285,13 +281,11 @@ export class Logger {
  this.logStream = createWriteStream(this.config.logFile, { flags: 'a' });
  
  this.logStream.on('error', (error) => {
- // eslint-disable-next-line no-console
- console.error(`Log stream error: ${error.message}`);
+ try { process.stderr.write(`Log stream error: ${error.message}\n`); } catch { /* ignore */ }
  });
  
  } catch (error) {
- // eslint-disable-next-line no-console
- console.error(`Failed to create log stream: ${error}`);
+ try { process.stderr.write(`Failed to create log stream: ${error}\n`); } catch { /* ignore */ }
  this.config.enableFile = false;
  }
  }
