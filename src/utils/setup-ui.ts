@@ -3,7 +3,13 @@
  * This is specifically for setup wizard UI, separate from server logging
  */
 
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { getLogger } from './logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = resolve(__dirname, '..', '..');
 import type { DatabaseConfig, ExtensionConfig, SecurityConfig } from '../types/database.js';
 
 // ============================================================================
@@ -19,7 +25,7 @@ export class SetupUI {
  component: 'setup',
  enableFile: true,
  enableConsole: false, // Don't duplicate console output in logger
- logFile: './setup.log',
+ logFile: join(PROJECT_ROOT, 'setup.log'),
  logLevel: 'WARNING' // Only log warnings and errors by default
  });
 

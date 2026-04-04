@@ -2,7 +2,13 @@
  * Enhanced logging utilities for SQL MCP Server
  */
 import { createWriteStream, existsSync, unlinkSync } from 'fs';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import type { WriteStream } from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = resolve(__dirname, '..', '..');
 
 /**
  * Logger configuration interface
@@ -42,7 +48,7 @@ export class Logger {
 
  constructor(config: LoggerConfig = {}) {
  this.config = {
- logFile: './mcp-server.log',
+ logFile: join(PROJECT_ROOT, 'mcp-server.log'),
  enableConsole: true,
  enableFile: true,
  rotateOnStart: true,

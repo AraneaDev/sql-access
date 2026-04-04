@@ -6,8 +6,12 @@
 
 import { EventEmitter } from 'events';
 import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = resolve(__dirname, '..', '..');
 import { parse as parseIni } from 'ini';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -58,7 +62,7 @@ export class SQLMCPServer extends EventEmitter {
   super();
 
   this.logger = new Logger({
-   logFile: './sql-mcp-server.log',
+   logFile: join(PROJECT_ROOT, 'sql-mcp-server.log'),
    logLevel: 'INFO',
    component: 'SQLMCPServer',
    enableConsole: false
@@ -72,7 +76,7 @@ export class SQLMCPServer extends EventEmitter {
   this.sshTunnelManager = new EnhancedSSHTunnelManager();
   this.securityManager = new SecurityManager();
   this.connectionManager = new ConnectionManager(this.sshTunnelManager);
-  this.schemaManager = new SchemaManager(this.connectionManager);
+  this.schemaManager = new SchemaManager(this.connectionManager, join(PROJECT_ROOT, 'schemas'));
 
   this.setupEventListeners();
   this.registerMCPHandlers();

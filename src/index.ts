@@ -9,8 +9,14 @@
  * security controls and schema awareness.
  */
 
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { SQLMCPServer } from './classes/SQLMCPServer.js';
 import { Logger, initializeLogger } from './utils/logger.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PROJECT_ROOT = resolve(__dirname, '..');
 
 // Initialize logger for main process with console disabled for MCP mode
 const logger = new Logger({ 
@@ -25,7 +31,7 @@ async function main(): Promise<void> {
  // Initialize global logger for all components BEFORE creating any other components
  await initializeLogger({
  enableConsole: false, // Critical: Disable console output to prevent JSON-RPC interference
- logFile: './sql-mcp-server.log',
+ logFile: join(PROJECT_ROOT, 'sql-mcp-server.log'),
  logLevel: 'INFO'
  });
 
