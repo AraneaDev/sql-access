@@ -87,7 +87,7 @@ if [[ "$README_COUNT" -lt 1 ]]; then
   ERRORS=$((ERRORS + 1))
 fi
 
-DOCS_README_COUNT=$(grep -c "**Version:** ${NEW_VERSION}" docs/README.md || true)
+DOCS_README_COUNT=$(grep -cF "**Version:** ${NEW_VERSION}" docs/README.md || true)
 if [[ "$DOCS_README_COUNT" -lt 1 ]]; then
   echo "  FAIL: docs/README.md has no references to ${NEW_VERSION}"
   ERRORS=$((ERRORS + 1))
