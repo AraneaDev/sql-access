@@ -526,6 +526,840 @@ describe('ConnectionManager', () => {
     });
   });
 
+  // ============================================================================
+  // Retry Logic (withRetry / isRetryableError)
+  // ============================================================================
+
+  describe('Retry Logic', () => {
+    test('should retry on ECONNREFUSED error', async () => {
+      let attempts = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        if (attempts <= 2) {
+          // Return adapter that throws retryable error
+          const adapter = MockDatabaseFactory.createPostgresAdapter(
+            TestConfigFixtures.validPostgresConfig
+          );
+          jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
+          return adapter;
+        }
+        // Third attempt succeeds
+        return MockDatabaseFactory.createPostgresAdapter(TestConfigFixtures.validPostgresConfig);
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      const connection = await connectionManager.getConnection('retry_db');
+      expect(connection).toBeDefined();
+      expect(attempts).toBe(3);
+    }, 15000);
+
+    test('should retry on ECONNRESET error', async () => {
+      let attempts = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        if (attempts <= 1) {
+          const adapter = MockDatabaseFactory.createPostgresAdapter(
+            TestConfigFixtures.validPostgresConfig
+          );
+          jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('read ECONNRESET'));
+          return adapter;
+        }
+        return MockDatabaseFactory.createPostgresAdapter(TestConfigFixtures.validPostgresConfig);
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      const connection = await connectionManager.getConnection('retry_db');
+      expect(connection).toBeDefined();
+      expect(attempts).toBe(2);
+    }, 15000);
+
+    test('should retry on ETIMEDOUT error', async () => {
+      let attempts = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        if (attempts <= 1) {
+          const adapter = MockDatabaseFactory.createPostgresAdapter(
+            TestConfigFixtures.validPostgresConfig
+          );
+          jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('connect ETIMEDOUT'));
+          return adapter;
+        }
+        return MockDatabaseFactory.createPostgresAdapter(TestConfigFixtures.validPostgresConfig);
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      const connection = await connectionManager.getConnection('retry_db');
+      expect(connection).toBeDefined();
+    }, 15000);
+
+    test('should retry on socket hang up error', async () => {
+      let attempts = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        if (attempts <= 1) {
+          const adapter = MockDatabaseFactory.createPostgresAdapter(
+            TestConfigFixtures.validPostgresConfig
+          );
+          jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('socket hang up'));
+          return adapter;
+        }
+        return MockDatabaseFactory.createPostgresAdapter(TestConfigFixtures.validPostgresConfig);
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      const connection = await connectionManager.getConnection('retry_db');
+      expect(connection).toBeDefined();
+    }, 15000);
+
+    test('should NOT retry on non-retryable errors', async () => {
+      let attempts = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        const adapter = MockDatabaseFactory.createPostgresAdapter(
+          TestConfigFixtures.validPostgresConfig
+        );
+        jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('Access denied for user'));
+        return adapter;
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      await expect(connectionManager.getConnection('retry_db')).rejects.toThrow('Access denied');
+      expect(attempts).toBe(1); // No retries
+    });
+
+    test('should give up after max retries exceeded', async () => {
+      let attempts = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        const adapter = MockDatabaseFactory.createPostgresAdapter(
+          TestConfigFixtures.validPostgresConfig
+        );
+        jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
+        return adapter;
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      await expect(connectionManager.getConnection('retry_db')).rejects.toThrow('ECONNREFUSED');
+      expect(attempts).toBe(3); // initial + 2 retries
+    }, 15000);
+
+    test('should use exponential backoff delays', async () => {
+      const startTime = Date.now();
+      let attempts = 0;
+
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        attempts++;
+        const adapter = MockDatabaseFactory.createPostgresAdapter(
+          TestConfigFixtures.validPostgresConfig
+        );
+        jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('connect ECONNREFUSED'));
+        return adapter;
+      });
+
+      connectionManager.registerDatabase('retry_db', TestConfigFixtures.validPostgresConfig);
+
+      try {
+        await connectionManager.getConnection('retry_db');
+      } catch {
+        // expected
+      }
+
+      const elapsed = Date.now() - startTime;
+      // With exponential backoff: 1000ms + 2000ms = 3000ms minimum
+      // Allow generous tolerance for test execution variance
+      expect(elapsed).toBeGreaterThanOrEqual(2000);
+      expect(attempts).toBe(3);
+    }, 15000);
+  });
+
+  // ============================================================================
+  // SSH Tunnel Integration (expanded)
+  // ============================================================================
+
+  describe('SSH Tunnel Integration (expanded)', () => {
+    test('should reuse existing healthy tunnel', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      // Configure SSH tunnel manager to report connected
+      mockSSHTunnelManager.isConnected.mockReturnValue(true);
+      mockSSHTunnelManager.getTunnel = jest.fn().mockReturnValue({
+        localHost: '127.0.0.1',
+        localPort: 12345,
+        remoteHost: 'db.internal.com',
+        remotePort: 5432,
+      }) as any;
+
+      const config = TestConfigFixtures.configWithSSH;
+      connectionManager.registerDatabase('ssh_db', config);
+
+      const connection = await connectionManager.getConnection('ssh_db');
+      expect(connection).toBeDefined();
+
+      // createTunnel should NOT have been called since tunnel is already connected
+      expect(mockSSHTunnelManager.createTunnel).not.toHaveBeenCalled();
+    });
+
+    test('should recreate unhealthy tunnel', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      // Tunnel exists but is not connected (unhealthy)
+      mockSSHTunnelManager.isConnected.mockReturnValue(false);
+      mockSSHTunnelManager.hasTunnel.mockReturnValue(true);
+
+      const config = TestConfigFixtures.configWithSSH;
+      connectionManager.registerDatabase('ssh_db', config);
+
+      const connection = await connectionManager.getConnection('ssh_db');
+      expect(connection).toBeDefined();
+
+      // Should have closed the old tunnel and created a new one
+      expect(mockSSHTunnelManager.closeTunnel).toHaveBeenCalled();
+      expect(mockSSHTunnelManager.createTunnel).toHaveBeenCalled();
+    });
+
+    test('should clean up tunnel if DB connection fails', async () => {
+      const mockAdapter = MockDatabaseFactory.createFailingAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      mockSSHTunnelManager.isConnected.mockReturnValue(false);
+      mockSSHTunnelManager.hasTunnel.mockReturnValue(false);
+
+      const config = TestConfigFixtures.configWithSSH;
+      connectionManager.registerDatabase('ssh_db', config);
+
+      await expect(connectionManager.getConnection('ssh_db')).rejects.toThrow();
+
+      // Tunnel should have been cleaned up after DB connection failure
+      expect(mockSSHTunnelManager.closeTunnel).toHaveBeenCalled();
+    });
+
+    test('should throw ConnectionError when SSH tunnel creation fails', async () => {
+      mockSSHTunnelManager.isConnected.mockReturnValue(false);
+      mockSSHTunnelManager.hasTunnel.mockReturnValue(false);
+      mockSSHTunnelManager.createTunnel.mockRejectedValue(new Error('SSH auth failed'));
+
+      const config = TestConfigFixtures.configWithSSH;
+      connectionManager.registerDatabase('ssh_db', config);
+
+      await expect(connectionManager.getConnection('ssh_db')).rejects.toThrow(
+        /SSH tunnel/
+      );
+    });
+
+    test('should not create SSH tunnel for sqlite even with ssh_host set', async () => {
+      const mockAdapter = MockDatabaseFactory.createSqliteAdapter(
+        TestConfigFixtures.validSqliteConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      const config: DatabaseConfig = {
+        ...TestConfigFixtures.validSqliteConfig,
+        ssh_host: 'bastion.example.com',
+        ssh_username: 'user',
+        ssh_password: 'testpassword',
+      };
+      connectionManager.registerDatabase('sqlite_db', config);
+
+      const connection = await connectionManager.getConnection('sqlite_db');
+      expect(connection).toBeDefined();
+      expect(mockSSHTunnelManager.createTunnel).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================================
+  // Query Execution
+  // ============================================================================
+
+  describe('Query Execution', () => {
+    test('should execute a simple query', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.executeQuery('test_db', 'SELECT * FROM users');
+      expect(result).toBeDefined();
+      expect(result.rows).toBeDefined();
+      expect(result.rowCount).toBeGreaterThan(0);
+    });
+
+    test('should throw when no adapter found for query', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      // Remove the adapter manually to simulate missing adapter
+      (connectionManager as any).adapters.delete('test_db');
+
+      await expect(
+        connectionManager.executeQuery('test_db', 'SELECT 1')
+      ).rejects.toThrow(/No adapter found/);
+    });
+
+    test('should emit error event on query failure', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      const querySpy = jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
+        new Error('Query syntax error')
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      // Reset the spy to fail on the actual query
+      querySpy.mockRejectedValue(new Error('Query syntax error'));
+
+      const errorPromise = new Promise<void>((resolve) => {
+        connectionManager.on('error', () => resolve());
+      });
+
+      await expect(
+        connectionManager.executeQuery('test_db', 'INVALID SQL')
+      ).rejects.toThrow('Query syntax error');
+
+      await errorPromise;
+    });
+
+    test('should auto-create connection if not exists when querying', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      // Don't call getConnection first
+      const result = await connectionManager.executeQuery('test_db', 'SELECT 1 as test');
+      expect(result).toBeDefined();
+    });
+  });
+
+  // ============================================================================
+  // Batch Execution
+  // ============================================================================
+
+  describe('Batch Execution', () => {
+    test('should execute batch queries', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.executeBatch('test_db', [
+        { query: 'SELECT * FROM users', label: 'Get users' },
+        { query: 'SELECT * FROM posts', label: 'Get posts' },
+      ]);
+
+      expect(result.successCount).toBe(2);
+      expect(result.failureCount).toBe(0);
+      expect(result.results).toHaveLength(2);
+      expect(result.totalExecutionTime).toBeGreaterThanOrEqual(0);
+      expect(result.transactionUsed).toBe(false);
+    });
+
+    test('should execute batch with transaction', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      const beginSpy = jest.spyOn(mockAdapter, 'beginTransaction');
+      const commitSpy = jest.spyOn(mockAdapter, 'commitTransaction');
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.executeBatch(
+        'test_db',
+        [
+          { query: 'SELECT * FROM users', label: 'Get users' },
+          { query: 'SELECT * FROM posts', label: 'Get posts' },
+        ],
+        true
+      );
+
+      expect(result.transactionUsed).toBe(true);
+      expect(result.successCount).toBe(2);
+      expect(beginSpy).toHaveBeenCalled();
+      expect(commitSpy).toHaveBeenCalled();
+    });
+
+    test('should rollback transaction on batch query failure', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      let queryCount = 0;
+      jest.spyOn(mockAdapter, 'executeQuery').mockImplementation(async () => {
+        queryCount++;
+        if (queryCount === 2) {
+          throw new Error('Query 2 failed');
+        }
+        return { rows: [], rowCount: 0, fields: [], truncated: false, execution_time_ms: 0 };
+      });
+      const rollbackSpy = jest.spyOn(mockAdapter, 'rollbackTransaction');
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      await expect(
+        connectionManager.executeBatch(
+          'test_db',
+          [
+            { query: 'SELECT 1', label: 'Q1' },
+            { query: 'INVALID', label: 'Q2' },
+          ],
+          true
+        )
+      ).rejects.toThrow('Query 2 failed');
+
+      expect(rollbackSpy).toHaveBeenCalled();
+    });
+
+    test('should continue batch without transaction on partial failure', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      let queryCount = 0;
+      jest.spyOn(mockAdapter, 'executeQuery').mockImplementation(async () => {
+        queryCount++;
+        if (queryCount === 2) {
+          throw new Error('Query 2 failed');
+        }
+        return { rows: [], rowCount: 0, fields: [], truncated: false, execution_time_ms: 0 };
+      });
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.executeBatch(
+        'test_db',
+        [
+          { query: 'SELECT 1', label: 'Q1' },
+          { query: 'INVALID', label: 'Q2' },
+          { query: 'SELECT 3', label: 'Q3' },
+        ],
+        false
+      );
+
+      expect(result.successCount).toBe(2);
+      expect(result.failureCount).toBe(1);
+      expect(result.results[1].success).toBe(false);
+      expect(result.results[1].error).toBe('Query 2 failed');
+    });
+
+    test('should assign default labels when not provided', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.executeBatch('test_db', [
+        { query: 'SELECT 1' },
+        { query: 'SELECT 2' },
+      ]);
+
+      expect(result.results[0].label).toBe('Query 1');
+      expect(result.results[1].label).toBe('Query 2');
+    });
+
+    test('should throw when no adapter found for batch', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+      (connectionManager as any).adapters.delete('test_db');
+
+      await expect(
+        connectionManager.executeBatch('test_db', [{ query: 'SELECT 1' }])
+      ).rejects.toThrow(/No adapter found/);
+    });
+  });
+
+  // ============================================================================
+  // closeAllConnections with timeouts
+  // ============================================================================
+
+  describe('closeAllConnections', () => {
+    test('should handle timeout on slow connection close', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      // Make disconnect hang
+      jest.spyOn(mockAdapter, 'disconnect').mockReturnValue(new Promise(() => {}));
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('slow_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('slow_db');
+
+      // closeAllConnections has 5s per-connection timeout
+      await expect(connectionManager.closeAllConnections()).resolves.not.toThrow();
+    }, 15000);
+
+    test('should handle multiple connection close errors', async () => {
+      const mockAdapter1 = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      const mockAdapter2 = MockDatabaseFactory.createMysqlAdapter(
+        TestConfigFixtures.validMysqlConfig
+      );
+
+      jest.spyOn(mockAdapter1, 'disconnect').mockRejectedValue(new Error('Close error 1'));
+      jest.spyOn(mockAdapter2, 'disconnect').mockRejectedValue(new Error('Close error 2'));
+
+      let adapterCount = 0;
+      jest.spyOn(connectionManager as any, 'createAdapter').mockImplementation(() => {
+        adapterCount++;
+        return adapterCount === 1 ? mockAdapter1 : mockAdapter2;
+      });
+
+      connectionManager.registerDatabase('db1', TestConfigFixtures.validPostgresConfig);
+      connectionManager.registerDatabase('db2', TestConfigFixtures.validMysqlConfig);
+
+      await connectionManager.getConnection('db1');
+      await connectionManager.getConnection('db2');
+
+      // Should not throw even with errors
+      await expect(connectionManager.closeAllConnections()).resolves.not.toThrow();
+    });
+  });
+
+  // ============================================================================
+  // Initialize
+  // ============================================================================
+
+  describe('Initialize', () => {
+    test('should initialize with database configs', () => {
+      const databases: Record<string, DatabaseConfig> = {
+        db1: TestConfigFixtures.validPostgresConfig,
+        db2: TestConfigFixtures.validMysqlConfig,
+      };
+
+      const emitSpy = jest.spyOn(connectionManager, 'emit');
+      connectionManager.initialize(databases);
+
+      expect(connectionManager.hasDatabase('db1')).toBe(true);
+      expect(connectionManager.hasDatabase('db2')).toBe(true);
+      expect(emitSpy).toHaveBeenCalledWith('initialized', databases);
+    });
+  });
+
+  // ============================================================================
+  // getActiveConnections and getConnectionStats
+  // ============================================================================
+
+  describe('Active Connections and Stats', () => {
+    test('should return active connections', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      const active = connectionManager.getActiveConnections();
+      expect(active).toContain('test_db');
+    });
+
+    test('should return empty when no active connections', () => {
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      expect(connectionManager.getActiveConnections()).toEqual([]);
+    });
+
+    test('should return connection statistics with SSH info', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('db1', TestConfigFixtures.validPostgresConfig);
+      connectionManager.registerDatabase('db2', TestConfigFixtures.validMysqlConfig);
+
+      await connectionManager.getConnection('db1');
+
+      const stats = connectionManager.getConnectionStats();
+      expect(stats.total).toBe(2);
+      expect(stats.active).toBe(1);
+      expect(stats.inactive).toBe(1);
+      expect(typeof stats.withSSH).toBe('number');
+    });
+
+    test('getConnectionStatistics should be alias for getConnectionStats', () => {
+      connectionManager.registerDatabase('db1', TestConfigFixtures.validPostgresConfig);
+      const stats = connectionManager.getConnectionStats();
+      const statistics = connectionManager.getConnectionStatistics();
+      expect(stats).toEqual(statistics);
+    });
+  });
+
+  // ============================================================================
+  // createDatabaseListItems
+  // ============================================================================
+
+  describe('createDatabaseListItems', () => {
+    test('should create list items from configs', () => {
+      const configs: Record<string, DatabaseConfig> = {
+        pg_db: TestConfigFixtures.validPostgresConfig,
+        mysql_db: TestConfigFixtures.validMysqlConfig,
+        ssh_db: TestConfigFixtures.configWithSSH,
+      };
+
+      const items = connectionManager.createDatabaseListItems(configs);
+
+      expect(items).toHaveLength(3);
+
+      const pgItem = items.find((i) => i.name === 'pg_db')!;
+      expect(pgItem.type).toBe('postgresql');
+      expect(pgItem.ssh_enabled).toBe(false);
+      expect(pgItem.select_only_mode).toBe(true);
+
+      const sshItem = items.find((i) => i.name === 'ssh_db')!;
+      expect(sshItem.ssh_enabled).toBe(true);
+      expect(sshItem.select_only_mode).toBe(true);
+    });
+
+    test('should handle sqlite with file instead of host', () => {
+      const configs: Record<string, DatabaseConfig> = {
+        sqlite_db: TestConfigFixtures.validSqliteConfig,
+      };
+
+      const items = connectionManager.createDatabaseListItems(configs);
+      expect(items[0].host).toBe('./test.db');
+    });
+  });
+
+  // ============================================================================
+  // isConnected edge cases
+  // ============================================================================
+
+  describe('isConnected edge cases', () => {
+    test('should return false when adapter throws', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      // Make isConnected throw
+      jest.spyOn(mockAdapter, 'isConnected').mockImplementation(() => {
+        throw new Error('Check failed');
+      });
+
+      expect(connectionManager.isConnected('test_db')).toBe(false);
+    });
+
+    test('should return false when no connection info exists', () => {
+      expect(connectionManager.isConnected('nonexistent')).toBe(false);
+    });
+  });
+
+  // ============================================================================
+  // getExistingConnection and getAdapter
+  // ============================================================================
+
+  describe('getExistingConnection and getAdapter', () => {
+    test('should return undefined for non-existent connection', () => {
+      expect(connectionManager.getExistingConnection('nonexistent')).toBeUndefined();
+    });
+
+    test('should return undefined for non-existent adapter', () => {
+      expect(connectionManager.getAdapter('nonexistent')).toBeUndefined();
+    });
+
+    test('should return existing connection after creation', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      expect(connectionManager.getExistingConnection('test_db')).toBeDefined();
+      expect(connectionManager.getAdapter('test_db')).toBeDefined();
+    });
+  });
+
+  // ============================================================================
+  // testConnection (expanded)
+  // ============================================================================
+
+  describe('testConnection (expanded)', () => {
+    test('should test with provided config instead of registered', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      // Don't register - pass config directly
+      const result = await connectionManager.testConnection(
+        'custom_db',
+        TestConfigFixtures.validPostgresConfig
+      );
+
+      expect(result.success).toBe(true);
+    });
+
+    test('should return failure for invalid config', async () => {
+      const invalidConfig = TestConfigFixtures.invalidDatabaseConfig as DatabaseConfig;
+
+      const result = await connectionManager.testConnection('invalid_db', invalidConfig);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid configuration');
+    });
+
+    test('should indicate SSH tunnel status in test result', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      const config = TestConfigFixtures.configWithSSH;
+      const result = await connectionManager.testConnection('ssh_db', config);
+
+      expect(result.ssh_tunnel).toBe(true);
+    });
+
+    test('should handle SSH tunnel failure in test', async () => {
+      mockSSHTunnelManager.createTunnel.mockRejectedValue(new Error('SSH connection refused'));
+
+      const config = TestConfigFixtures.configWithSSH;
+      const result = await connectionManager.testConnection('ssh_db', config);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('SSH tunnel failed');
+    });
+
+    test('should clean up test tunnel after successful test', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      const config = TestConfigFixtures.configWithSSH;
+      await connectionManager.testConnection('ssh_db', config);
+
+      // Should have closed the test tunnel (named `ssh_db_test`)
+      expect(mockSSHTunnelManager.closeTunnel).toHaveBeenCalledWith('ssh_db_test');
+    });
+
+    test('should report schema_captured when schema is available', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.testConnection('test_db');
+
+      expect(result.success).toBe(true);
+      expect(result.schema_captured).toBe(true);
+      expect(result.schema_info).toBeDefined();
+    });
+
+    test('should handle schema capture failure gracefully', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(mockAdapter, 'captureSchema').mockRejectedValue(new Error('Schema error'));
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const result = await connectionManager.testConnection('test_db');
+
+      expect(result.success).toBe(true);
+      expect(result.schema_captured).toBe(false);
+    });
+
+    test('should indicate select_only_mode in test result', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      const config = { ...TestConfigFixtures.validPostgresConfig, select_only: true };
+      connectionManager.registerDatabase('test_db', config);
+
+      const result = await connectionManager.testConnection('test_db');
+      expect(result.select_only_mode).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Event emissions
+  // ============================================================================
+
+  describe('Event emissions', () => {
+    test('should emit connected event on successful connection', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+
+      const connectedPromise = new Promise<string>((resolve) => {
+        connectionManager.on('connected', (dbName: string) => resolve(dbName));
+      });
+
+      await connectionManager.getConnection('test_db');
+
+      const dbName = await connectedPromise;
+      expect(dbName).toBe('test_db');
+    });
+
+    test('should emit disconnected event on connection close', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      const disconnectedPromise = new Promise<string>((resolve) => {
+        connectionManager.on('disconnected', (dbName: string) => resolve(dbName));
+      });
+
+      await connectionManager.closeConnection('test_db');
+
+      const dbName = await disconnectedPromise;
+      expect(dbName).toBe('test_db');
+    });
+  });
+
   describe('Cleanup and Resource Management', () => {
     test('should clean up resources on close', async () => {
       const mockAdapter1 = MockDatabaseFactory.createPostgresAdapter(

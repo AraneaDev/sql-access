@@ -258,6 +258,469 @@ describe('RedactionManager', () => {
       expect(emailRule?.redaction).toBe('partial_mask');
     });
   });
+
+  describe('updateRules', () => {
+    it('should replace all rules with new configuration', () => {
+      const newConfig: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'password',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+        log_redacted_access: true,
+        audit_redacted_queries: true,
+        case_sensitive_matching: true,
+      };
+
+      redactionManager.updateRules(newConfig);
+      const summary = redactionManager.getConfigurationSummary();
+
+      expect(summary.rule_count).toBe(1);
+      expect(summary.rules[0].pattern).toBe('password');
+      expect(summary.settings.log_access).toBe(true);
+      expect(summary.settings.audit_queries).toBe(true);
+      expect(summary.settings.case_sensitive).toBe(true);
+    });
+  });
+
+  describe('createAuditEntry', () => {
+    it('should create a valid audit entry', () => {
+      const redactionResult = {
+        fields_redacted: ['email', 'ssn'],
+        redaction_count: 4,
+        rules_applied: ['email', 'ssn'],
+      };
+
+      const entry = redactionManager.createAuditEntry('testdb', 'abc123hash', redactionResult);
+
+      expect(entry.timestamp).toBeDefined();
+      expect(entry.database).toBe('testdb');
+      expect(entry.query_hash).toBe('abc123hash');
+      expect(entry.fields_redacted).toEqual(['email', 'ssn']);
+      expect(entry.redaction_count).toBe(4);
+      expect(entry.rules_applied).toEqual(['email', 'ssn']);
+    });
+  });
+
+  describe('redactResults with log_redacted_access enabled', () => {
+    it('should log when redactions occur and logging is enabled', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'email',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+        log_redacted_access: true,
+      };
+
+      const manager = new RedactionManager(config);
+      const queryResult: QueryResult = {
+        rows: [{ email: 'test@example.com', name: 'Test' }],
+        rowCount: 1,
+        fields: ['email', 'name'],
+        truncated: false,
+        execution_time_ms: 10,
+      };
+
+      const result = manager.redactResults(queryResult);
+      expect(result.redaction).toBeDefined();
+      expect(result.redaction?.redaction_count).toBe(1);
+    });
+  });
+
+  describe('redactResults with no redactions', () => {
+    it('should not include redaction info when no fields match', () => {
+      const queryResult: QueryResult = {
+        rows: [{ id: 1, name: 'Test' }],
+        rowCount: 1,
+        fields: ['id', 'name'],
+        truncated: false,
+        execution_time_ms: 10,
+      };
+
+      const result = redactionManager.redactResults(queryResult);
+      expect(result.redaction).toBeUndefined();
+    });
+  });
+
+  describe('Regex pattern matching', () => {
+    it('should match fields using regex patterns', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: '^secret_.*',
+            pattern_type: 'regex',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const rule = manager.shouldRedactField('secret_key');
+      expect(rule).toBeTruthy();
+      expect(rule?.redaction_type).toBe('full_mask');
+    });
+
+    it('should not match non-matching regex fields', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: '^secret_.*',
+            pattern_type: 'regex',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const rule = manager.shouldRedactField('public_key');
+      expect(rule).toBeNull();
+    });
+
+    it('should handle invalid regex patterns gracefully', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: '[invalid(regex',
+            pattern_type: 'regex',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const rule = manager.shouldRedactField('test');
+      expect(rule).toBeNull();
+    });
+
+    it('should respect case sensitivity for regex', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: '^Secret$',
+            pattern_type: 'regex',
+            redaction_type: 'full_mask',
+          },
+        ],
+        case_sensitive_matching: true,
+      };
+
+      const manager = new RedactionManager(config);
+      expect(manager.shouldRedactField('Secret')).toBeTruthy();
+      expect(manager.shouldRedactField('secret')).toBeNull();
+    });
+  });
+
+  describe('Custom redaction type', () => {
+    it('should apply custom pattern replacement', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'data',
+            pattern_type: 'exact',
+            redaction_type: 'custom',
+            custom_pattern: '\\d+',
+            replacement_text: '[NUM]',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ data: 'order 12345 confirmed' });
+      expect(result.redacted.data).toBe('order [NUM] confirmed');
+    });
+
+    it('should fall back to full mask when custom_pattern is missing', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'data',
+            pattern_type: 'exact',
+            redaction_type: 'custom',
+            // No custom_pattern provided
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ data: 'sensitive' });
+      expect(result.redacted.data).toBe('*********');
+    });
+  });
+
+  describe('Unknown redaction type', () => {
+    it('should fall back to full mask for unknown redaction type', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'data',
+            pattern_type: 'exact',
+            redaction_type: 'unknown_type' as any,
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ data: 'value' });
+      expect(result.redacted.data).toBe('*****');
+    });
+  });
+
+  describe('Replace redaction type', () => {
+    it('should use default replacement text when none specified', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'token',
+            pattern_type: 'exact',
+            redaction_type: 'replace',
+            // No replacement_text
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ token: 'abc123' });
+      expect(result.redacted.token).toBe('[REDACTED]');
+    });
+  });
+
+  describe('Partial mask without preserve_format', () => {
+    it('should use generic partial mask when preserve_format is false', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'name',
+            pattern_type: 'exact',
+            redaction_type: 'partial_mask',
+            preserve_format: false,
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ name: 'JohnDoe' });
+      expect(result.redacted.name).toBe('J*****e');
+    });
+  });
+
+  describe('Redaction with non-string values', () => {
+    it('should convert numbers to string before redaction', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'salary',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ salary: 50000 });
+      expect(result.redacted.salary).toBe('*****');
+    });
+
+    it('should convert booleans to string before redaction', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'active',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const result = manager.testRedaction({ active: true });
+      expect(result.redacted.active).toBe('****');
+    });
+  });
+
+  describe('Wildcard pattern edge cases', () => {
+    it('should handle wildcards at start and end', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: '*secret*',
+            pattern_type: 'wildcard',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      expect(manager.shouldRedactField('my_secret_key')).toBeTruthy();
+      expect(manager.shouldRedactField('secret')).toBeTruthy();
+      expect(manager.shouldRedactField('top_secret')).toBeTruthy();
+      expect(manager.shouldRedactField('public_name')).toBeNull();
+    });
+  });
+
+  describe('Rule with missing field_pattern', () => {
+    it('should skip rules with empty field_pattern', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: '',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+          {
+            field_pattern: 'email',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+      };
+
+      const manager = new RedactionManager(config);
+      const summary = manager.getConfigurationSummary();
+      // The empty pattern rule should be skipped
+      expect(summary.rule_count).toBe(1);
+    });
+  });
+
+  describe('Case sensitive exact matching', () => {
+    it('should not match different cases when case sensitive', () => {
+      const config: DatabaseRedactionConfig = {
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'Email',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+        case_sensitive_matching: true,
+      };
+
+      const manager = new RedactionManager(config);
+      expect(manager.shouldRedactField('Email')).toBeTruthy();
+      expect(manager.shouldRedactField('email')).toBeNull();
+      expect(manager.shouldRedactField('EMAIL')).toBeNull();
+    });
+  });
+});
+
+describe('RedactionPatterns - additional coverage', () => {
+  describe('fullMask with non-string input', () => {
+    it('should convert non-string to string', () => {
+      expect(RedactionPatterns.fullMask(12345 as any)).toBe('12345');
+    });
+  });
+
+  describe('partialMaskEmail edge cases', () => {
+    it('should handle email with 2-char local part', () => {
+      const result = RedactionPatterns.partialMaskEmail('ab@example.com');
+      expect(result).toBe('a*@*****.com');
+    });
+
+    it('should handle email with 1-char local part', () => {
+      const result = RedactionPatterns.partialMaskEmail('a@example.com');
+      expect(result).toBe('a@*****.com');
+    });
+
+    it('should handle email with no domain dots', () => {
+      const result = RedactionPatterns.partialMaskEmail('test@localhost');
+      expect(result).toContain('@');
+      expect(result).toContain('*');
+    });
+
+    it('should handle non-string input', () => {
+      const result = RedactionPatterns.partialMaskEmail(12345 as any);
+      expect(result).toBe('12345');
+    });
+
+    it('should handle empty local part after @', () => {
+      const result = RedactionPatterns.partialMaskEmail('@domain.com');
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('partialMaskPhone edge cases', () => {
+    it('should handle non-string input', () => {
+      expect(RedactionPatterns.partialMaskPhone(12345 as any)).toBe('12345');
+    });
+
+    it('should handle very short numbers (less than 3 digits)', () => {
+      expect(RedactionPatterns.partialMaskPhone('12')).toBe('**');
+    });
+  });
+
+  describe('partialMaskGeneric edge cases', () => {
+    it('should handle non-string input', () => {
+      expect(RedactionPatterns.partialMaskGeneric(999 as any)).toBe('999');
+    });
+
+    it('should handle 1-char string', () => {
+      expect(RedactionPatterns.partialMaskGeneric('a')).toBe('*');
+    });
+
+    it('should handle 2-char string', () => {
+      expect(RedactionPatterns.partialMaskGeneric('ab')).toBe('**');
+    });
+
+    it('should handle 3-char string', () => {
+      expect(RedactionPatterns.partialMaskGeneric('abc')).toBe('a**');
+    });
+
+    it('should handle 4-char string', () => {
+      expect(RedactionPatterns.partialMaskGeneric('abcd')).toBe('a***');
+    });
+  });
+
+  describe('customPattern', () => {
+    it('should apply custom regex replacement', () => {
+      expect(RedactionPatterns.customPattern('test123data456', '\\d+', 'X')).toBe('testXdataX');
+    });
+
+    it('should handle non-string input', () => {
+      expect(RedactionPatterns.customPattern(42 as any, '\\d+', 'X')).toBe('42');
+    });
+
+    it('should fall back to full mask on invalid regex', () => {
+      const result = RedactionPatterns.customPattern('test', '[invalid(regex', 'X');
+      expect(result).toBe('****');
+    });
+
+    it('should use default replacement when not specified', () => {
+      expect(RedactionPatterns.customPattern('secret123', '\\d+')).toBe('secret[REDACTED]');
+    });
+  });
+
+  describe('smartPartialMask edge cases', () => {
+    it('should handle non-string input', () => {
+      expect(RedactionPatterns.smartPartialMask(42 as any)).toBe('42');
+    });
+
+    it('should detect and mask phone-like values', () => {
+      // More than 60% digits, >= 7 digits
+      const result = RedactionPatterns.smartPartialMask('5551234567');
+      expect(result).toContain('*');
+      expect(result).toContain('4567'); // Last 4 preserved
+    });
+  });
 });
 
 describe('Configuration Integration', () => {

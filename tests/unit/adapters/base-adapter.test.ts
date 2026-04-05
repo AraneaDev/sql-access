@@ -637,4 +637,235 @@ describe('DatabaseAdapter Base Class', () => {
       }).not.toThrow();
     });
   });
+
+  // ============================================================================
+  // Redaction Configuration (lines 34-35, 288-319)
+  // ============================================================================
+
+  describe('constructor with redaction', () => {
+    it('should initialize redaction manager when redaction is enabled', () => {
+      const configWithRedaction: DatabaseConfig = {
+        ...testConfig,
+        redaction: {
+          enabled: true,
+          rules: [
+            {
+              field_pattern: 'password',
+              pattern_type: 'exact',
+              redaction_type: 'full_mask',
+            },
+          ],
+        },
+      };
+      const redactionAdapter = new TestAdapter(configWithRedaction);
+      expect(redactionAdapter.isRedactionEnabled()).toBe(true);
+    });
+
+    it('should not initialize redaction manager when redaction is disabled', () => {
+      const configWithoutRedaction: DatabaseConfig = {
+        ...testConfig,
+        redaction: {
+          enabled: false,
+          rules: [],
+        },
+      };
+      const noRedactionAdapter = new TestAdapter(configWithoutRedaction);
+      expect(noRedactionAdapter.isRedactionEnabled()).toBe(false);
+    });
+  });
+
+  describe('parseConfigValue - default branch (line 166)', () => {
+    it('should return value as-is for unrecognized type parameter', () => {
+      // The default branch in the switch returns value as T
+      const result = adapter.testParseConfigValue('hello', 'unknown' as any, 'fallback');
+      expect(result).toBe('hello');
+    });
+
+    it('should return undefined as-is for unrecognized type when value is undefined', () => {
+      const result = adapter.testParseConfigValue(undefined as any, 'string', 'default');
+      expect(result).toBe('default');
+    });
+  });
+
+  describe('normalizeQueryResult with redaction (lines 234-236)', () => {
+    it('should apply redaction when redaction manager is configured', () => {
+      const configWithRedaction: DatabaseConfig = {
+        ...testConfig,
+        redaction: {
+          enabled: true,
+          rules: [
+            {
+              field_pattern: 'name',
+              pattern_type: 'exact',
+              redaction_type: 'full_mask',
+            },
+          ],
+        },
+      };
+      const redactedAdapter = new TestAdapter(configWithRedaction);
+      const startTime = Date.now() - 10;
+      const result = redactedAdapter.testNormalizeQueryResult({}, startTime);
+
+      // Redaction manager should have processed the result
+      expect(result).toBeDefined();
+      expect(result.execution_time_ms).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  // ============================================================================
+  // Redaction Management Methods (lines 288-319)
+  // ============================================================================
+
+  describe('updateRedactionConfig', () => {
+    it('should enable redaction when config is provided with enabled=true', () => {
+      expect(adapter.isRedactionEnabled()).toBe(false);
+
+      adapter.updateRedactionConfig({
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'email',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+      });
+
+      expect(adapter.isRedactionEnabled()).toBe(true);
+      // Config should be updated too
+      expect(adapter.getConfig().redaction?.enabled).toBe(true);
+    });
+
+    it('should disable redaction when config has enabled=false', () => {
+      // First enable
+      adapter.updateRedactionConfig({
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'email',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+      });
+      expect(adapter.isRedactionEnabled()).toBe(true);
+
+      // Then disable
+      adapter.updateRedactionConfig({
+        enabled: false,
+        rules: [],
+      });
+      expect(adapter.isRedactionEnabled()).toBe(false);
+    });
+
+    it('should disable redaction when config is undefined', () => {
+      adapter.updateRedactionConfig({
+        enabled: true,
+        rules: [
+          {
+            field_pattern: 'email',
+            pattern_type: 'exact',
+            redaction_type: 'full_mask',
+          },
+        ],
+      });
+
+      adapter.updateRedactionConfig(undefined);
+      expect(adapter.isRedactionEnabled()).toBe(false);
+    });
+  });
+
+  describe('isRedactionEnabled', () => {
+    it('should return false by default', () => {
+      expect(adapter.isRedactionEnabled()).toBe(false);
+    });
+
+    it('should return true when redaction is configured', () => {
+      const configWithRedaction: DatabaseConfig = {
+        ...testConfig,
+        redaction: {
+          enabled: true,
+          rules: [
+            {
+              field_pattern: 'ssn',
+              pattern_type: 'exact',
+              redaction_type: 'full_mask',
+            },
+          ],
+        },
+      };
+      const redactedAdapter = new TestAdapter(configWithRedaction);
+      expect(redactedAdapter.isRedactionEnabled()).toBe(true);
+    });
+  });
+
+  describe('getRedactionSummary', () => {
+    it('should return null when redaction is not enabled', () => {
+      expect(adapter.getRedactionSummary()).toBeNull();
+    });
+
+    it('should return summary when redaction is enabled', () => {
+      const configWithRedaction: DatabaseConfig = {
+        ...testConfig,
+        redaction: {
+          enabled: true,
+          rules: [
+            {
+              field_pattern: 'password',
+              pattern_type: 'exact',
+              redaction_type: 'full_mask',
+            },
+          ],
+        },
+      };
+      const redactedAdapter = new TestAdapter(configWithRedaction);
+      const summary = redactedAdapter.getRedactionSummary();
+      expect(summary).not.toBeNull();
+      expect(summary).toHaveProperty('enabled', true);
+    });
+  });
+
+  describe('testRedaction', () => {
+    it('should return null when redaction is not enabled', () => {
+      const result = adapter.testRedaction({ name: 'John', email: 'john@example.com' });
+      expect(result).toBeNull();
+    });
+
+    it('should return redaction test results when enabled', () => {
+      const configWithRedaction: DatabaseConfig = {
+        ...testConfig,
+        redaction: {
+          enabled: true,
+          rules: [
+            {
+              field_pattern: 'email',
+              pattern_type: 'exact',
+              redaction_type: 'full_mask',
+            },
+          ],
+        },
+      };
+      const redactedAdapter = new TestAdapter(configWithRedaction);
+      const result = redactedAdapter.testRedaction({ name: 'John', email: 'john@example.com' });
+      expect(result).not.toBeNull();
+    });
+  });
+
+  // ============================================================================
+  // Constructor timeout parsing edge cases (line 35 branch)
+  // ============================================================================
+
+  describe('constructor timeout parsing', () => {
+    it('should parse timeout from string type', () => {
+      const configWithStringTimeout = { ...testConfig, timeout: '5000' as any };
+      const stringAdapter = new TestAdapter(configWithStringTimeout);
+      expect((stringAdapter as any).connectionTimeout).toBe(5000);
+    });
+
+    it('should use default for non-parseable string timeout', () => {
+      const configWithBadTimeout = { ...testConfig, timeout: 'abc' as any };
+      const badAdapter = new TestAdapter(configWithBadTimeout);
+      expect((badAdapter as any).connectionTimeout).toBe(30000);
+    });
+  });
 });

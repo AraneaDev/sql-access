@@ -1,0 +1,633 @@
+/**
+ * Query Handlers Tests
+ * Tests for sql_query, sql_batch_query, sql_analyze_performance handlers
+ */
+
+import {
+  handleSqlQuery,
+  handleBatchQuery,
+  handleAnalyzePerformance,
+} from '../../../src/tools/handlers/query-handlers.js';
+import type { ToolHandlerContext } from '../../../src/tools/handlers/types.js';
+import type { ParsedServerConfig, DatabaseConfig } from '../../../src/types/index.js';
+import { SecurityViolationError } from '../../../src/types/index.js';
+import { ValidationError, ConfigurationError } from '../../../src/utils/error-handler.js';
+
+// Mock response-formatter
+jest.mock('../../../src/utils/response-formatter.js', () => ({
+  createToolResponse: jest.fn((text: string, isError = false) => ({
+    content: [{ type: 'text', text }],
+    _meta: { progressToken: null },
+    ...(isError ? { isError: true } : {}),
+  })),
+  formatTableResults: jest.fn(() => '| col1 |\n|---|\n| val1 |\n'),
+  formatCondensedTableResults: jest.fn(() => '| col1 |\n'),
+}));
+
+function createMockContext(
+  databases: Record<string, DatabaseConfig> = {},
+  extensionConfig?: any
+): ToolHandlerContext {
+  return {
+    connectionManager: {
+      registerDatabase: jest.fn(),
+      unregisterDatabase: jest.fn(),
+      getConnection: jest.fn(),
+      executeQuery: jest.fn(),
+      executeBatch: jest.fn(),
+      analyzePerformance: jest.fn(),
+    } as any,
+    securityManager: {
+      validateSelectOnlyQuery: jest.fn().mockReturnValue({ allowed: true }),
+    } as any,
+    schemaManager: {
+      getSchema: jest.fn(),
+      hasSchema: jest.fn().mockReturnValue(true),
+      captureSchema: jest.fn(),
+      refreshSchema: jest.fn(),
+      generateSchemaContext: jest.fn(),
+    } as any,
+    sshTunnelManager: {
+      hasTunnel: jest.fn().mockReturnValue(false),
+      closeTunnel: jest.fn(),
+    } as any,
+    config: {
+      databases,
+      ...(extensionConfig ? { extension: extensionConfig } : {}),
+    } as ParsedServerConfig,
+    configPath: '/tmp/test-config.ini',
+    logger: {
+      info: jest.fn(),
+      debug: jest.fn(),
+      warning: jest.fn(),
+      error: jest.fn(),
+    } as any,
+  };
+}
+
+describe('query-handlers', () => {
+  describe('handleSqlQuery', () => {
+    it('should execute a query successfully', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [{ id: 1, name: 'test' }],
+        fields: ['id', 'name'],
+        rowCount: 1,
+        truncated: false,
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'SELECT * FROM users',
+      });
+
+      expect(result.content[0].text).toContain('Query executed successfully');
+      expect(result.content[0].text).toContain('1 rows');
+      expect(ctx.connectionManager.executeQuery).toHaveBeenCalledWith('testdb', 'SELECT * FROM users', []);
+    });
+
+    it('should pass params to executeQuery', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [], fields: [], rowCount: 0, truncated: false,
+      });
+
+      await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'SELECT * FROM users WHERE id = ?',
+        params: [42],
+      });
+
+      expect(ctx.connectionManager.executeQuery).toHaveBeenCalledWith(
+        'testdb', 'SELECT * FROM users WHERE id = ?', [42]
+      );
+    });
+
+    it('should validate SELECT-only mode', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.securityManager.validateSelectOnlyQuery as jest.Mock).mockReturnValue({
+        allowed: false,
+        reason: 'DELETE statements are not allowed',
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'DELETE FROM users',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Query blocked');
+      expect(result.content[0].text).toContain('Security Information');
+    });
+
+    it('should skip security validation when select_only is false', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [], fields: [], rowCount: 0, truncated: false,
+      });
+
+      await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'DELETE FROM users WHERE id = 1',
+      });
+
+      expect(ctx.securityManager.validateSelectOnlyQuery).not.toHaveBeenCalled();
+    });
+
+    it('should show truncation notice when results are truncated', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [{ id: 1 }],
+        fields: ['id'],
+        rowCount: 1000,
+        truncated: true,
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'SELECT * FROM users',
+      });
+
+      expect(result.content[0].text).toContain('limited to 1');
+    });
+
+    it('should show "No results returned" for empty results', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [], fields: [], rowCount: 0, truncated: false,
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'SELECT * FROM empty_table',
+      });
+
+      expect(result.content[0].text).toContain('No results returned');
+    });
+
+    it('should capture schema if not cached', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [{ id: 1 }], fields: ['id'], rowCount: 1, truncated: false,
+      });
+
+      await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
+
+      expect(ctx.schemaManager.captureSchema).toHaveBeenCalledWith('testdb', expect.anything());
+    });
+
+    it('should handle schema capture failure gracefully', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
+      (ctx.connectionManager.getConnection as jest.Mock).mockRejectedValue(new Error('conn error'));
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [], fields: [], rowCount: 0, truncated: false,
+      });
+
+      const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
+
+      // Should still succeed despite schema capture failure
+      expect(result.content[0].text).toContain('Query executed successfully');
+      expect(ctx.logger.warning).toHaveBeenCalled();
+    });
+
+    it('should show SSH tunnel info when tunnel exists', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.sshTunnelManager.hasTunnel as jest.Mock).mockReturnValue(true);
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [{ id: 1 }], fields: ['id'], rowCount: 1, truncated: false,
+      });
+
+      const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
+
+      expect(result.content[0].text).toContain('SSH tunnel');
+    });
+
+    it('should show SELECT-only mode info in response', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [], fields: [], rowCount: 0, truncated: false,
+      });
+
+      const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
+
+      expect(result.content[0].text).toContain('SELECT-only mode active');
+    });
+
+    it('should return error response on query execution failure', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockRejectedValue(
+        new Error('Syntax error near SELECT')
+      );
+
+      const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELEC 1' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Query failed');
+      expect(result.content[0].text).toContain('Syntax error');
+    });
+
+    it('should throw ConfigurationError for nonexistent database', async () => {
+      const ctx = createMockContext();
+
+      const result = await handleSqlQuery(ctx, { database: 'nonexistent', query: 'SELECT 1' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Query failed');
+    });
+
+    it('should log SSH info for SSH-enabled databases', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', ssh_host: 'bastion', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [], fields: [], rowCount: 0, truncated: false,
+      });
+
+      await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
+
+      expect(ctx.logger.info).toHaveBeenCalledWith(expect.stringContaining('SSH tunnel'));
+    });
+  });
+
+  describe('handleBatchQuery', () => {
+    it('should execute batch queries successfully', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [
+          { index: 1, success: true, query: 'SELECT 1', data: { rows: [{ '1': 1 }], fields: ['1'], rowCount: 1, truncated: false } },
+        ],
+        totalExecutionTime: 10,
+        successCount: 1,
+        failureCount: 0,
+        transactionUsed: false,
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }],
+      });
+
+      expect(result.content[0].text).toContain('Batch Query Results');
+      expect(result.content[0].text).toContain('Successful: 1');
+    });
+
+    it('should throw ValidationError when no queries provided', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+
+      await expect(
+        handleBatchQuery(ctx, { database: 'testdb', queries: [] })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('should throw ValidationError when queries is undefined', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+
+      await expect(
+        handleBatchQuery(ctx, { database: 'testdb', queries: undefined as any })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('should throw ValidationError when batch size exceeds maximum', async () => {
+      const ctx = createMockContext(
+        { testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig },
+        { max_batch_size: 3 }
+      );
+
+      const queries = Array.from({ length: 4 }, (_, i) => ({ query: `SELECT ${i}` }));
+
+      await expect(
+        handleBatchQuery(ctx, { database: 'testdb', queries })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('should use default max batch size of 10', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+
+      const queries = Array.from({ length: 11 }, (_, i) => ({ query: `SELECT ${i}` }));
+
+      await expect(
+        handleBatchQuery(ctx, { database: 'testdb', queries })
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it('should validate all queries for SELECT-only mode', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.securityManager.validateSelectOnlyQuery as jest.Mock)
+        .mockReturnValueOnce({ allowed: true })
+        .mockReturnValueOnce({ allowed: false, reason: 'DELETE not allowed' });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }, { query: 'DELETE FROM users' }],
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Security Information');
+    });
+
+    it('should pass transaction flag correctly', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [],
+        totalExecutionTime: 5,
+        successCount: 0,
+        failureCount: 0,
+        transactionUsed: true,
+      });
+
+      await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }],
+        transaction: true,
+      });
+
+      expect(ctx.connectionManager.executeBatch).toHaveBeenCalledWith(
+        'testdb', [{ query: 'SELECT 1' }], true
+      );
+    });
+
+    it('should disable transaction in SELECT-only mode', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [],
+        totalExecutionTime: 5,
+        successCount: 0,
+        failureCount: 0,
+        transactionUsed: false,
+      });
+
+      await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }],
+        transaction: true,
+      });
+
+      // transaction && !select_only = true && false = false
+      expect(ctx.connectionManager.executeBatch).toHaveBeenCalledWith(
+        'testdb', [{ query: 'SELECT 1' }], false
+      );
+    });
+
+    it('should display individual query results with labels', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [
+          {
+            index: 1,
+            label: 'Get Users',
+            success: true,
+            query: 'SELECT * FROM users',
+            data: { rows: [{ id: 1 }], fields: ['id'], rowCount: 1, truncated: false, execution_time_ms: 5 },
+          },
+          {
+            index: 2,
+            success: false,
+            query: 'INVALID SQL',
+            error: 'Syntax error',
+          },
+        ],
+        totalExecutionTime: 10,
+        successCount: 1,
+        failureCount: 1,
+        transactionUsed: false,
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT * FROM users', label: 'Get Users' }, { query: 'INVALID SQL' }],
+      });
+
+      expect(result.content[0].text).toContain('Get Users');
+      expect(result.content[0].text).toContain('[OK] Success');
+      expect(result.content[0].text).toContain('[ERROR] Failed');
+      expect(result.content[0].text).toContain('5ms');
+    });
+
+    it('should show transaction info when transaction is used', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [],
+        totalExecutionTime: 5,
+        successCount: 0,
+        failureCount: 0,
+        transactionUsed: true,
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }],
+        transaction: true,
+      });
+
+      expect(result.content[0].text).toContain('Transaction');
+    });
+
+    it('should show SSH tunnel and SELECT-only info', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.sshTunnelManager.hasTunnel as jest.Mock).mockReturnValue(true);
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [],
+        totalExecutionTime: 5,
+        successCount: 0,
+        failureCount: 0,
+        transactionUsed: false,
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }],
+      });
+
+      expect(result.content[0].text).toContain('SELECT-only mode active');
+      expect(result.content[0].text).toContain('SSH tunnel');
+    });
+
+    it('should handle execution errors', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockRejectedValue(
+        new Error('Connection lost')
+      );
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }],
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Batch Query Failed');
+      expect(result.content[0].text).toContain('Connection lost');
+    });
+
+    it('should show "No results returned" for queries with empty rows', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [
+          {
+            index: 1,
+            success: true,
+            query: 'INSERT INTO t VALUES (1)',
+            data: { rows: [], fields: [], rowCount: 0, truncated: false },
+          },
+        ],
+        totalExecutionTime: 5,
+        successCount: 1,
+        failureCount: 0,
+        transactionUsed: false,
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'INSERT INTO t VALUES (1)' }],
+      });
+
+      expect(result.content[0].text).toContain('No results returned');
+    });
+
+    it('should show truncated row info in individual results', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
+        results: [
+          {
+            index: 1,
+            success: true,
+            query: 'SELECT * FROM big_table',
+            data: { rows: [{ id: 1 }], fields: ['id'], rowCount: 1000, truncated: true },
+          },
+        ],
+        totalExecutionTime: 20,
+        successCount: 1,
+        failureCount: 0,
+        transactionUsed: false,
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT * FROM big_table' }],
+      });
+
+      expect(result.content[0].text).toContain('showing 1');
+    });
+  });
+
+  describe('handleAnalyzePerformance', () => {
+    it('should analyze query performance successfully', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.analyzePerformance as jest.Mock).mockResolvedValue({
+        executionTime: 42,
+        explainTime: 5,
+        rowCount: 100,
+        columnCount: 5,
+        executionPlan: 'FULL TABLE SCAN on users',
+        recommendations: 'Consider adding an index on users.email',
+      });
+
+      const result = await handleAnalyzePerformance(ctx, {
+        database: 'testdb',
+        query: 'SELECT * FROM users WHERE email = "test@example.com"',
+      });
+
+      expect(result.content[0].text).toContain('Query Performance Analysis');
+      expect(result.content[0].text).toContain('42ms');
+      expect(result.content[0].text).toContain('5ms');
+      expect(result.content[0].text).toContain('100');
+      expect(result.content[0].text).toContain('FULL TABLE SCAN');
+      expect(result.content[0].text).toContain('Consider adding an index');
+    });
+
+    it('should return error response on failure', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.analyzePerformance as jest.Mock).mockRejectedValue(
+        new Error('EXPLAIN not supported')
+      );
+
+      const result = await handleAnalyzePerformance(ctx, {
+        database: 'testdb',
+        query: 'SELECT 1',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Performance analysis failed');
+    });
+
+    it('should log SSH info for SSH-enabled databases', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', ssh_host: 'bastion', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.analyzePerformance as jest.Mock).mockResolvedValue({
+        executionTime: 10, explainTime: 2, rowCount: 0, columnCount: 0,
+        executionPlan: '', recommendations: '',
+      });
+
+      await handleAnalyzePerformance(ctx, { database: 'testdb', query: 'SELECT 1' });
+
+      expect(ctx.logger.info).toHaveBeenCalledWith(expect.stringContaining('SSH tunnel'));
+    });
+
+    it('should throw ConfigurationError for nonexistent database', async () => {
+      const ctx = createMockContext();
+
+      const result = await handleAnalyzePerformance(ctx, {
+        database: 'nonexistent',
+        query: 'SELECT 1',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Performance analysis failed');
+    });
+  });
+});

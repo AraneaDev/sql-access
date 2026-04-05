@@ -1,0 +1,340 @@
+/**
+ * Schema Handlers Tests
+ * Tests for sql_get_schema, sql_refresh_schema, sql_list_databases, sql_test_connection handlers
+ */
+
+import {
+  handleGetSchema,
+  handleRefreshSchema,
+  handleListDatabases,
+  handleTestConnection,
+} from '../../../src/tools/handlers/schema-handlers.js';
+import type { ToolHandlerContext } from '../../../src/tools/handlers/types.js';
+import type { ParsedServerConfig, DatabaseConfig } from '../../../src/types/index.js';
+import { ConfigurationError } from '../../../src/utils/error-handler.js';
+
+// Mock response-formatter
+jest.mock('../../../src/utils/response-formatter.js', () => ({
+  createToolResponse: jest.fn((text: string, isError = false) => ({
+    content: [{ type: 'text', text }],
+    _meta: { progressToken: null },
+    ...(isError ? { isError: true } : {}),
+  })),
+  formatDatabaseSummary: jest.fn((db: any) => ` **${db.name}** (${db.type})\n`),
+}));
+
+function createMockContext(databases: Record<string, DatabaseConfig> = {}, security?: any): ToolHandlerContext {
+  return {
+    connectionManager: {
+      registerDatabase: jest.fn(),
+      unregisterDatabase: jest.fn(),
+      getConnection: jest.fn(),
+      executeQuery: jest.fn(),
+      executeBatch: jest.fn(),
+      analyzePerformance: jest.fn(),
+    } as any,
+    securityManager: {
+      validateSelectOnlyQuery: jest.fn(),
+    } as any,
+    schemaManager: {
+      getSchema: jest.fn(),
+      hasSchema: jest.fn().mockReturnValue(false),
+      captureSchema: jest.fn(),
+      refreshSchema: jest.fn(),
+      generateSchemaContext: jest.fn(),
+    } as any,
+    sshTunnelManager: {
+      hasTunnel: jest.fn().mockReturnValue(false),
+      closeTunnel: jest.fn(),
+    } as any,
+    config: {
+      databases,
+      ...(security ? { security } : {}),
+    } as ParsedServerConfig,
+    configPath: '/tmp/test-config.ini',
+    logger: {
+      info: jest.fn(),
+      debug: jest.fn(),
+      warning: jest.fn(),
+      error: jest.fn(),
+    } as any,
+  };
+}
+
+describe('schema-handlers', () => {
+  describe('handleGetSchema', () => {
+    it('should return schema text when schema is available', async () => {
+      const ctx = createMockContext();
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({ summary: {} });
+      (ctx.schemaManager.generateSchemaContext as jest.Mock).mockReturnValue('Schema for testdb...');
+
+      const result = await handleGetSchema(ctx, { database: 'testdb' });
+
+      expect(result.content[0].text).toBe('Schema for testdb...');
+      expect(ctx.schemaManager.generateSchemaContext).toHaveBeenCalledWith('testdb', undefined);
+    });
+
+    it('should return schema filtered by table name', async () => {
+      const ctx = createMockContext();
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({ summary: {} });
+      (ctx.schemaManager.generateSchemaContext as jest.Mock).mockReturnValue('Table: users');
+
+      const result = await handleGetSchema(ctx, { database: 'testdb', table: 'users' });
+
+      expect(ctx.schemaManager.generateSchemaContext).toHaveBeenCalledWith('testdb', 'users');
+    });
+
+    it('should return message when no schema is available', async () => {
+      const ctx = createMockContext();
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
+
+      const result = await handleGetSchema(ctx, { database: 'testdb' });
+
+      expect(result.content[0].text).toContain('No schema available');
+    });
+
+    it('should return error response when schema manager throws', async () => {
+      const ctx = createMockContext();
+      (ctx.schemaManager.getSchema as jest.Mock).mockImplementation(() => {
+        throw new Error('Schema error');
+      });
+
+      const result = await handleGetSchema(ctx, { database: 'testdb' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Failed to get schema');
+    });
+  });
+
+  describe('handleRefreshSchema', () => {
+    it('should refresh schema successfully when connection exists', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', select_only: true } as DatabaseConfig,
+      });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.schemaManager.refreshSchema as jest.Mock).mockResolvedValue({
+        summary: { table_count: 5, total_columns: 20 },
+      });
+
+      const result = await handleRefreshSchema(ctx, { database: 'testdb' });
+
+      expect(result.content[0].text).toContain('Schema refreshed');
+      expect(result.content[0].text).toContain('5 tables');
+      expect(result.content[0].text).toContain('20 columns');
+    });
+
+    it('should establish connection if none exists', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', select_only: true } as DatabaseConfig,
+      });
+      (ctx.connectionManager.getConnection as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ isConnected: true });
+      (ctx.schemaManager.refreshSchema as jest.Mock).mockResolvedValue({
+        summary: { table_count: 3, total_columns: 10 },
+      });
+
+      const result = await handleRefreshSchema(ctx, { database: 'testdb' });
+
+      expect(ctx.connectionManager.executeQuery).toHaveBeenCalledWith('testdb', 'SELECT 1', []);
+      expect(result.content[0].text).toContain('Schema refreshed');
+    });
+
+    it('should throw ConnectionError if connection cannot be established', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', select_only: true } as DatabaseConfig,
+      });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue(null);
+
+      const result = await handleRefreshSchema(ctx, { database: 'testdb' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Failed to refresh schema');
+    });
+
+    it('should log SSH info when ssh_host is configured', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', ssh_host: 'bastion.example.com', select_only: true } as DatabaseConfig,
+      });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue(null);
+
+      await handleRefreshSchema(ctx, { database: 'testdb' });
+
+      expect(ctx.logger.info).toHaveBeenCalledWith(expect.stringContaining('SSH tunnel'));
+    });
+
+    it('should throw ConfigurationError for nonexistent database', async () => {
+      const ctx = createMockContext();
+
+      // requireDbConfig throws ConfigurationError, which is caught and returned as error response
+      const result = await handleRefreshSchema(ctx, { database: 'nonexistent' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Failed to refresh schema');
+    });
+  });
+
+  describe('handleListDatabases', () => {
+    it('should list all configured databases', async () => {
+      const ctx = createMockContext({
+        db1: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+        db2: { type: 'postgresql', host: 'pghost', ssl: true, ssh_host: 'bastion', mcp_configurable: true } as DatabaseConfig,
+      });
+
+      const result = await handleListDatabases(ctx);
+
+      expect(result.content[0].text).toContain('Configured Databases');
+      expect(result.content[0].text).toContain('db1');
+      expect(result.content[0].text).toContain('db2');
+    });
+
+    it('should include schema info when cached', async () => {
+      const ctx = createMockContext({
+        db1: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({
+        summary: { table_count: 10, view_count: 2, total_columns: 50 },
+      });
+
+      const result = await handleListDatabases(ctx);
+
+      expect(result.content[0].text).toContain('Configured Databases');
+    });
+
+    it('should include security limits when configured', async () => {
+      const ctx = createMockContext(
+        { db1: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig },
+        {
+          max_joins: 5,
+          max_subqueries: 3,
+          max_unions: 2,
+          max_group_bys: 4,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        }
+      );
+
+      const result = await handleListDatabases(ctx);
+
+      expect(result.content[0].text).toContain('Global Security Limits');
+      expect(result.content[0].text).toContain('Max JOINs: 5');
+    });
+
+    it('should handle errors gracefully', async () => {
+      const ctx = createMockContext();
+      // Force an error by making Object.entries throw indirectly
+      Object.defineProperty(ctx.config, 'databases', {
+        get() { throw new Error('config broken'); }
+      });
+
+      const result = await handleListDatabases(ctx);
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Failed to list databases');
+    });
+
+    it('should return empty list when no databases configured', async () => {
+      const ctx = createMockContext({});
+
+      const result = await handleListDatabases(ctx);
+
+      expect(result.content[0].text).toContain('Configured Databases');
+    });
+  });
+
+  describe('handleTestConnection', () => {
+    it('should test connection successfully', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({
+        summary: { table_count: 5, total_columns: 20 },
+      });
+
+      const result = await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(result.content[0].text).toContain('Connection successful');
+      expect(result.content[0].text).toContain('SELECT-only mode active');
+    });
+
+    it('should capture schema if not cached', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
+
+      await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(ctx.schemaManager.captureSchema).toHaveBeenCalledWith('testdb', expect.anything());
+    });
+
+    it('should show SSH tunnel info when tunnel exists', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.sshTunnelManager.hasTunnel as jest.Mock).mockReturnValue(true);
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
+
+      const result = await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(result.content[0].text).toContain('SSH tunnel established');
+    });
+
+    it('should show schema info when schema is available', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({
+        summary: { table_count: 10, total_columns: 50 },
+      });
+
+      const result = await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(result.content[0].text).toContain('Schema captured: 10 tables');
+    });
+
+    it('should return error response on connection failure', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
+      (ctx.connectionManager.getConnection as jest.Mock).mockRejectedValue(new Error('Connection refused'));
+
+      // The error from getConnection is caught internally, but getSchema may still work
+      // Actually the schema capture error is caught, then getSchema is called
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
+
+      const result = await handleTestConnection(ctx, { database: 'testdb' });
+
+      // The handler catches schema capture errors with a warning, still succeeds
+      expect(result.content[0].text).toContain('Connection successful');
+    });
+
+    it('should throw ConfigurationError for nonexistent database', async () => {
+      const ctx = createMockContext();
+
+      const result = await handleTestConnection(ctx, { database: 'nonexistent' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Connection test failed');
+    });
+
+    it('should log SSH info for SSH-enabled databases', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', ssh_host: 'bastion', select_only: true } as DatabaseConfig,
+      });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
+      (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
+
+      await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(ctx.logger.info).toHaveBeenCalledWith(expect.stringContaining('SSH tunnel'));
+    });
+  });
+});

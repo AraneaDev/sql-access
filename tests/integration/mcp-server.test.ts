@@ -347,4 +347,431 @@ describe('SQLMCPServer Integration Tests', () => {
       expect((response.result as any).content[0].text).toContain('No active connection found');
     });
   });
+
+  describe('Config Loading Edge Cases', () => {
+    test('should fail when config file does not exist', async () => {
+      const nonExistentPath = path.join(tmpdir(), 'nonexistent-config-' + Date.now() + '.ini');
+
+      await expect(server.initialize(nonExistentPath)).rejects.toThrow('No config.ini found');
+    });
+
+    test('should parse config with security section', async () => {
+      const configWithSecurity = path.join(tmpdir(), `security-config-${Date.now()}.ini`);
+      const content = `[database.testdb]
+type=sqlite
+file=./test.db
+
+[security]
+max_joins=5
+max_subqueries=3
+max_complexity_score=50
+
+[extension]
+max_rows=500
+query_timeout=15000
+max_batch_size=5
+`;
+      fs.writeFileSync(configWithSecurity, content);
+
+      await expect(server.initialize(configWithSecurity)).resolves.not.toThrow();
+
+      fs.unlinkSync(configWithSecurity);
+    });
+
+    test('should parse SQLite database config', async () => {
+      const sqliteConfig = path.join(tmpdir(), `sqlite-config-${Date.now()}.ini`);
+      const content = `[database.local]
+type=sqlite
+file=./test.db
+select_only=true
+`;
+      fs.writeFileSync(sqliteConfig, content);
+
+      await expect(server.initialize(sqliteConfig)).resolves.not.toThrow();
+
+      fs.unlinkSync(sqliteConfig);
+    });
+
+    test('should fail for SQLite config missing file field', async () => {
+      const badSqliteConfig = path.join(tmpdir(), `bad-sqlite-${Date.now()}.ini`);
+      const content = `[database.local]
+type=sqlite
+`;
+      fs.writeFileSync(badSqliteConfig, content);
+
+      await expect(server.initialize(badSqliteConfig)).rejects.toThrow("missing required 'file' field");
+
+      fs.unlinkSync(badSqliteConfig);
+    });
+
+    test('should fail for MySQL config missing username', async () => {
+      const badMysqlConfig = path.join(tmpdir(), `bad-mysql-${Date.now()}.ini`);
+      const content = `[database.testdb]
+type=mysql
+host=localhost
+`;
+      fs.writeFileSync(badMysqlConfig, content);
+
+      await expect(server.initialize(badMysqlConfig)).rejects.toThrow("missing required 'username' field");
+
+      fs.unlinkSync(badMysqlConfig);
+    });
+
+    test('should parse SSH tunnel configuration', async () => {
+      const sshConfig = path.join(tmpdir(), `ssh-config-${Date.now()}.ini`);
+      const content = `[database.remote]
+type=mysql
+host=internal-db.example.com
+port=3306
+database=mydb
+username=dbuser
+password=dbpass
+ssh_host=bastion.example.com
+ssh_port=22
+ssh_username=tunneluser
+ssh_private_key=/home/user/.ssh/id_rsa
+`;
+      fs.writeFileSync(sshConfig, content);
+
+      await expect(server.initialize(sshConfig)).resolves.not.toThrow();
+
+      fs.unlinkSync(sshConfig);
+    });
+  });
+
+  describe('handleRequest Edge Cases', () => {
+    beforeEach(async () => {
+      await server.initialize(tempConfigPath);
+
+      const mockConnectionManager = {
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+        getConnection: jest.fn().mockResolvedValue({ id: 'mock-connection' }),
+        testConnection: jest.fn().mockResolvedValue({ success: true }),
+        closeAllConnections: jest.fn().mockResolvedValue(undefined),
+        hasDatabase: jest.fn().mockReturnValue(true),
+        getDatabaseNames: jest.fn().mockReturnValue(['primary']),
+        executeQuery: jest.fn().mockResolvedValue({
+          rows: [{ id: 1 }],
+          rowCount: 1,
+          fields: ['id'],
+          truncated: false,
+          execution_time_ms: 5,
+        }),
+      };
+      (server as any).connectionManager = mockConnectionManager;
+
+      const mockSchemaManager = {
+        initialize: jest.fn().mockResolvedValue(undefined),
+        hasSchema: jest.fn().mockReturnValue(true),
+        captureSchema: jest.fn().mockResolvedValue({}),
+        getSchema: jest.fn().mockReturnValue({ summary: { table_count: 5, total_columns: 25 } }),
+      };
+      (server as any).schemaManager = mockSchemaManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        hasTunnel: jest.fn().mockReturnValue(false),
+        createTunnel: jest.fn().mockResolvedValue({}),
+        closeTunnel: jest.fn().mockResolvedValue(undefined),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (server as any).sshTunnelManager = mockSSHTunnelManager;
+    });
+
+    test('should return null for unknown methods', async () => {
+      const request: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 10,
+        method: 'unknown/method',
+        params: {},
+      };
+
+      const response = await server.handleRequest(request);
+      expect(response).toBeNull();
+    });
+
+    test('should handle missing id in request', async () => {
+      const request: MCPRequest = {
+        jsonrpc: '2.0',
+        id: undefined as any,
+        method: 'tools/list',
+        params: {},
+      };
+
+      const response = await server.handleRequest(request);
+      expect(response).toBeDefined();
+      expect(response?.id).toBe(0); // falls back to 0
+    });
+
+    test('should handle tools/call when dispatcher is not initialized', async () => {
+      // Reset dispatcher to null
+      (server as any).dispatchToolCall = null;
+
+      const request: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 11,
+        method: 'tools/call',
+        params: {
+          name: 'sql_query',
+          arguments: { database: 'primary', query: 'SELECT 1' },
+        },
+      };
+
+      const response = await server.handleRequest(request);
+      expect(response).toBeDefined();
+      expect(response?.error).toBeDefined();
+      expect(response?.error?.message).toContain('Server not initialized');
+    });
+
+    test('should handle tools/call with missing arguments', async () => {
+      const request: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 12,
+        method: 'tools/call',
+        params: {
+          name: 'sql_query',
+          arguments: {},
+        },
+      };
+
+      const response = await server.handleRequest(request);
+      expect(response).toBeDefined();
+      // Should return a result (may be error) but not crash
+      expect(response?.id).toBe(12);
+    });
+
+    test('should handle list_tools returning all expected tools', async () => {
+      const request: MCPRequest = {
+        jsonrpc: '2.0',
+        id: 13,
+        method: 'tools/list',
+        params: {},
+      };
+
+      const response = await server.handleRequest(request);
+      expect(response).toBeDefined();
+      const tools = (response?.result as any).tools;
+      expect(tools.length).toBeGreaterThan(0);
+
+      const toolNames = tools.map((t: any) => t.name);
+      expect(toolNames).toContain('sql_query');
+      expect(toolNames).toContain('sql_batch_query');
+      expect(toolNames).toContain('sql_list_databases');
+      expect(toolNames).toContain('sql_get_schema');
+      expect(toolNames).toContain('sql_test_connection');
+    });
+  });
+
+  describe('testConnection', () => {
+    beforeEach(async () => {
+      await server.initialize(tempConfigPath);
+    });
+
+    test('should return failure for unknown database', async () => {
+      const result = await server.testConnection('nonexistent_db');
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('not found');
+      expect(result.database).toBe('nonexistent_db');
+      expect(result.ssh_tunnel).toBe(false);
+    });
+
+    test('should return success for configured database with schema', async () => {
+      const mockConnectionManager = {
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+        getConnection: jest.fn().mockResolvedValue({ id: 'mock' }),
+        closeAllConnections: jest.fn().mockResolvedValue(undefined),
+        hasDatabase: jest.fn().mockReturnValue(true),
+        getDatabaseNames: jest.fn().mockReturnValue(['primary']),
+      };
+      (server as any).connectionManager = mockConnectionManager;
+
+      const mockSchemaManager = {
+        initialize: jest.fn().mockResolvedValue(undefined),
+        hasSchema: jest.fn().mockReturnValue(true),
+        captureSchema: jest.fn().mockResolvedValue({}),
+        getSchema: jest.fn().mockReturnValue({
+          summary: { table_count: 10, view_count: 2, total_columns: 50 },
+        }),
+      };
+      (server as any).schemaManager = mockSchemaManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        hasTunnel: jest.fn().mockReturnValue(false),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (server as any).sshTunnelManager = mockSSHTunnelManager;
+
+      const result = await server.testConnection('primary');
+
+      expect(result.success).toBe(true);
+      expect(result.database).toBe('primary');
+      expect(result.schema_captured).toBe(true);
+      expect(result.schema_info?.table_count).toBe(10);
+    });
+
+    test('should capture schema when not already cached', async () => {
+      const mockConnectionManager = {
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+        getConnection: jest.fn().mockResolvedValue({ id: 'mock' }),
+        closeAllConnections: jest.fn().mockResolvedValue(undefined),
+        hasDatabase: jest.fn().mockReturnValue(true),
+        getDatabaseNames: jest.fn().mockReturnValue(['primary']),
+      };
+      (server as any).connectionManager = mockConnectionManager;
+
+      const mockSchemaManager = {
+        initialize: jest.fn().mockResolvedValue(undefined),
+        hasSchema: jest.fn().mockReturnValue(false),
+        captureSchema: jest.fn().mockResolvedValue({}),
+        getSchema: jest.fn().mockReturnValue({
+          summary: { table_count: 5, view_count: 0, total_columns: 20 },
+        }),
+      };
+      (server as any).schemaManager = mockSchemaManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        hasTunnel: jest.fn().mockReturnValue(false),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (server as any).sshTunnelManager = mockSSHTunnelManager;
+
+      const result = await server.testConnection('primary');
+
+      expect(result.success).toBe(true);
+      expect(mockSchemaManager.captureSchema).toHaveBeenCalled();
+    });
+
+    test('should handle schema capture failure gracefully', async () => {
+      const mockConnectionManager = {
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+        getConnection: jest.fn().mockRejectedValue(new Error('Connection failed')),
+        closeAllConnections: jest.fn().mockResolvedValue(undefined),
+        hasDatabase: jest.fn().mockReturnValue(true),
+        getDatabaseNames: jest.fn().mockReturnValue(['primary']),
+      };
+      (server as any).connectionManager = mockConnectionManager;
+
+      const mockSchemaManager = {
+        initialize: jest.fn().mockResolvedValue(undefined),
+        hasSchema: jest.fn().mockReturnValue(false),
+        captureSchema: jest.fn().mockRejectedValue(new Error('Schema error')),
+        getSchema: jest.fn().mockReturnValue(null),
+      };
+      (server as any).schemaManager = mockSchemaManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        hasTunnel: jest.fn().mockReturnValue(false),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (server as any).sshTunnelManager = mockSSHTunnelManager;
+
+      // Should not throw, should return success with schema_captured false
+      const result = await server.testConnection('primary');
+      expect(result.success).toBe(true);
+      expect(result.schema_captured).toBe(false);
+    });
+
+    test('should detect SSH tunnel for database with ssh_host', async () => {
+      // Create config with SSH
+      const sshConfigPath = path.join(tmpdir(), `ssh-test-${Date.now()}.ini`);
+      const content = `[database.remote]
+type=mysql
+host=internal-db
+port=3306
+database=mydb
+username=user
+password=pass
+ssh_host=bastion.example.com
+ssh_port=22
+ssh_username=tunneluser
+ssh_private_key=/tmp/fake_key
+`;
+      fs.writeFileSync(sshConfigPath, content);
+
+      const sshServer = new SQLMCPServer();
+      await sshServer.initialize(sshConfigPath);
+
+      const mockConnectionManager = {
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+        getConnection: jest.fn().mockResolvedValue({ id: 'mock' }),
+        closeAllConnections: jest.fn().mockResolvedValue(undefined),
+        hasDatabase: jest.fn().mockReturnValue(true),
+      };
+      (sshServer as any).connectionManager = mockConnectionManager;
+
+      const mockSchemaManager = {
+        initialize: jest.fn(),
+        hasSchema: jest.fn().mockReturnValue(true),
+        getSchema: jest.fn().mockReturnValue({
+          summary: { table_count: 3, view_count: 0, total_columns: 10 },
+        }),
+      };
+      (sshServer as any).schemaManager = mockSchemaManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        hasTunnel: jest.fn().mockReturnValue(true),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (sshServer as any).sshTunnelManager = mockSSHTunnelManager;
+
+      const result = await sshServer.testConnection('remote');
+      expect(result.success).toBe(true);
+      expect(result.ssh_tunnel).toBe(true);
+
+      await sshServer.cleanup();
+      fs.unlinkSync(sshConfigPath);
+    });
+  });
+
+  describe('Cleanup', () => {
+    test('should cleanup without errors', async () => {
+      await server.initialize(tempConfigPath);
+
+      const mockConnectionManager = {
+        closeAllConnections: jest.fn().mockResolvedValue(undefined),
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+      };
+      (server as any).connectionManager = mockConnectionManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (server as any).sshTunnelManager = mockSSHTunnelManager;
+
+      await expect(server.cleanup()).resolves.not.toThrow();
+      expect(mockConnectionManager.closeAllConnections).toHaveBeenCalled();
+      expect(mockSSHTunnelManager.closeAllTunnels).toHaveBeenCalled();
+    });
+
+    test('should propagate cleanup errors', async () => {
+      await server.initialize(tempConfigPath);
+
+      const mockConnectionManager = {
+        closeAllConnections: jest.fn().mockRejectedValue(new Error('Cleanup failed')),
+        initialize: jest.fn(),
+        registerDatabase: jest.fn(),
+      };
+      (server as any).connectionManager = mockConnectionManager;
+
+      const mockSSHTunnelManager = {
+        initialize: jest.fn(),
+        closeAllTunnels: jest.fn().mockResolvedValue(undefined),
+      };
+      (server as any).sshTunnelManager = mockSSHTunnelManager;
+
+      await expect(server.cleanup()).rejects.toThrow('Cleanup failed');
+    });
+  });
 });
