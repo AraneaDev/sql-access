@@ -268,7 +268,7 @@ export {
 // ============================================================================
 
 export const MCP_PROTOCOL_VERSION = '2025-06-18';
-export const SERVER_VERSION = '2.4.0';
+export const SERVER_VERSION = '2.4.1';
 export const SERVER_NAME = 'mcp-sql-access-server';
 
 // ============================================================================
