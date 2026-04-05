@@ -408,7 +408,9 @@ class MockSSHClient {
 }
 
 // Helper to create valid SSH tunnel options
-function createValidTunnelOptions(overrides?: Partial<SSHTunnelCreateOptions>): SSHTunnelCreateOptions {
+function createValidTunnelOptions(
+  overrides?: Partial<SSHTunnelCreateOptions>
+): SSHTunnelCreateOptions {
   return {
     sshConfig: {
       host: 'bastion.example.com',
@@ -966,7 +968,12 @@ describe('EnhancedSSHTunnelManager', () => {
       const tunnel = {
         isActive: true,
         connection: mockConn as any,
-        portAssignment: { assignedPort: 12345, wasPreferredPort: false, attemptedPorts: [12345], reason: 'test' },
+        portAssignment: {
+          assignedPort: 12345,
+          wasPreferredPort: false,
+          attemptedPorts: [12345],
+          reason: 'test',
+        },
       };
 
       (tunnelManager as any).tunnels.set('test-db', tunnel);

@@ -540,7 +540,9 @@ describe('ConnectionManager', () => {
           const adapter = MockDatabaseFactory.createPostgresAdapter(
             TestConfigFixtures.validPostgresConfig
           );
-          jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
+          jest
+            .spyOn(adapter, 'connect')
+            .mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
           return adapter;
         }
         // Third attempt succeeds
@@ -639,7 +641,9 @@ describe('ConnectionManager', () => {
         const adapter = MockDatabaseFactory.createPostgresAdapter(
           TestConfigFixtures.validPostgresConfig
         );
-        jest.spyOn(adapter, 'connect').mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
+        jest
+          .spyOn(adapter, 'connect')
+          .mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
         return adapter;
       });
 
@@ -755,9 +759,7 @@ describe('ConnectionManager', () => {
       const config = TestConfigFixtures.configWithSSH;
       connectionManager.registerDatabase('ssh_db', config);
 
-      await expect(connectionManager.getConnection('ssh_db')).rejects.toThrow(
-        /SSH tunnel/
-      );
+      await expect(connectionManager.getConnection('ssh_db')).rejects.toThrow(/SSH tunnel/);
     });
 
     test('should not create SSH tunnel for sqlite even with ssh_host set', async () => {
@@ -811,18 +813,18 @@ describe('ConnectionManager', () => {
       // Remove the adapter manually to simulate missing adapter
       (connectionManager as any).adapters.delete('test_db');
 
-      await expect(
-        connectionManager.executeQuery('test_db', 'SELECT 1')
-      ).rejects.toThrow(/No adapter found/);
+      await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow(
+        /No adapter found/
+      );
     });
 
     test('should emit error event on query failure', async () => {
       const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
         TestConfigFixtures.validPostgresConfig
       );
-      const querySpy = jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
-        new Error('Query syntax error')
-      );
+      const querySpy = jest
+        .spyOn(mockAdapter, 'executeQuery')
+        .mockRejectedValue(new Error('Query syntax error'));
       jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
 
       connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
@@ -835,9 +837,9 @@ describe('ConnectionManager', () => {
         connectionManager.on('error', () => resolve());
       });
 
-      await expect(
-        connectionManager.executeQuery('test_db', 'INVALID SQL')
-      ).rejects.toThrow('Query syntax error');
+      await expect(connectionManager.executeQuery('test_db', 'INVALID SQL')).rejects.toThrow(
+        'Query syntax error'
+      );
 
       await errorPromise;
     });

@@ -301,9 +301,9 @@ describe('MCP type guards', () => {
   describe('isMCPResponse', () => {
     it('should return true for valid responses', () => {
       expect(isMCPResponse({ jsonrpc: '2.0', id: 1, result: {} })).toBe(true);
-      expect(
-        isMCPResponse({ jsonrpc: '2.0', id: 1, error: { code: -1, message: 'fail' } })
-      ).toBe(true);
+      expect(isMCPResponse({ jsonrpc: '2.0', id: 1, error: { code: -1, message: 'fail' } })).toBe(
+        true
+      );
     });
 
     it('should return false for non-responses', () => {
@@ -333,9 +333,7 @@ describe('MCP type guards', () => {
     });
 
     it('should return false for non-tool-call requests', () => {
-      expect(
-        isMCPToolCallRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' })
-      ).toBe(false);
+      expect(isMCPToolCallRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' })).toBe(false);
       expect(
         isMCPToolCallRequest({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: {} })
       ).toBe(false);

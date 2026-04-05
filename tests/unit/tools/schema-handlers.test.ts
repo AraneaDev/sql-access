@@ -23,7 +23,10 @@ jest.mock('../../../src/utils/response-formatter.js', () => ({
   formatDatabaseSummary: jest.fn((db: any) => ` **${db.name}** (${db.type})\n`),
 }));
 
-function createMockContext(databases: Record<string, DatabaseConfig> = {}, security?: any): ToolHandlerContext {
+function createMockContext(
+  databases: Record<string, DatabaseConfig> = {},
+  security?: any
+): ToolHandlerContext {
   return {
     connectionManager: {
       registerDatabase: jest.fn(),
@@ -66,7 +69,9 @@ describe('schema-handlers', () => {
     it('should return schema text when schema is available', async () => {
       const ctx = createMockContext();
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({ summary: {} });
-      (ctx.schemaManager.generateSchemaContext as jest.Mock).mockReturnValue('Schema for testdb...');
+      (ctx.schemaManager.generateSchemaContext as jest.Mock).mockReturnValue(
+        'Schema for testdb...'
+      );
 
       const result = await handleGetSchema(ctx, { database: 'testdb' });
 
@@ -154,7 +159,11 @@ describe('schema-handlers', () => {
 
     it('should log SSH info when ssh_host is configured', async () => {
       const ctx = createMockContext({
-        testdb: { type: 'mysql', ssh_host: 'bastion.example.com', select_only: true } as DatabaseConfig,
+        testdb: {
+          type: 'mysql',
+          ssh_host: 'bastion.example.com',
+          select_only: true,
+        } as DatabaseConfig,
       });
       (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue(null);
 
@@ -178,7 +187,13 @@ describe('schema-handlers', () => {
     it('should list all configured databases', async () => {
       const ctx = createMockContext({
         db1: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
-        db2: { type: 'postgresql', host: 'pghost', ssl: true, ssh_host: 'bastion', mcp_configurable: true } as DatabaseConfig,
+        db2: {
+          type: 'postgresql',
+          host: 'pghost',
+          ssl: true,
+          ssh_host: 'bastion',
+          mcp_configurable: true,
+        } as DatabaseConfig,
       });
 
       const result = await handleListDatabases(ctx);
@@ -225,7 +240,9 @@ describe('schema-handlers', () => {
       const ctx = createMockContext();
       // Force an error by making Object.entries throw indirectly
       Object.defineProperty(ctx.config, 'databases', {
-        get() { throw new Error('config broken'); }
+        get() {
+          throw new Error('config broken');
+        },
       });
 
       const result = await handleListDatabases(ctx);
@@ -304,7 +321,9 @@ describe('schema-handlers', () => {
         testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
       });
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
-      (ctx.connectionManager.getConnection as jest.Mock).mockRejectedValue(new Error('Connection refused'));
+      (ctx.connectionManager.getConnection as jest.Mock).mockRejectedValue(
+        new Error('Connection refused')
+      );
 
       // The error from getConnection is caught internally, but getSchema may still work
       // Actually the schema capture error is caught, then getSchema is called
@@ -327,7 +346,12 @@ describe('schema-handlers', () => {
 
     it('should log SSH info for SSH-enabled databases', async () => {
       const ctx = createMockContext({
-        testdb: { type: 'mysql', host: 'localhost', ssh_host: 'bastion', select_only: true } as DatabaseConfig,
+        testdb: {
+          type: 'mysql',
+          host: 'localhost',
+          ssh_host: 'bastion',
+          select_only: true,
+        } as DatabaseConfig,
       });
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);

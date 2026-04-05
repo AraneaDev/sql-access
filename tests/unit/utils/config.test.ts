@@ -95,7 +95,9 @@ describe('config', () => {
 
     it('should load and parse configuration successfully', () => {
       mockFs.existsSync.mockReturnValue(true);
-      mockFs.readFileSync.mockReturnValue('[database.mydb]\ntype=mysql\nhost=localhost\nusername=root');
+      mockFs.readFileSync.mockReturnValue(
+        '[database.mydb]\ntype=mysql\nhost=localhost\nusername=root'
+      );
       mockParseIni.mockReturnValue({
         database: {
           mydb: { type: 'mysql', host: 'localhost', username: 'root' },
@@ -255,7 +257,11 @@ describe('config', () => {
     });
 
     it('should normalize type to lowercase', () => {
-      const config = parseDatabaseConfig('db', { type: 'MySQL', host: 'localhost', username: 'root' });
+      const config = parseDatabaseConfig('db', {
+        type: 'MySQL',
+        host: 'localhost',
+        username: 'root',
+      });
       expect(config.type).toBe('mysql');
     });
 
@@ -283,7 +289,9 @@ describe('config', () => {
 
     // SQLite specific
     it('should require file for sqlite', () => {
-      expect(() => parseDatabaseConfig('db', { type: 'sqlite' })).toThrow("missing required 'file'");
+      expect(() => parseDatabaseConfig('db', { type: 'sqlite' })).toThrow(
+        "missing required 'file'"
+      );
     });
 
     it('should parse sqlite config with file', () => {
@@ -816,7 +824,14 @@ describe('config', () => {
             select_only: false,
           } as DatabaseConfig,
         },
-        security: { max_joins: 10, max_subqueries: 5, max_unions: 3, max_group_bys: 5, max_complexity_score: 100, max_query_length: 10000 },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
         extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
       };
 
@@ -832,9 +847,21 @@ describe('config', () => {
     it('should write security section', () => {
       const config: ParsedServerConfig = {
         databases: {
-          mydb: { type: 'mysql', host: 'localhost', username: 'root', select_only: false } as DatabaseConfig,
+          mydb: {
+            type: 'mysql',
+            host: 'localhost',
+            username: 'root',
+            select_only: false,
+          } as DatabaseConfig,
         },
-        security: { max_joins: 10, max_subqueries: 5, max_unions: 3, max_group_bys: 5, max_complexity_score: 100, max_query_length: 10000 },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
         extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
       };
 
@@ -848,9 +875,21 @@ describe('config', () => {
     it('should write extension section', () => {
       const config: ParsedServerConfig = {
         databases: {
-          mydb: { type: 'mysql', host: 'localhost', username: 'root', select_only: false } as DatabaseConfig,
+          mydb: {
+            type: 'mysql',
+            host: 'localhost',
+            username: 'root',
+            select_only: false,
+          } as DatabaseConfig,
         },
-        security: { max_joins: 10, max_subqueries: 5, max_unions: 3, max_group_bys: 5, max_complexity_score: 100, max_query_length: 10000 },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
         extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
       };
 
@@ -872,7 +911,13 @@ describe('config', () => {
             redaction: {
               enabled: true,
               rules: [
-                { field_pattern: 'email', pattern_type: 'exact', redaction_type: 'replace', replacement_text: '[HIDDEN]', preserve_format: false },
+                {
+                  field_pattern: 'email',
+                  pattern_type: 'exact',
+                  redaction_type: 'replace',
+                  replacement_text: '[HIDDEN]',
+                  preserve_format: false,
+                },
               ],
               log_redacted_access: true,
               audit_redacted_queries: true,
@@ -881,7 +926,14 @@ describe('config', () => {
             },
           } as DatabaseConfig,
         },
-        security: { max_joins: 10, max_subqueries: 5, max_unions: 3, max_group_bys: 5, max_complexity_score: 100, max_query_length: 10000 },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
         extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
       };
 
@@ -907,7 +959,14 @@ describe('config', () => {
             mcp_configurable: true,
           } as DatabaseConfig,
         },
-        security: { max_joins: 10, max_subqueries: 5, max_unions: 3, max_group_bys: 5, max_complexity_score: 100, max_query_length: 10000 },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
         extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
       };
 
@@ -928,7 +987,14 @@ describe('config', () => {
             select_only: false,
           } as any,
         },
-        security: { max_joins: 10, max_subqueries: 5, max_unions: 3, max_group_bys: 5, max_complexity_score: 100, max_query_length: 10000 },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
         extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
       };
 

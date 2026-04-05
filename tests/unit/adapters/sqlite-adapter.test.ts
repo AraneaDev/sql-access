@@ -707,9 +707,7 @@ describe('SQLiteAdapter', () => {
           process.nextTick(() => callback(null, { page_size: 4096 }));
         })
         .mockImplementationOnce((query: string, callback: Function) => {
-          process.nextTick(() =>
-            callback(null, { seq: 0, name: 'main', file: '/tmp/test.db' })
-          );
+          process.nextTick(() => callback(null, { seq: 0, name: 'main', file: '/tmp/test.db' }));
         });
 
       const info = await adapter.getDatabaseInfo(connection);

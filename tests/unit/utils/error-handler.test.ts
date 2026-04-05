@@ -237,7 +237,9 @@ describe('error-handler', () => {
         expect(info.category).toBe(ErrorCategory.VALIDATION);
         expect(info.severity).toBe(ErrorSeverity.MEDIUM);
         expect(info.retryable).toBe(false);
-        expect(info.troubleshooting).toEqual(expect.arrayContaining([expect.stringContaining('email')]));
+        expect(info.troubleshooting).toEqual(
+          expect.arrayContaining([expect.stringContaining('email')])
+        );
       });
 
       it('should classify TimeoutError', () => {
@@ -245,7 +247,9 @@ describe('error-handler', () => {
         expect(info.category).toBe(ErrorCategory.TIMEOUT);
         expect(info.severity).toBe(ErrorSeverity.MEDIUM);
         expect(info.retryable).toBe(true);
-        expect(info.troubleshooting).toEqual(expect.arrayContaining([expect.stringContaining('5000')]));
+        expect(info.troubleshooting).toEqual(
+          expect.arrayContaining([expect.stringContaining('5000')])
+        );
       });
 
       it('should classify ECONNREFUSED errors', () => {
@@ -319,7 +323,10 @@ describe('error-handler', () => {
 
     describe('formatToolError', () => {
       it('should format error with tool name', () => {
-        const formatted = handler.formatToolError(new QueryExecutionError('syntax error'), 'sql_query');
+        const formatted = handler.formatToolError(
+          new QueryExecutionError('syntax error'),
+          'sql_query'
+        );
         expect(formatted).toContain('sql_query Failed');
         expect(formatted).toContain('syntax error');
         expect(formatted).toContain('Troubleshooting');
@@ -348,9 +355,15 @@ describe('error-handler', () => {
 
     describe('getErrorSeverity', () => {
       it('should return correct severity for each error type', () => {
-        expect(handler.getErrorSeverity(new SecurityViolationError('test'))).toBe(ErrorSeverity.HIGH);
-        expect(handler.getErrorSeverity(new ConfigurationError('test'))).toBe(ErrorSeverity.CRITICAL);
-        expect(handler.getErrorSeverity(new QueryExecutionError('test'))).toBe(ErrorSeverity.MEDIUM);
+        expect(handler.getErrorSeverity(new SecurityViolationError('test'))).toBe(
+          ErrorSeverity.HIGH
+        );
+        expect(handler.getErrorSeverity(new ConfigurationError('test'))).toBe(
+          ErrorSeverity.CRITICAL
+        );
+        expect(handler.getErrorSeverity(new QueryExecutionError('test'))).toBe(
+          ErrorSeverity.MEDIUM
+        );
       });
     });
   });

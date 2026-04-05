@@ -506,7 +506,9 @@ describe('SecurityManager', () => {
     test('should reject query exceeding max length', () => {
       const config: SecurityConfig = { ...defaultConfig, max_query_length: 50 };
       const sm = new SecurityManager({ security: config }, false);
-      const result = sm.validateAnyQuery('SELECT * FROM very_long_table_name WHERE column_a = 1 AND column_b = 2');
+      const result = sm.validateAnyQuery(
+        'SELECT * FROM very_long_table_name WHERE column_a = 1 AND column_b = 2'
+      );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('maximum length');
     });
@@ -518,7 +520,7 @@ describe('SecurityManager', () => {
     });
 
     test('should reject query with dangerous patterns', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT * FROM users; DROP TABLE users");
+      const result = nonSelectManager.validateAnyQuery('SELECT * FROM users; DROP TABLE users');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous patterns');
     });
@@ -546,9 +548,7 @@ describe('SecurityManager', () => {
     test('should reject query with too many UNIONs', () => {
       const config: SecurityConfig = { ...defaultConfig, max_unions: 1 };
       const sm = new SecurityManager({ security: config }, false);
-      const result = sm.validateAnyQuery(
-        'SELECT 1 UNION SELECT 2 UNION SELECT 3'
-      );
+      const result = sm.validateAnyQuery('SELECT 1 UNION SELECT 2 UNION SELECT 3');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('UNION');
     });
@@ -556,9 +556,7 @@ describe('SecurityManager', () => {
     test('should reject query with too many GROUP BY clauses', () => {
       const config: SecurityConfig = { ...defaultConfig, max_group_bys: 1 };
       const sm = new SecurityManager({ security: config }, false);
-      const result = sm.validateAnyQuery(
-        'SELECT a, b, c, COUNT(*) FROM t GROUP BY a, b, c'
-      );
+      const result = sm.validateAnyQuery('SELECT a, b, c, COUNT(*) FROM t GROUP BY a, b, c');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('GROUP BY');
     });
@@ -593,14 +591,16 @@ describe('SecurityManager', () => {
 
     test('should block query with dangerous patterns even for allowed commands', () => {
       // A query that starts with something not in blocked/allowed, contains dangerous patterns
-      const result = securityManager.validateSelectOnlyQuery("PRAGMA; DROP TABLE users");
+      const result = securityManager.validateSelectOnlyQuery('PRAGMA; DROP TABLE users');
       expect(result.allowed).toBe(false);
     });
   });
 
   describe('Deep Validation - nested dangerous patterns', () => {
     test('should block SELECT INTO OUTFILE', async () => {
-      const result = await securityManager.validateQuery("SELECT * FROM users INTO OUTFILE '/tmp/data.csv'");
+      const result = await securityManager.validateQuery(
+        "SELECT * FROM users INTO OUTFILE '/tmp/data.csv'"
+      );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous');
     });
@@ -616,12 +616,16 @@ describe('SecurityManager', () => {
     });
 
     test('should block SELECT with EXEC', async () => {
-      const result = await securityManager.validateQuery("SELECT * FROM users; EXEC xp_cmdshell('dir')");
+      const result = await securityManager.validateQuery(
+        "SELECT * FROM users; EXEC xp_cmdshell('dir')"
+      );
       expect(result.allowed).toBe(false);
     });
 
     test('should block UNION SELECT INTO', async () => {
-      const result = await securityManager.validateQuery("SELECT 1 UNION SELECT * INTO OUTFILE '/tmp/hack'");
+      const result = await securityManager.validateQuery(
+        "SELECT 1 UNION SELECT * INTO OUTFILE '/tmp/hack'"
+      );
       expect(result.allowed).toBe(false);
     });
 
@@ -631,12 +635,12 @@ describe('SecurityManager', () => {
     });
 
     test('should block SLEEP function', async () => {
-      const result = await securityManager.validateQuery("SELECT SLEEP(10)");
+      const result = await securityManager.validateQuery('SELECT SLEEP(10)');
       expect(result.allowed).toBe(false);
     });
 
     test('should block USER() function', async () => {
-      const result = await securityManager.validateQuery("SELECT USER()");
+      const result = await securityManager.validateQuery('SELECT USER()');
       expect(result.allowed).toBe(false);
     });
 
@@ -646,7 +650,7 @@ describe('SecurityManager', () => {
     });
 
     test('should block CONNECTION_ID() function', async () => {
-      const result = await securityManager.validateQuery("SELECT CONNECTION_ID()");
+      const result = await securityManager.validateQuery('SELECT CONNECTION_ID()');
       expect(result.allowed).toBe(false);
     });
   });
@@ -659,31 +663,37 @@ describe('SecurityManager', () => {
     });
 
     test("should detect OR '1'='1 injection", () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT * FROM users WHERE name = '' OR '1'='1'");
+      const result = nonSelectManager.validateAnyQuery(
+        "SELECT * FROM users WHERE name = '' OR '1'='1'"
+      );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous patterns');
     });
 
     test('should detect OR 1=1 injection', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT * FROM users WHERE name = ' OR 1 = 1");
+      const result = nonSelectManager.validateAnyQuery(
+        "SELECT * FROM users WHERE name = ' OR 1 = 1"
+      );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous patterns');
     });
 
     test('should detect semicolon DROP TABLE injection', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT * FROM users; DROP TABLE users");
+      const result = nonSelectManager.validateAnyQuery('SELECT * FROM users; DROP TABLE users');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous patterns');
     });
 
     test('should detect UNION SELECT NULL injection', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT * FROM users WHERE id = ' UNION SELECT NULL");
+      const result = nonSelectManager.validateAnyQuery(
+        "SELECT * FROM users WHERE id = ' UNION SELECT NULL"
+      );
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous patterns');
     });
 
     test('should detect CONCAT CHAR injection', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT CONCAT( CHAR( 72))");
+      const result = nonSelectManager.validateAnyQuery('SELECT CONCAT( CHAR( 72))');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('dangerous patterns');
     });
@@ -700,7 +710,7 @@ describe('SecurityManager', () => {
     });
 
     test('should detect semicolon followed by DELETE', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT 1; DELETE FROM users");
+      const result = nonSelectManager.validateAnyQuery('SELECT 1; DELETE FROM users');
       expect(result.allowed).toBe(false);
     });
 
@@ -720,14 +730,16 @@ describe('SecurityManager', () => {
     });
 
     test('should detect SLEEP function', () => {
-      const result = nonSelectManager.validateAnyQuery("SELECT SLEEP(10)");
+      const result = nonSelectManager.validateAnyQuery('SELECT SLEEP(10)');
       expect(result.allowed).toBe(false);
     });
   });
 
   describe('SQL Injection via deep validation (SELECT-only mode)', () => {
     test('should detect SELECT INTO OUTFILE via deep validation', async () => {
-      const result = await securityManager.validateQuery("SELECT * FROM users INTO OUTFILE '/tmp/data.csv'");
+      const result = await securityManager.validateQuery(
+        "SELECT * FROM users INTO OUTFILE '/tmp/data.csv'"
+      );
       expect(result.allowed).toBe(false);
     });
 
@@ -737,19 +749,21 @@ describe('SecurityManager', () => {
     });
 
     test('should detect SELECT ; DROP via deep validation', async () => {
-      const result = await securityManager.validateQuery("SELECT * FROM users; DROP TABLE users");
+      const result = await securityManager.validateQuery('SELECT * FROM users; DROP TABLE users');
       expect(result.allowed).toBe(false);
     });
 
     test('should detect SELECT EXEC via deep validation', async () => {
-      const result = await securityManager.validateQuery("SELECT 1; EXEC xp_cmdshell");
+      const result = await securityManager.validateQuery('SELECT 1; EXEC xp_cmdshell');
       expect(result.allowed).toBe(false);
     });
   });
 
   describe('Privilege escalation detection', () => {
     test('should detect CREATE USER attempt', async () => {
-      const result = await securityManager.validateQuery("CREATE USER 'hacker' IDENTIFIED BY 'pass'");
+      const result = await securityManager.validateQuery(
+        "CREATE USER 'hacker' IDENTIFIED BY 'pass'"
+      );
       expect(result.allowed).toBe(false);
     });
 
@@ -759,7 +773,9 @@ describe('SecurityManager', () => {
     });
 
     test('should detect ALTER USER attempt', async () => {
-      const result = await securityManager.validateQuery("ALTER USER 'root' IDENTIFIED BY 'newpass'");
+      const result = await securityManager.validateQuery(
+        "ALTER USER 'root' IDENTIFIED BY 'newpass'"
+      );
       expect(result.allowed).toBe(false);
     });
 
@@ -811,10 +827,7 @@ describe('SecurityManager', () => {
     });
 
     test('should block batch with violations', () => {
-      const queries = [
-        { query: 'SELECT * FROM users' },
-        { query: 'INSERT INTO users VALUES (1)' },
-      ];
+      const queries = [{ query: 'SELECT * FROM users' }, { query: 'INSERT INTO users VALUES (1)' }];
       const result = securityManager.validateBatchSelectOnlyQueries(queries);
 
       expect(result.allowed).toBe(false);
@@ -879,9 +892,7 @@ describe('SecurityManager', () => {
 
     test('should return CRITICAL risk for extremely complex queries', () => {
       const sm = new SecurityManager({ security: { ...defaultConfig, max_complexity_score: 50 } });
-      const analysis = sm.analyzeQueryComplexity(
-        SampleQueries.complexityTestQueries.manyJoins
-      );
+      const analysis = sm.analyzeQueryComplexity(SampleQueries.complexityTestQueries.manyJoins);
       // 12 joins * 5 = 60 > 50 threshold
       expect(analysis.risk_level).toBe('CRITICAL');
     });
@@ -923,7 +934,12 @@ describe('SecurityManager', () => {
     });
 
     test('should create audit log for batch query', () => {
-      const log = securityManager.createAuditLog('testdb', ['SELECT 1', 'SELECT 2'], false, 'blocked');
+      const log = securityManager.createAuditLog(
+        'testdb',
+        ['SELECT 1', 'SELECT 2'],
+        false,
+        'blocked'
+      );
 
       expect(log.query_type).toBe('BATCH');
       expect(log.query_count).toBe(2);
@@ -940,7 +956,9 @@ describe('SecurityManager', () => {
     });
 
     test('should include metadata in audit log', () => {
-      const log = securityManager.createAuditLog('testdb', 'SELECT 1', true, undefined, { user: 'admin' });
+      const log = securityManager.createAuditLog('testdb', 'SELECT 1', true, undefined, {
+        user: 'admin',
+      });
 
       expect(log.metadata).toEqual({ user: 'admin' });
     });
@@ -953,7 +971,9 @@ describe('SecurityManager', () => {
 
   describe('Error message sanitization', () => {
     test('should redact password in error messages', () => {
-      const sanitized = securityManager.sanitizeErrorMessage('Connection failed: password=mysecret123');
+      const sanitized = securityManager.sanitizeErrorMessage(
+        'Connection failed: password=mysecret123'
+      );
       expect(sanitized).toContain('password=[REDACTED]');
       expect(sanitized).not.toContain('mysecret123');
     });

@@ -399,7 +399,9 @@ type=sqlite
 `;
       fs.writeFileSync(badSqliteConfig, content);
 
-      await expect(server.initialize(badSqliteConfig)).rejects.toThrow("missing required 'file' field");
+      await expect(server.initialize(badSqliteConfig)).rejects.toThrow(
+        "missing required 'file' field"
+      );
 
       fs.unlinkSync(badSqliteConfig);
     });
@@ -412,7 +414,9 @@ host=localhost
 `;
       fs.writeFileSync(badMysqlConfig, content);
 
-      await expect(server.initialize(badMysqlConfig)).rejects.toThrow("missing required 'username' field");
+      await expect(server.initialize(badMysqlConfig)).rejects.toThrow(
+        "missing required 'username' field"
+      );
 
       fs.unlinkSync(badMysqlConfig);
     });

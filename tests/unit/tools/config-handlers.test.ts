@@ -84,7 +84,10 @@ describe('config-handlers', () => {
 
       expect(result.content[0].text).toContain("Database 'testdb' added successfully");
       expect(result.content[0].text).toContain('mysql');
-      expect(ctx.connectionManager.registerDatabase).toHaveBeenCalledWith('testdb', expect.objectContaining({ type: 'mysql', host: 'localhost' }));
+      expect(ctx.connectionManager.registerDatabase).toHaveBeenCalledWith(
+        'testdb',
+        expect.objectContaining({ type: 'mysql', host: 'localhost' })
+      );
       expect(ctx.config.databases['testdb']).toBeDefined();
     });
 
@@ -108,24 +111,29 @@ describe('config-handlers', () => {
       });
 
       await expect(
-        handleAddDatabase(ctx, { name: 'existing', type: 'mysql', host: 'localhost', username: 'root' })
+        handleAddDatabase(ctx, {
+          name: 'existing',
+          type: 'mysql',
+          host: 'localhost',
+          username: 'root',
+        })
       ).rejects.toThrow(ConfigurationError);
     });
 
     it('should throw ValidationError for invalid database type', async () => {
       const ctx = createMockContext();
 
-      await expect(
-        handleAddDatabase(ctx, { name: 'newdb', type: 'oracle' })
-      ).rejects.toThrow(ValidationError);
+      await expect(handleAddDatabase(ctx, { name: 'newdb', type: 'oracle' })).rejects.toThrow(
+        ValidationError
+      );
     });
 
     it('should throw ValidationError when SQLite is missing file parameter', async () => {
       const ctx = createMockContext();
 
-      await expect(
-        handleAddDatabase(ctx, { name: 'newdb', type: 'sqlite' })
-      ).rejects.toThrow(ValidationError);
+      await expect(handleAddDatabase(ctx, { name: 'newdb', type: 'sqlite' })).rejects.toThrow(
+        ValidationError
+      );
     });
 
     it('should throw ValidationError when non-SQLite is missing host', async () => {
@@ -203,7 +211,12 @@ describe('config-handlers', () => {
   describe('handleUpdateDatabase', () => {
     it('should update database fields successfully', async () => {
       const ctx = createMockContext({
-        mydb: { type: 'mysql', host: 'old-host', mcp_configurable: true, select_only: true } as DatabaseConfig,
+        mydb: {
+          type: 'mysql',
+          host: 'old-host',
+          mcp_configurable: true,
+          select_only: true,
+        } as DatabaseConfig,
       });
 
       const result = await handleUpdateDatabase(ctx, {
@@ -216,7 +229,10 @@ describe('config-handlers', () => {
       expect(result.content[0].text).toContain('host');
       expect(result.content[0].text).toContain('port');
       expect(ctx.connectionManager.unregisterDatabase).toHaveBeenCalledWith('mydb');
-      expect(ctx.connectionManager.registerDatabase).toHaveBeenCalledWith('mydb', expect.anything());
+      expect(ctx.connectionManager.registerDatabase).toHaveBeenCalledWith(
+        'mydb',
+        expect.anything()
+      );
     });
 
     it('should throw ConfigurationError if database not found', async () => {
@@ -249,7 +265,12 @@ describe('config-handlers', () => {
 
     it('should update all supported fields', async () => {
       const ctx = createMockContext({
-        mydb: { type: 'mysql', host: 'old', mcp_configurable: true, select_only: true } as DatabaseConfig,
+        mydb: {
+          type: 'mysql',
+          host: 'old',
+          mcp_configurable: true,
+          select_only: true,
+        } as DatabaseConfig,
       });
 
       await handleUpdateDatabase(ctx, {
@@ -353,7 +374,12 @@ describe('config-handlers', () => {
 
     it('should show MCP configurable: no when disabled', async () => {
       const ctx = createMockContext({
-        mydb: { type: 'mysql', host: 'localhost', mcp_configurable: false, select_only: true } as DatabaseConfig,
+        mydb: {
+          type: 'mysql',
+          host: 'localhost',
+          mcp_configurable: false,
+          select_only: true,
+        } as DatabaseConfig,
       });
 
       const result = await handleGetConfig(ctx, 'mydb');

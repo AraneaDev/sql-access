@@ -85,7 +85,11 @@ describe('query-handlers', () => {
 
       expect(result.content[0].text).toContain('Query executed successfully');
       expect(result.content[0].text).toContain('1 rows');
-      expect(ctx.connectionManager.executeQuery).toHaveBeenCalledWith('testdb', 'SELECT * FROM users', []);
+      expect(ctx.connectionManager.executeQuery).toHaveBeenCalledWith(
+        'testdb',
+        'SELECT * FROM users',
+        []
+      );
     });
 
     it('should pass params to executeQuery', async () => {
@@ -93,7 +97,10 @@ describe('query-handlers', () => {
         testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [], fields: [], rowCount: 0, truncated: false,
+        rows: [],
+        fields: [],
+        rowCount: 0,
+        truncated: false,
       });
 
       await handleSqlQuery(ctx, {
@@ -103,7 +110,9 @@ describe('query-handlers', () => {
       });
 
       expect(ctx.connectionManager.executeQuery).toHaveBeenCalledWith(
-        'testdb', 'SELECT * FROM users WHERE id = ?', [42]
+        'testdb',
+        'SELECT * FROM users WHERE id = ?',
+        [42]
       );
     });
 
@@ -131,7 +140,10 @@ describe('query-handlers', () => {
         testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [], fields: [], rowCount: 0, truncated: false,
+        rows: [],
+        fields: [],
+        rowCount: 0,
+        truncated: false,
       });
 
       await handleSqlQuery(ctx, {
@@ -166,7 +178,10 @@ describe('query-handlers', () => {
         testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [], fields: [], rowCount: 0, truncated: false,
+        rows: [],
+        fields: [],
+        rowCount: 0,
+        truncated: false,
       });
 
       const result = await handleSqlQuery(ctx, {
@@ -184,7 +199,10 @@ describe('query-handlers', () => {
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
       (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [{ id: 1 }], fields: ['id'], rowCount: 1, truncated: false,
+        rows: [{ id: 1 }],
+        fields: ['id'],
+        rowCount: 1,
+        truncated: false,
       });
 
       await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
@@ -199,7 +217,10 @@ describe('query-handlers', () => {
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
       (ctx.connectionManager.getConnection as jest.Mock).mockRejectedValue(new Error('conn error'));
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [], fields: [], rowCount: 0, truncated: false,
+        rows: [],
+        fields: [],
+        rowCount: 0,
+        truncated: false,
       });
 
       const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
@@ -215,7 +236,10 @@ describe('query-handlers', () => {
       });
       (ctx.sshTunnelManager.hasTunnel as jest.Mock).mockReturnValue(true);
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [{ id: 1 }], fields: ['id'], rowCount: 1, truncated: false,
+        rows: [{ id: 1 }],
+        fields: ['id'],
+        rowCount: 1,
+        truncated: false,
       });
 
       const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
@@ -228,7 +252,10 @@ describe('query-handlers', () => {
         testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
       });
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [], fields: [], rowCount: 0, truncated: false,
+        rows: [],
+        fields: [],
+        rowCount: 0,
+        truncated: false,
       });
 
       const result = await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
@@ -262,10 +289,18 @@ describe('query-handlers', () => {
 
     it('should log SSH info for SSH-enabled databases', async () => {
       const ctx = createMockContext({
-        testdb: { type: 'mysql', host: 'localhost', ssh_host: 'bastion', select_only: false } as DatabaseConfig,
+        testdb: {
+          type: 'mysql',
+          host: 'localhost',
+          ssh_host: 'bastion',
+          select_only: false,
+        } as DatabaseConfig,
       });
       (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
-        rows: [], fields: [], rowCount: 0, truncated: false,
+        rows: [],
+        fields: [],
+        rowCount: 0,
+        truncated: false,
       });
 
       await handleSqlQuery(ctx, { database: 'testdb', query: 'SELECT 1' });
@@ -281,7 +316,12 @@ describe('query-handlers', () => {
       });
       (ctx.connectionManager.executeBatch as jest.Mock).mockResolvedValue({
         results: [
-          { index: 1, success: true, query: 'SELECT 1', data: { rows: [{ '1': 1 }], fields: ['1'], rowCount: 1, truncated: false } },
+          {
+            index: 1,
+            success: true,
+            query: 'SELECT 1',
+            data: { rows: [{ '1': 1 }], fields: ['1'], rowCount: 1, truncated: false },
+          },
         ],
         totalExecutionTime: 10,
         successCount: 1,
@@ -303,9 +343,9 @@ describe('query-handlers', () => {
         testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
 
-      await expect(
-        handleBatchQuery(ctx, { database: 'testdb', queries: [] })
-      ).rejects.toThrow(ValidationError);
+      await expect(handleBatchQuery(ctx, { database: 'testdb', queries: [] })).rejects.toThrow(
+        ValidationError
+      );
     });
 
     it('should throw ValidationError when queries is undefined', async () => {
@@ -326,9 +366,9 @@ describe('query-handlers', () => {
 
       const queries = Array.from({ length: 4 }, (_, i) => ({ query: `SELECT ${i}` }));
 
-      await expect(
-        handleBatchQuery(ctx, { database: 'testdb', queries })
-      ).rejects.toThrow(ValidationError);
+      await expect(handleBatchQuery(ctx, { database: 'testdb', queries })).rejects.toThrow(
+        ValidationError
+      );
     });
 
     it('should use default max batch size of 10', async () => {
@@ -338,9 +378,9 @@ describe('query-handlers', () => {
 
       const queries = Array.from({ length: 11 }, (_, i) => ({ query: `SELECT ${i}` }));
 
-      await expect(
-        handleBatchQuery(ctx, { database: 'testdb', queries })
-      ).rejects.toThrow(ValidationError);
+      await expect(handleBatchQuery(ctx, { database: 'testdb', queries })).rejects.toThrow(
+        ValidationError
+      );
     });
 
     it('should validate all queries for SELECT-only mode', async () => {
@@ -379,7 +419,9 @@ describe('query-handlers', () => {
       });
 
       expect(ctx.connectionManager.executeBatch).toHaveBeenCalledWith(
-        'testdb', [{ query: 'SELECT 1' }], true
+        'testdb',
+        [{ query: 'SELECT 1' }],
+        true
       );
     });
 
@@ -403,7 +445,9 @@ describe('query-handlers', () => {
 
       // transaction && !select_only = true && false = false
       expect(ctx.connectionManager.executeBatch).toHaveBeenCalledWith(
-        'testdb', [{ query: 'SELECT 1' }], false
+        'testdb',
+        [{ query: 'SELECT 1' }],
+        false
       );
     });
 
@@ -418,7 +462,13 @@ describe('query-handlers', () => {
             label: 'Get Users',
             success: true,
             query: 'SELECT * FROM users',
-            data: { rows: [{ id: 1 }], fields: ['id'], rowCount: 1, truncated: false, execution_time_ms: 5 },
+            data: {
+              rows: [{ id: 1 }],
+              fields: ['id'],
+              rowCount: 1,
+              truncated: false,
+              execution_time_ms: 5,
+            },
           },
           {
             index: 2,
@@ -606,11 +656,20 @@ describe('query-handlers', () => {
 
     it('should log SSH info for SSH-enabled databases', async () => {
       const ctx = createMockContext({
-        testdb: { type: 'mysql', host: 'localhost', ssh_host: 'bastion', select_only: false } as DatabaseConfig,
+        testdb: {
+          type: 'mysql',
+          host: 'localhost',
+          ssh_host: 'bastion',
+          select_only: false,
+        } as DatabaseConfig,
       });
       (ctx.connectionManager.analyzePerformance as jest.Mock).mockResolvedValue({
-        executionTime: 10, explainTime: 2, rowCount: 0, columnCount: 0,
-        executionPlan: '', recommendations: '',
+        executionTime: 10,
+        explainTime: 2,
+        rowCount: 0,
+        columnCount: 0,
+        executionPlan: '',
+        recommendations: '',
       });
 
       await handleAnalyzePerformance(ctx, { database: 'testdb', query: 'SELECT 1' });

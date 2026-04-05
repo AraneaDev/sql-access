@@ -10,29 +10,68 @@ import { ValidationError } from '../../../src/utils/error-handler.js';
 
 // Mock all handler modules
 jest.mock('../../../src/tools/handlers/query-handlers.js', () => ({
-  handleSqlQuery: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'query result' }] }),
-  handleBatchQuery: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'batch result' }] }),
-  handleAnalyzePerformance: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'perf result' }] }),
+  handleSqlQuery: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'query result' }] }),
+  handleBatchQuery: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'batch result' }] }),
+  handleAnalyzePerformance: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'perf result' }] }),
 }));
 
 jest.mock('../../../src/tools/handlers/schema-handlers.js', () => ({
-  handleGetSchema: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'schema result' }] }),
-  handleRefreshSchema: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'refresh result' }] }),
-  handleListDatabases: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'list result' }] }),
-  handleTestConnection: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'test result' }] }),
+  handleGetSchema: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'schema result' }] }),
+  handleRefreshSchema: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'refresh result' }] }),
+  handleListDatabases: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'list result' }] }),
+  handleTestConnection: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'test result' }] }),
 }));
 
 jest.mock('../../../src/tools/handlers/config-handlers.js', () => ({
-  handleAddDatabase: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'add result' }] }),
-  handleUpdateDatabase: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'update result' }] }),
-  handleRemoveDatabase: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'remove result' }] }),
-  handleGetConfig: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'config result' }] }),
-  handleSetMcpConfigurable: jest.fn().mockResolvedValue({ content: [{ type: 'text', text: 'mcp result' }] }),
+  handleAddDatabase: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'add result' }] }),
+  handleUpdateDatabase: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'update result' }] }),
+  handleRemoveDatabase: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'remove result' }] }),
+  handleGetConfig: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'config result' }] }),
+  handleSetMcpConfigurable: jest
+    .fn()
+    .mockResolvedValue({ content: [{ type: 'text', text: 'mcp result' }] }),
 }));
 
-import { handleSqlQuery, handleBatchQuery, handleAnalyzePerformance } from '../../../src/tools/handlers/query-handlers.js';
-import { handleGetSchema, handleRefreshSchema, handleListDatabases, handleTestConnection } from '../../../src/tools/handlers/schema-handlers.js';
-import { handleAddDatabase, handleUpdateDatabase, handleRemoveDatabase, handleGetConfig, handleSetMcpConfigurable } from '../../../src/tools/handlers/config-handlers.js';
+import {
+  handleSqlQuery,
+  handleBatchQuery,
+  handleAnalyzePerformance,
+} from '../../../src/tools/handlers/query-handlers.js';
+import {
+  handleGetSchema,
+  handleRefreshSchema,
+  handleListDatabases,
+  handleTestConnection,
+} from '../../../src/tools/handlers/schema-handlers.js';
+import {
+  handleAddDatabase,
+  handleUpdateDatabase,
+  handleRemoveDatabase,
+  handleGetConfig,
+  handleSetMcpConfigurable,
+} from '../../../src/tools/handlers/config-handlers.js';
 
 function createMockContext(): ToolHandlerContext {
   return {
@@ -85,7 +124,9 @@ describe('dispatcher', () => {
 
     it('should throw ValidationError when missing required args', async () => {
       await expect(dispatch('sql_batch_query', {})).rejects.toThrow(ValidationError);
-      await expect(dispatch('sql_batch_query', { database: 'db' })).rejects.toThrow(ValidationError);
+      await expect(dispatch('sql_batch_query', { database: 'db' })).rejects.toThrow(
+        ValidationError
+      );
     });
   });
 
@@ -101,8 +142,12 @@ describe('dispatcher', () => {
 
     it('should throw ValidationError when missing required args', async () => {
       await expect(dispatch('sql_analyze_performance', {})).rejects.toThrow(ValidationError);
-      await expect(dispatch('sql_analyze_performance', { database: 'db' })).rejects.toThrow(ValidationError);
-      await expect(dispatch('sql_analyze_performance', { query: 'q' })).rejects.toThrow(ValidationError);
+      await expect(dispatch('sql_analyze_performance', { database: 'db' })).rejects.toThrow(
+        ValidationError
+      );
+      await expect(dispatch('sql_analyze_performance', { query: 'q' })).rejects.toThrow(
+        ValidationError
+      );
     });
   });
 
@@ -160,7 +205,9 @@ describe('dispatcher', () => {
     it('should throw ValidationError when missing required args', async () => {
       await expect(dispatch('sql_add_database', {})).rejects.toThrow(ValidationError);
       await expect(dispatch('sql_add_database', { name: 'db' })).rejects.toThrow(ValidationError);
-      await expect(dispatch('sql_add_database', { type: 'mysql' })).rejects.toThrow(ValidationError);
+      await expect(dispatch('sql_add_database', { type: 'mysql' })).rejects.toThrow(
+        ValidationError
+      );
     });
   });
 
@@ -168,7 +215,10 @@ describe('dispatcher', () => {
     it('should route to handleUpdateDatabase with valid args', async () => {
       await dispatch('sql_update_database', { database: 'mydb', host: 'new-host' });
 
-      expect(handleUpdateDatabase).toHaveBeenCalledWith(ctx, { database: 'mydb', host: 'new-host' });
+      expect(handleUpdateDatabase).toHaveBeenCalledWith(ctx, {
+        database: 'mydb',
+        host: 'new-host',
+      });
     });
 
     it('should throw ValidationError when missing database', async () => {
@@ -209,7 +259,9 @@ describe('dispatcher', () => {
 
     it('should throw ValidationError when missing required args', async () => {
       await expect(dispatch('sql_set_mcp_configurable', {})).rejects.toThrow(ValidationError);
-      await expect(dispatch('sql_set_mcp_configurable', { database: 'db' })).rejects.toThrow(ValidationError);
+      await expect(dispatch('sql_set_mcp_configurable', { database: 'db' })).rejects.toThrow(
+        ValidationError
+      );
     });
   });
 

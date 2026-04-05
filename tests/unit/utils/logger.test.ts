@@ -345,13 +345,21 @@ describe('Logger', () => {
     });
 
     it('should use short format', () => {
-      const logger = new Logger({ enableFile: false, enableConsole: true, timestampFormat: 'short' });
+      const logger = new Logger({
+        enableFile: false,
+        enableConsole: true,
+        timestampFormat: 'short',
+      });
       logger.info('test');
       expect(console.log).toHaveBeenCalled();
     });
 
     it('should use no timestamp', () => {
-      const logger = new Logger({ enableFile: false, enableConsole: true, timestampFormat: 'none' });
+      const logger = new Logger({
+        enableFile: false,
+        enableConsole: true,
+        timestampFormat: 'none',
+      });
       logger.info('test');
       const call = (console.log as jest.Mock).mock.calls[0][0];
       expect(call).toContain('[]'); // empty timestamp
