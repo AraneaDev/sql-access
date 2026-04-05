@@ -18,7 +18,7 @@ This guide provides a comprehensive development environment setup for contributi
 
 ```bash
 # Clone the repository
-https://forgejo.aranea.dev/ContextForge/sql-access.git
+https://github.com/AraneaDev/sql-access.git
 cd sql-access
 
 # Install dependencies

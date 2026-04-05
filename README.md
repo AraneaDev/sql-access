@@ -40,7 +40,7 @@
 
 ### 1. Install
 ```bash
-git clone https://forgejo.aranea.dev/ContextForge/sql-access.git
+git clone https://github.com/AraneaDev/sql-access.git
 cd sql-access
 npm install
 npm run build
@@ -283,7 +283,7 @@ The following CLI commands are available after installation:
 
 ### Development Setup
 ```bash
-git clone https://forgejo.aranea.dev/ContextForge/sql-access.git
+git clone https://github.com/AraneaDev/sql-access.git
 cd sql-access
 npm install
 npm run dev
