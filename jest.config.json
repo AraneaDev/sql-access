@@ -10,8 +10,7 @@
     "!src/setup/**/*",
     "!src/index.ts",
     "!src/install.ts",
-    "!src/setup.ts",
-    "!src/types/**/*"
+    "!src/setup.ts"
   ],
   "coverageDirectory": "coverage",
   "coverageReporters": [
