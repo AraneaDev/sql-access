@@ -105,7 +105,10 @@ export class MySQLAdapter extends DatabaseAdapter {
 
     try {
       const mysqlConn = connection as MySQLConnection;
-      const [rows, fields] = await mysqlConn.execute(query, (params ?? []) as (string | number | boolean | null)[]);
+      const [rows, fields] = await mysqlConn.execute(
+        query,
+        (params ?? []) as (string | number | boolean | null)[]
+      );
 
       return this.normalizeQueryResult({ rows, fields }, startTime);
     } catch (error) {
