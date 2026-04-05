@@ -11,7 +11,7 @@ graph TB
  Server --> Security[SecurityManager]
  Server --> Connection[ConnectionManager]
  Server --> Schema[SchemaManager]
- Server --> SSH[SSHTunnelManager]
+ Server --> SSH[EnhancedSSHTunnelManager]
  
  Connection --> Adapters[Database Adapters]
  Adapters --> PostgreSQL[(PostgreSQL)]
@@ -54,7 +54,7 @@ graph TB
 - `ConnectionManager` - Connection pooling and lifecycle
 - `SecurityManager` - Query validation and security
 - `SchemaManager` - Schema discovery and caching
-- `SSHTunnelManager` - SSH tunnel management
+- `EnhancedSSHTunnelManager` - SSH tunnel management
 
 ### 3. Data Access Layer
 **Responsibility**: Database-specific implementations and abstractions
@@ -90,7 +90,7 @@ graph TB
 1. **Claude Desktop** sends MCP request via stdio
 2. **SQLMCPServer** receives and validates the request
 3. **SecurityManager** validates query permissions and complexity
-4. **SSHTunnelManager** establishes tunnels if needed
+4. **EnhancedSSHTunnelManager** establishes tunnels if needed
 5. **ConnectionManager** gets/creates database connection
 6. **Database Adapter** executes query against target database
 7. **SchemaManager** caches metadata if needed
@@ -103,10 +103,10 @@ graph LR
  SQLMCPServer --> ConnectionManager
  SQLMCPServer --> SecurityManager
  SQLMCPServer --> SchemaManager
- SQLMCPServer --> SSHTunnelManager
+ SQLMCPServer --> EnhancedSSHTunnelManager
  
  ConnectionManager --> AdapterFactory
- ConnectionManager --> SSHTunnelManager
+ ConnectionManager --> EnhancedSSHTunnelManager
  
  SchemaManager --> ConnectionManager
  
@@ -183,7 +183,7 @@ The `AdapterFactory` provides:
 sequenceDiagram
  participant C as Client
  participant CM as ConnectionManager
- participant SSH as SSHTunnelManager
+ participant SSH as EnhancedSSHTunnelManager
  participant A as DatabaseAdapter
  participant DB as Database
  
@@ -271,7 +271,7 @@ src/
 |   +-- ConnectionManager.ts # Connection management
 |   +-- SecurityManager.ts # Security and validation
 |   +-- SchemaManager.ts # Schema caching
-|   +-- SSHTunnelManager.ts # SSH tunneling
+|   +-- EnhancedSSHTunnelManager.ts # SSH tunneling
 +-- database/ # Database access layer
 |   +-- adapters/ # Database-specific adapters
 +-- types/ # TypeScript definitions

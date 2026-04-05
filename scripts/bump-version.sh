@@ -8,6 +8,7 @@ set -euo pipefail
 #   - package.json + package-lock.json (via npm version)
 #   - src/types/index.ts (SERVER_VERSION constant)
 #   - README.md (title and description version references)
+#   - docs/README.md (Version: x.y.z footer)
 
 BUMP="${1:-}"
 
@@ -58,7 +59,11 @@ sed -i "s/export const SERVER_VERSION = '.*'/export const SERVER_VERSION = '${NE
 echo "  Updating README.md..."
 sed -i "s/v${OLD_VERSION}/v${NEW_VERSION}/g" README.md
 
-# 4. Verify all files match
+# 4. docs/README.md — replace version in footer
+echo "  Updating docs/README.md..."
+sed -i "s/\*\*Version:\*\* ${OLD_VERSION}/**Version:** ${NEW_VERSION}/" docs/README.md
+
+# 5. Verify all files match
 echo ""
 echo "  Verifying..."
 
@@ -82,6 +87,12 @@ if [[ "$README_COUNT" -lt 1 ]]; then
   ERRORS=$((ERRORS + 1))
 fi
 
+DOCS_README_COUNT=$(grep -c "**Version:** ${NEW_VERSION}" docs/README.md || true)
+if [[ "$DOCS_README_COUNT" -lt 1 ]]; then
+  echo "  FAIL: docs/README.md has no references to ${NEW_VERSION}"
+  ERRORS=$((ERRORS + 1))
+fi
+
 if [[ "$ERRORS" -gt 0 ]]; then
   echo ""
   echo "  ERROR: ${ERRORS} verification(s) failed. Aborting."
@@ -93,7 +104,7 @@ echo "  OK: All files updated to v${NEW_VERSION}"
 
 # 5. Commit and tag
 echo ""
-git add package.json package-lock.json src/types/index.ts README.md
+git add package.json package-lock.json src/types/index.ts README.md docs/README.md
 git commit -m "chore: bump version to v${NEW_VERSION}"
 git tag -a "v${NEW_VERSION}" -m "Release v${NEW_VERSION}"
 
@@ -104,6 +115,7 @@ echo "  package.json         ✓"
 echo "  package-lock.json    ✓"
 echo "  src/types/index.ts   ✓"
 echo "  README.md            ✓"
+echo "  docs/README.md       ✓"
 echo "  git tag v${NEW_VERSION}   ✓"
 echo ""
 echo "To push: git push && git push --tags"
