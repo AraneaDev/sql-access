@@ -134,7 +134,7 @@ export class RedactionPatterns {
 
     try {
       return value.replace(new RegExp(pattern, 'gi'), replacement);
-    } catch (error) {
+    } catch {
       // If regex is invalid, fall back to full masking
       return this.fullMask(value);
     }

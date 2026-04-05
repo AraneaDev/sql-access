@@ -105,7 +105,7 @@ export class MySQLAdapter extends DatabaseAdapter {
 
     try {
       const mysqlConn = connection as MySQLConnection;
-      const [rows, fields] = await mysqlConn.execute(query, params);
+      const [rows, fields] = await mysqlConn.execute(query, (params ?? []) as (string | number | boolean | null)[]);
 
       return this.normalizeQueryResult({ rows, fields }, startTime);
     } catch (error) {
@@ -183,7 +183,7 @@ export class MySQLAdapter extends DatabaseAdapter {
  `;
 
       const [tablesRows] = await (connection as MySQLConnection).execute(tablesQuery, [
-        this.config.database,
+        this.config.database ?? '',
       ]);
       const tables = tablesRows as Array<{
         TABLE_NAME: string;
@@ -238,7 +238,7 @@ export class MySQLAdapter extends DatabaseAdapter {
  `;
 
     const [columnsRows] = await (connection as MySQLConnection).execute(columnsQuery, [
-      this.config.database,
+      this.config.database ?? '',
       tableName,
     ]);
 

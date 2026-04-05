@@ -152,10 +152,8 @@ export interface SQLRefreshSchemaArgs {
   database: string;
 }
 
-// Empty interface for list_databases (no arguments required)
-export interface SQLListDatabasesArgs {
-  // No properties - this tool takes no arguments
-}
+// Type alias for list_databases (no arguments required)
+export type SQLListDatabasesArgs = Record<string, never>;
 
 // ============================================================================
 // MCP Tool Validation Types

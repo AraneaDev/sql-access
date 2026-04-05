@@ -457,12 +457,13 @@ export class ConnectionManager extends EventEmitter {
       dbNames.map((dbName) =>
         Promise.race([
           this.closeConnection(dbName),
-          new Promise<void>((_, reject) =>
-            setTimeout(
+          new Promise<void>((_, reject) => {
+            const timer = setTimeout(
               () => reject(new Error(`Timeout closing connection '${dbName}'`)),
               PER_CONNECTION_TIMEOUT
-            )
-          ),
+            );
+            timer.unref();
+          }),
         ])
       )
     );

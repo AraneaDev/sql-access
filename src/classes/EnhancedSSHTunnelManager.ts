@@ -284,12 +284,13 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
       dbNames.map((dbName) =>
         Promise.race([
           this.closeTunnel(dbName),
-          new Promise<void>((_, reject) =>
-            setTimeout(
+          new Promise<void>((_, reject) => {
+            const timer = setTimeout(
               () => reject(new Error(`Timeout closing tunnel '${dbName}'`)),
               PER_TUNNEL_TIMEOUT
-            )
-          ),
+            );
+            timer.unref();
+          }),
         ])
       )
     );
@@ -435,7 +436,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
           maxAttempts: 5,
         });
         response.suggestion = suggestion.assignedPort;
-      } catch (error) {
+      } catch {
         // No suggestion available
       }
     }

@@ -221,7 +221,7 @@ export class SetupValidator {
           `Directory '${dir}' does not exist - ensure it will be created before running`
         );
       }
-    } catch (error) {
+    } catch {
       result.warnings.push('Could not validate directory path');
     }
 
@@ -337,7 +337,7 @@ export class SetupValidator {
           );
         }
       }
-    } catch (error) {
+    } catch {
       result.warnings.push('Could not validate private key file permissions');
     }
 

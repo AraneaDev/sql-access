@@ -560,7 +560,7 @@ export class SchemaManager extends EventEmitter {
             const filePath = join(this.schemaPath, file);
             const stats = statSync(filePath);
             totalSizeBytes += stats.size;
-          } catch (error) {
+          } catch {
             // Ignore individual file errors
           }
         }

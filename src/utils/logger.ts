@@ -83,7 +83,11 @@ export class Logger {
   async cleanup(): Promise<void> {
     if (this.logStream) {
       await new Promise<void>((resolve) => {
-        this.logStream?.end(resolve) ?? resolve();
+        if (this.logStream) {
+          this.logStream.end(resolve);
+        } else {
+          resolve();
+        }
       });
       this.logStream = undefined;
     }
@@ -183,7 +187,7 @@ export class Logger {
           // Only log non-EPIPE errors to stderr as last resort
           try {
             process.stderr.write(`Logger write error: ${error}\n`);
-          } catch (e) {
+          } catch {
             // Completely ignore if even stderr fails
           }
         }
@@ -251,24 +255,25 @@ export class Logger {
       // For other errors, try stderr as fallback
       try {
         process.stderr.write(`Console output error: ${error}\n`);
-      } catch (e) {
+      } catch {
         // If even stderr fails, give up silently
         this.config.enableConsole = false;
       }
     }
   }
 
+  // eslint-disable-next-line no-console -- logger is the one place that legitimately uses console
   private getConsoleMethod(level: LogEntry['level']): (..._args: unknown[]) => void {
     switch (level) {
       case 'INFO':
-        return console.log;
+        return console.log; // eslint-disable-line no-console
       case 'WARNING':
-        return console.warn;
+        return console.warn; // eslint-disable-line no-console
       case 'ERROR':
       case 'CRITICAL':
-        return console.error;
+        return console.error; // eslint-disable-line no-console
       default:
-        return console.log;
+        return console.log; // eslint-disable-line no-console
     }
   }
 
