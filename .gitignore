@@ -140,4 +140,4 @@ id_rsa*
 # Backup files
 *.bak
 *.backup
-*.old
+*.old.claude/
