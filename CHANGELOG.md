@@ -5,6 +5,24 @@ All notable changes to the SQL MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.3] - 2026-04-05
+
+### Added
+- 10 new test files covering tools/handlers, utils, types, and adapter factory
+- GitHub Actions CI workflow with lint, format, type-check, and test matrix (Node 18/20/22)
+- Prettier code formatting with `.prettierrc.json` and `.prettierignore`
+
+### Changed
+- Expanded 12 existing test files with error path, edge case, and branch coverage
+- Raised Jest coverage thresholds to industry standards: 80% statements/lines/functions, 70% branches
+- Total test count: 416 → 1101 tests across 21 suites
+
+### Fixed
+- Redaction manager test describe block structure (premature closure)
+- Logger test url mock for SWC CJS transform compatibility (`pathToFileURL`)
+- Connection manager SQLite+ssh_host test missing required `ssh_password` field
+- Timing-sensitive exponential backoff test tolerance
+
 ## [2.4.2] - 2026-03-28
 
 ### Changed
