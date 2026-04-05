@@ -3,6 +3,7 @@
  */
 
 import type { Client as PgClient } from 'pg';
+import { SecurityViolationError } from '../utils/error-handler.js';
 import type { Connection as MySQLConnection } from 'mysql2/promise';
 import type { Database as SQLiteConnection } from 'sqlite3';
 import type { ConnectionPool as MSSQLConnection } from 'mssql';
@@ -38,6 +39,7 @@ export interface DatabaseConfig {
  username?: string;
  password?: string;
  ssl?: boolean;
+ ssl_verify?: boolean; // Verify SSL certificates (default: false for self-signed cert compatibility)
  select_only?: boolean;
  timeout?: number;
  file?: string; // For SQLite
@@ -235,50 +237,7 @@ export interface StandardErrorResponse {
  };
 }
 
-/**
- *
- */
-export class SQLMCPError extends Error {
- public code: string;
- public details?: Record<string, unknown>;
-
- constructor(message: string, code: string, details?: Record<string, unknown>) {
- super(message);
- this.name = 'SQLMCPError';
- this.code = code;
- this.details = details;
- }
-}
-
-/**
- *
- */
-export class SecurityViolationError extends SQLMCPError {
- constructor(message: string, details?: Record<string, unknown>) {
- super(message, 'SECURITY_VIOLATION', details);
- this.name = 'SecurityViolationError';
- }
-}
-
-/**
- *
- */
-export class ConnectionError extends SQLMCPError {
- constructor(message: string, details?: Record<string, unknown>) {
- super(message, 'CONNECTION_ERROR', details);
- this.name = 'ConnectionError';
- }
-}
-
-/**
- *
- */
-export class QueryExecutionError extends SQLMCPError {
- constructor(message: string, details?: Record<string, unknown>) {
- super(message, 'QUERY_EXECUTION_ERROR', details);
- this.name = 'QueryExecutionError';
- }
-}
+// Error classes are defined in ../utils/error-handler.ts and re-exported via types/index.ts
 
 // ============================================================================
 // Utility Types

@@ -274,35 +274,6 @@ export abstract class DatabaseAdapter {
  ].reduce((total, table) => total + table.columns.length, 0);
  }
 
- /**
- * Safely get a string value from a query result row
- */
- protected getSafeString(row: Record<string, unknown>, field: string): string {
- const value = row[field];
- return value !== null && value !== undefined ? String(value) : '';
- }
-
- /**
- * Safely get a number value from a query result row
- */
- protected getSafeNumber(row: Record<string, unknown>, field: string): number | null {
- const value = row[field];
- if (value === null || value === undefined) return null;
- 
- const num = typeof value === 'number' ? value : parseInt(String(value), 10);
- return isNaN(num) ? null : num;
- }
-
- /**
- * Safely get a boolean value from a query result row
- */
- protected getSafeBoolean(row: Record<string, unknown>, field: string): boolean {
- const value = row[field];
- if (typeof value === 'boolean') return value;
- if (typeof value === 'string') return value.toLowerCase() === 'yes';
- return false;
- }
-
  // ============================================================================
  // Redaction Management Methods
  // ============================================================================

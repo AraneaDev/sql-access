@@ -44,8 +44,8 @@ export interface MCPNotification extends MCPMessage {
 // ============================================================================
 
 export interface MCPCapabilities {
- tools?: object;
- logging?: object;
+ tools?: Record<string, unknown>;
+ logging?: Record<string, unknown>;
 }
 
 export interface MCPServerInfo {

@@ -184,13 +184,18 @@ export type ViewInfo = EnhancedViewInfo;
 export type ForeignKeyInfo = BasicForeignKeyInfo;
 export type IndexInfo = BasicIndexInfo;
 
-// Error classes
+// Error classes (single source of truth in error-handler.ts)
 export {
  SQLMCPError,
  SecurityViolationError,
  ConnectionError,
- QueryExecutionError
-} from './database.js';
+ QueryExecutionError,
+ ConfigurationError,
+ SchemaError,
+ SSHTunnelError,
+ ValidationError,
+ TimeoutError
+} from '../utils/error-handler.js';
 
 // Type guards
 export {

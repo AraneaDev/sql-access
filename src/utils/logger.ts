@@ -83,7 +83,7 @@ export class Logger {
  async cleanup(): Promise<void> {
  if (this.logStream) {
  await new Promise<void>((resolve) => {
- this.logStream!.end(resolve);
+ this.logStream?.end(resolve) ?? resolve();
  });
  this.logStream = undefined;
  }

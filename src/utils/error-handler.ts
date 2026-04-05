@@ -97,7 +97,7 @@ export class SSHTunnelError extends SQLMCPError {
  * Validation error
  */
 export class ValidationError extends SQLMCPError {
- constructor(message: string, public field: string, details?: Record<string, unknown>) {
+ constructor(message: string, public field: string = 'unknown', details?: Record<string, unknown>) {
  super(message, 'VALIDATION_ERROR', { field, ...details });
  this.name = 'ValidationError';
  }
@@ -111,6 +111,13 @@ export class TimeoutError extends SQLMCPError {
  super(message, 'TIMEOUT_ERROR', { timeoutMs, ...details });
  this.name = 'TimeoutError';
  }
+}
+
+/**
+ * Extract error message from unknown error type
+ */
+export function getErrorMessage(error: unknown): string {
+ return error instanceof Error ? error.message : 'Unknown error';
 }
 
 /**

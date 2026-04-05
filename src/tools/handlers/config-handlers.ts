@@ -4,32 +4,25 @@
  * sql_get_config, sql_set_mcp_configurable
  */
 
-import type { DatabaseConfig, MCPToolResponse } from '../../types/index.js';
+import type { DatabaseConfig, DatabaseTypeString, MCPToolResponse } from '../../types/index.js';
+import { DEFAULT_DATABASE_PORTS } from '../../types/index.js';
 import { saveConfigFile } from '../../utils/config.js';
+import { createToolResponse } from '../../utils/response-formatter.js';
 import type { ToolHandlerContext } from './types.js';
-
-function getDefaultPort(type: string): number {
- switch (type.toLowerCase()) {
- case 'mysql': return 3306;
- case 'postgresql':
- case 'postgres': return 5432;
- case 'mssql':
- case 'sqlserver': return 1433;
- default: return 0;
- }
-}
+import { requireDbConfig } from './types.js';
+import { ValidationError, ConfigurationError } from '../../utils/error-handler.js';
 
 export async function handleAddDatabase(ctx: ToolHandlerContext, args: Record<string, unknown>): Promise<MCPToolResponse> {
  const name = args.name as string;
 
  if (ctx.config.databases[name]) {
- throw new Error(`Database '${name}' already exists. Use sql_update_database to modify it.`);
+ throw new ConfigurationError(`Database '${name}' already exists. Use sql_update_database to modify it.`);
  }
 
  const dbType = (args.type as string).toLowerCase();
  const validTypes = ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'];
  if (!validTypes.includes(dbType)) {
- throw new Error(`Invalid database type '${dbType}'. Valid types: ${validTypes.join(', ')}`);
+ throw new ValidationError(`Invalid database type '${dbType}'. Valid types: ${validTypes.join(', ')}`);
  }
 
  const dbConfig: DatabaseConfig = {
@@ -39,17 +32,18 @@ export async function handleAddDatabase(ctx: ToolHandlerContext, args: Record<st
  };
 
  if (dbType === 'sqlite') {
- if (!args.file) throw new Error("SQLite databases require 'file' parameter");
+ if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter");
  dbConfig.file = args.file as string;
  } else {
- if (!args.host) throw new Error(`Database type '${dbType}' requires 'host' parameter`);
- if (!args.username) throw new Error(`Database type '${dbType}' requires 'username' parameter`);
+ if (!args.host) throw new ValidationError(`Database type '${dbType}' requires 'host' parameter`);
+ if (!args.username) throw new ValidationError(`Database type '${dbType}' requires 'username' parameter`);
  dbConfig.host = args.host as string;
- dbConfig.port = (args.port as number) || getDefaultPort(dbType);
+ dbConfig.port = (args.port as number) || (DEFAULT_DATABASE_PORTS[dbType as DatabaseTypeString] ?? 0);
  dbConfig.database = args.database as string;
  dbConfig.username = args.username as string;
  dbConfig.password = args.password as string;
  dbConfig.ssl = (args.ssl as boolean) || false;
+ dbConfig.ssl_verify = (args.ssl_verify as boolean) || false;
  dbConfig.timeout = 30000;
  }
 
@@ -67,26 +61,21 @@ export async function handleAddDatabase(ctx: ToolHandlerContext, args: Record<st
  saveConfigFile(ctx.config, ctx.configPath);
  ctx.logger.info(`Database '${name}' added via MCP`, { type: dbType });
 
- return {
- content: [{
- type: "text",
- text: ` Database '${name}' added successfully (type: ${dbType})\n` +
+ return createToolResponse(
+ ` Database '${name}' added successfully (type: ${dbType})\n` +
  ` MCP configurable: yes (can be locked via sql_set_mcp_configurable)\n` +
  ` SELECT-only: ${dbConfig.select_only ? 'yes' : 'no'}\n` +
  `Use sql_test_connection to verify connectivity.`
- }],
- _meta: { progressToken: null }
- };
+ );
 }
 
 export async function handleUpdateDatabase(ctx: ToolHandlerContext, args: Record<string, unknown>): Promise<MCPToolResponse> {
  const database = args.database as string;
 
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) throw new Error(`Database '${database}' not found`);
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  if (!dbConfig.mcp_configurable) {
- throw new Error(
+ throw new ConfigurationError(
  `Database '${database}' is not MCP-configurable. ` +
  `Set mcp_configurable=true in config.ini manually to enable MCP configuration.`
  );
@@ -101,6 +90,7 @@ export async function handleUpdateDatabase(ctx: ToolHandlerContext, args: Record
  if (args.password !== undefined) { dbConfig.password = args.password as string; updated.push('password'); }
  if (args.file !== undefined) { dbConfig.file = args.file as string; updated.push('file'); }
  if (args.ssl !== undefined) { dbConfig.ssl = args.ssl as boolean; updated.push('ssl'); }
+ if (args.ssl_verify !== undefined) { dbConfig.ssl_verify = args.ssl_verify as boolean; updated.push('ssl_verify'); }
  if (args.select_only !== undefined) { dbConfig.select_only = args.select_only as boolean; updated.push('select_only'); }
 
  if (args.ssh_host !== undefined) { dbConfig.ssh_host = args.ssh_host as string; updated.push('ssh_host'); }
@@ -110,10 +100,7 @@ export async function handleUpdateDatabase(ctx: ToolHandlerContext, args: Record
  if (args.ssh_private_key !== undefined) { dbConfig.ssh_private_key = args.ssh_private_key as string; updated.push('ssh_private_key'); }
 
  if (updated.length === 0) {
- return {
- content: [{ type: "text", text: `No changes provided for database '${database}'.` }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(`No changes provided for database '${database}'.`);
  }
 
  ctx.connectionManager.unregisterDatabase(database);
@@ -122,23 +109,18 @@ export async function handleUpdateDatabase(ctx: ToolHandlerContext, args: Record
  saveConfigFile(ctx.config, ctx.configPath);
  ctx.logger.info(`Database '${database}' updated via MCP`, { fields: updated });
 
- return {
- content: [{
- type: "text",
- text: ` Database '${database}' updated successfully\n` +
+ return createToolResponse(
+ ` Database '${database}' updated successfully\n` +
  ` Changed fields: ${updated.join(', ')}\n` +
  `Use sql_test_connection to verify connectivity with new settings.`
- }],
- _meta: { progressToken: null }
- };
+ );
 }
 
 export async function handleRemoveDatabase(ctx: ToolHandlerContext, database: string): Promise<MCPToolResponse> {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) throw new Error(`Database '${database}' not found`);
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  if (!dbConfig.mcp_configurable) {
- throw new Error(
+ throw new ConfigurationError(
  `Database '${database}' is not MCP-configurable. ` +
  `Cannot remove databases that are not MCP-configurable. Edit config.ini manually.`
  );
@@ -154,18 +136,11 @@ export async function handleRemoveDatabase(ctx: ToolHandlerContext, database: st
  saveConfigFile(ctx.config, ctx.configPath);
  ctx.logger.info(`Database '${database}' removed via MCP`);
 
- return {
- content: [{
- type: "text",
- text: ` Database '${database}' removed successfully\nConnection closed and configuration saved.`
- }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(` Database '${database}' removed successfully\nConnection closed and configuration saved.`);
 }
 
 export async function handleGetConfig(ctx: ToolHandlerContext, database: string): Promise<MCPToolResponse> {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) throw new Error(`Database '${database}' not found`);
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  const redactedConfig: Record<string, unknown> = { ...dbConfig };
 
@@ -188,29 +163,21 @@ export async function handleGetConfig(ctx: ToolHandlerContext, database: string)
  }
  responseText += `\n MCP configurable: ${dbConfig.mcp_configurable ? 'yes' : 'no'}`;
 
- return {
- content: [{ type: "text", text: responseText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText);
 }
 
 export async function handleSetMcpConfigurable(ctx: ToolHandlerContext, database: string, enabled: boolean): Promise<MCPToolResponse> {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) throw new Error(`Database '${database}' not found`);
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  if (enabled === true) {
- return {
- content: [{
- type: "text",
- text: ` Cannot enable MCP configurability via MCP tools.\n` +
+ return createToolResponse(
+ ` Cannot enable MCP configurability via MCP tools.\n` +
  `For security, setting mcp_configurable=true must be done by manually editing config.ini.\n` +
  `This prevents an AI from re-enabling its own configuration access after a human locks it.\n\n` +
  `To unlock, add this to config.ini under [database.${database}]:\n` +
- `mcp_configurable=true`
- }],
- isError: true,
- _meta: { progressToken: null }
- };
+ `mcp_configurable=true`,
+ true
+ );
  }
 
  dbConfig.mcp_configurable = false;
@@ -218,12 +185,8 @@ export async function handleSetMcpConfigurable(ctx: ToolHandlerContext, database
  saveConfigFile(ctx.config, ctx.configPath);
  ctx.logger.info(`Database '${database}' locked from MCP configuration`);
 
- return {
- content: [{
- type: "text",
- text: ` Database '${database}' is now locked from MCP configuration changes.\n` +
+ return createToolResponse(
+ ` Database '${database}' is now locked from MCP configuration changes.\n` +
  `To re-enable MCP configuration, manually set mcp_configurable=true in config.ini.`
- }],
- _meta: { progressToken: null }
- };
+ );
 }

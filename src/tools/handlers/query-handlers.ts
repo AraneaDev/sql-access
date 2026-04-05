@@ -10,17 +10,16 @@ import type {
  MCPToolResponse
 } from '../../types/index.js';
 import { SecurityViolationError } from '../../types/index.js';
-import { formatTableResults, formatCondensedTableResults } from '../../utils/response-formatter.js';
+import { formatTableResults, formatCondensedTableResults, createToolResponse } from '../../utils/response-formatter.js';
+import { getErrorMessage, ValidationError } from '../../utils/error-handler.js';
 import type { ToolHandlerContext } from './types.js';
+import { requireDbConfig } from './types.js';
 
 export async function handleSqlQuery(ctx: ToolHandlerContext, args: SQLQueryArgs): Promise<MCPToolResponse> {
  const { database, query, params = [] } = args;
 
  try {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) {
- throw new Error(`Database configuration '${database}' not found`);
- }
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  // Security validation for SELECT-only mode
  if (dbConfig.select_only) {
@@ -47,7 +46,7 @@ export async function handleSqlQuery(ctx: ToolHandlerContext, args: SQLQueryArgs
  await ctx.schemaManager.captureSchema(database, dbConfig);
  }
  } catch (error) {
- ctx.logger.warning('Failed to capture schema', { database, error: error instanceof Error ? error.message : 'Unknown error' });
+ ctx.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
  }
  }
 
@@ -64,13 +63,10 @@ export async function handleSqlQuery(ctx: ToolHandlerContext, args: SQLQueryArgs
  responseText += 'No results returned.\n';
  }
 
- return {
- content: [{ type: "text", text: responseText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ const errorMessage = getErrorMessage(error);
  let responseText = ` Query failed on ${database}: ${errorMessage}`;
 
  if (error instanceof SecurityViolationError) {
@@ -80,11 +76,7 @@ export async function handleSqlQuery(ctx: ToolHandlerContext, args: SQLQueryArgs
  responseText += 'To modify data, use a database configured with full access permissions.';
  }
 
- return {
- content: [{ type: "text", text: responseText }],
- isError: true,
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText, true);
  }
 }
 
@@ -92,19 +84,16 @@ export async function handleBatchQuery(ctx: ToolHandlerContext, args: SQLBatchQu
  const { database, queries, transaction = false } = args;
 
  if (!queries || queries.length === 0) {
- throw new Error('No queries provided for batch execution');
+ throw new ValidationError('No queries provided for batch execution');
  }
 
  const maxBatchSize = ctx.config.extension?.max_batch_size || 10;
  if (queries.length > maxBatchSize) {
- throw new Error(`Batch size exceeds maximum of ${maxBatchSize} queries`);
+ throw new ValidationError(`Batch size exceeds maximum of ${maxBatchSize} queries`);
  }
 
  try {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) {
- throw new Error(`Database configuration '${database}' not found`);
- }
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  if (dbConfig.select_only) {
  for (const query of queries) {
@@ -170,13 +159,10 @@ export async function handleBatchQuery(ctx: ToolHandlerContext, args: SQLBatchQu
  responseText += ` Query: \`${queryResult.query?.substring(0, 100)}${queryResult.query && queryResult.query.length > 100 ? '...' : ''}\`\n\n`;
  }
 
- return {
- content: [{ type: "text", text: responseText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+ const errorMessage = getErrorMessage(error);
  let responseText = ` **Batch Query Failed** (${database})\n\n`;
  responseText += ` **Error:** ${errorMessage}\n\n`;
 
@@ -186,11 +172,7 @@ export async function handleBatchQuery(ctx: ToolHandlerContext, args: SQLBatchQu
  responseText += 'All queries in the batch must comply with security restrictions.';
  }
 
- return {
- content: [{ type: "text", text: responseText }],
- isError: true,
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText, true);
  }
 }
 
@@ -198,10 +180,7 @@ export async function handleAnalyzePerformance(ctx: ToolHandlerContext, args: SQ
  const { database, query } = args;
 
  try {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) {
- throw new Error(`Database configuration '${database}' not found`);
- }
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  if (dbConfig.ssh_host) {
  ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
@@ -226,17 +205,10 @@ export async function handleAnalyzePerformance(ctx: ToolHandlerContext, args: SQ
  responseText += ` **Performance Recommendations:**\n`;
  responseText += analysis.recommendations;
 
- return {
- content: [{ type: "text", text: responseText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
- return {
- content: [{ type: "text", text: ` Performance analysis failed for ${database}: ${errorMessage}` }],
- isError: true,
- _meta: { progressToken: null }
- };
+ const errorMessage = getErrorMessage(error);
+ return createToolResponse(` Performance analysis failed for ${database}: ${errorMessage}`, true);
  }
 }

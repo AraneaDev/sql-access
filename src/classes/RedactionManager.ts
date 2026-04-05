@@ -11,6 +11,7 @@ import type {
  RedactionAuditEntry
 } from '../types/index.js';
 import { getLogger } from '../utils/logger.js';
+import { getErrorMessage } from '../utils/error-handler.js';
 
 // ============================================================================
 // Redaction Pattern Implementations
@@ -258,7 +259,7 @@ export class RedactionManager {
  redactionResult.redaction_count++;
  redactionResult.rules_applied.push(rule.field_pattern);
  } catch (error) {
- const errorMsg = `Failed to redact field '${fieldName}': ${error instanceof Error ? error.message : 'Unknown error'}`;
+ const errorMsg = `Failed to redact field '${fieldName}': ${getErrorMessage(error)}`;
  redactionResult.warnings = redactionResult.warnings || [];
  redactionResult.warnings.push(errorMsg);
  this.logger.warning('Redaction error', { field: fieldName, error: errorMsg });

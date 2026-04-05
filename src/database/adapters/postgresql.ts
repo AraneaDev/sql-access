@@ -38,7 +38,12 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
  // Handle SSL configuration
  if (this.config.ssl !== undefined) {
  const sslEnabled = this.parseConfigValue(this.config.ssl, 'boolean', false);
- connectionConfig.ssl = sslEnabled ? { rejectUnauthorized: false } : false;
+ if (sslEnabled) {
+ const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+ connectionConfig.ssl = { rejectUnauthorized: sslVerify };
+ } else {
+ connectionConfig.ssl = false;
+ }
  }
 
  try {
@@ -63,7 +68,7 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
  try {
  const pgClient = connection as PgClient;
  // PostgreSQL client has _connected property to check connection status
- return pgClient && (pgClient as any)._connected === true;
+ return pgClient && '_connected' in pgClient && (pgClient as Record<string, unknown>)._connected === true;
  } catch {
  return false;
  }

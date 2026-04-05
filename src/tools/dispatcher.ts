@@ -17,6 +17,7 @@ import {
  handleGetConfig, handleSetMcpConfigurable
 } from './handlers/config-handlers.js';
 import type { ToolHandlerContext } from './handlers/types.js';
+import { ValidationError } from '../utils/error-handler.js';
 
 export type ToolDispatchFn = (name: string, args: Record<string, unknown>) => Promise<MCPToolResponse>;
 
@@ -28,19 +29,19 @@ export function createToolDispatcher(ctx: ToolHandlerContext): ToolDispatchFn {
  switch (name) {
  case "sql_query":
  if (!isSQLQueryArgs(args)) {
- throw new Error("Missing required arguments: 'database' and 'query' are required");
+ throw new ValidationError("Missing required arguments: 'database' and 'query' are required");
  }
  return handleSqlQuery(ctx, args);
 
  case "sql_batch_query":
  if (!isSQLBatchQueryArgs(args)) {
- throw new Error("Missing required arguments: 'database' and 'queries' are required");
+ throw new ValidationError("Missing required arguments: 'database' and 'queries' are required");
  }
  return handleBatchQuery(ctx, args);
 
  case "sql_analyze_performance":
  if (!args.database || !args.query) {
- throw new Error("Missing required arguments: 'database' and 'query' are required");
+ throw new ValidationError("Missing required arguments: 'database' and 'query' are required");
  }
  return handleAnalyzePerformance(ctx, {
  database: args.database as string,
@@ -52,54 +53,54 @@ export function createToolDispatcher(ctx: ToolHandlerContext): ToolDispatchFn {
 
  case "sql_get_schema":
  if (!isSQLGetSchemaArgs(args)) {
- throw new Error("Missing required argument: 'database' is required");
+ throw new ValidationError("Missing required argument: 'database' is required");
  }
  return handleGetSchema(ctx, args);
 
  case "sql_test_connection":
  if (!isSQLTestConnectionArgs(args)) {
- throw new Error("Missing required argument: 'database' is required");
+ throw new ValidationError("Missing required argument: 'database' is required");
  }
  return handleTestConnection(ctx, args);
 
  case "sql_refresh_schema":
  if (!args.database) {
- throw new Error("Missing required argument: 'database' is required");
+ throw new ValidationError("Missing required argument: 'database' is required");
  }
  return handleRefreshSchema(ctx, { database: args.database as string });
 
  case "sql_add_database":
  if (!args.name || !args.type) {
- throw new Error("Missing required arguments: 'name' and 'type' are required");
+ throw new ValidationError("Missing required arguments: 'name' and 'type' are required");
  }
  return handleAddDatabase(ctx, args);
 
  case "sql_update_database":
  if (!args.database) {
- throw new Error("Missing required argument: 'database' is required");
+ throw new ValidationError("Missing required argument: 'database' is required");
  }
  return handleUpdateDatabase(ctx, args);
 
  case "sql_remove_database":
  if (!args.database) {
- throw new Error("Missing required argument: 'database' is required");
+ throw new ValidationError("Missing required argument: 'database' is required");
  }
  return handleRemoveDatabase(ctx, args.database as string);
 
  case "sql_get_config":
  if (!args.database) {
- throw new Error("Missing required argument: 'database' is required");
+ throw new ValidationError("Missing required argument: 'database' is required");
  }
  return handleGetConfig(ctx, args.database as string);
 
  case "sql_set_mcp_configurable":
  if (!args.database || args.enabled === undefined) {
- throw new Error("Missing required arguments: 'database' and 'enabled' are required");
+ throw new ValidationError("Missing required arguments: 'database' and 'enabled' are required");
  }
  return handleSetMcpConfigurable(ctx, args.database as string, args.enabled as boolean);
 
  default:
- throw new Error(`Unknown tool: ${name}`);
+ throw new ValidationError(`Unknown tool: ${name}`);
  }
  };
 }

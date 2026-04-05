@@ -10,8 +10,10 @@ import type {
  MCPToolResponse,
  DatabaseListItem
 } from '../../types/index.js';
-import { formatDatabaseSummary } from '../../utils/response-formatter.js';
+import { formatDatabaseSummary, createToolResponse } from '../../utils/response-formatter.js';
+import { getErrorMessage, ConnectionError } from '../../utils/error-handler.js';
 import type { ToolHandlerContext } from './types.js';
+import { requireDbConfig } from './types.js';
 
 export async function handleGetSchema(ctx: ToolHandlerContext, args: SQLGetSchemaArgs): Promise<MCPToolResponse> {
  const { database, table } = args;
@@ -19,29 +21,16 @@ export async function handleGetSchema(ctx: ToolHandlerContext, args: SQLGetSchem
  try {
  const schema = ctx.schemaManager.getSchema(database);
  if (!schema) {
- return {
- content: [{
- type: "text",
- text: ` No schema available for database '${database}'. Connect to the database first to capture schema.`
- }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(` No schema available for database '${database}'. Connect to the database first to capture schema.`);
  }
 
  const schemaText = ctx.schemaManager.generateSchemaContext(database, table);
 
- return {
- content: [{ type: "text", text: schemaText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(schemaText);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
- return {
- content: [{ type: "text", text: ` Failed to get schema for ${database}: ${errorMessage}` }],
- isError: true,
- _meta: { progressToken: null }
- };
+ const errorMessage = getErrorMessage(error);
+ return createToolResponse(` Failed to get schema for ${database}: ${errorMessage}`, true);
  }
 }
 
@@ -49,10 +38,7 @@ export async function handleRefreshSchema(ctx: ToolHandlerContext, args: SQLRefr
  const { database } = args;
 
  try {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) {
- throw new Error(`Database configuration '${database}' not found`);
- }
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  // Ensure connection exists
  let connection = await ctx.connectionManager.getConnection(database);
@@ -63,27 +49,17 @@ export async function handleRefreshSchema(ctx: ToolHandlerContext, args: SQLRefr
  await ctx.connectionManager.executeQuery(database, 'SELECT 1', []);
  connection = await ctx.connectionManager.getConnection(database);
  if (!connection) {
- throw new Error(`Could not establish connection to ${database}`);
+ throw new ConnectionError(`Could not establish connection to ${database}`);
  }
  }
 
  const schema = await ctx.schemaManager.refreshSchema(database);
 
- return {
- content: [{
- type: "text",
- text: ` Schema refreshed for ${database}\n Captured: ${schema.summary.table_count} tables, ${schema.summary.total_columns} columns`
- }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(` Schema refreshed for ${database}\n Captured: ${schema.summary.table_count} tables, ${schema.summary.total_columns} columns`);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
- return {
- content: [{ type: "text", text: ` Failed to refresh schema for ${database}: ${errorMessage}` }],
- isError: true,
- _meta: { progressToken: null }
- };
+ const errorMessage = getErrorMessage(error);
+ return createToolResponse(` Failed to refresh schema for ${database}: ${errorMessage}`, true);
  }
 }
 
@@ -128,18 +104,11 @@ export async function handleListDatabases(ctx: ToolHandlerContext): Promise<MCPT
  responseText += ` - Max Query Length: ${ctx.config.security.max_query_length}\n`;
  }
 
- return {
- content: [{ type: "text", text: responseText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
- return {
- content: [{ type: "text", text: ` Failed to list databases: ${errorMessage}` }],
- isError: true,
- _meta: { progressToken: null }
- };
+ const errorMessage = getErrorMessage(error);
+ return createToolResponse(` Failed to list databases: ${errorMessage}`, true);
  }
 }
 
@@ -147,10 +116,7 @@ export async function handleTestConnection(ctx: ToolHandlerContext, args: SQLTes
  const { database } = args;
 
  try {
- const dbConfig = ctx.config.databases[database];
- if (!dbConfig) {
- throw new Error(`Database configuration '${database}' not found`);
- }
+ const dbConfig = requireDbConfig(ctx.config, database);
 
  if (dbConfig.ssh_host) {
  ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
@@ -164,7 +130,7 @@ export async function handleTestConnection(ctx: ToolHandlerContext, args: SQLTes
  await ctx.schemaManager.captureSchema(database, dbConfig);
  }
  } catch (error) {
- ctx.logger.warning('Failed to capture schema', { database, error: error instanceof Error ? error.message : 'Unknown error' });
+ ctx.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
  }
  }
 
@@ -181,17 +147,10 @@ export async function handleTestConnection(ctx: ToolHandlerContext, args: SQLTes
  }
  }
 
- return {
- content: [{ type: "text", text: responseText }],
- _meta: { progressToken: null }
- };
+ return createToolResponse(responseText);
 
  } catch (error) {
- const errorMessage = error instanceof Error ? error.message : 'Unknown error';
- return {
- content: [{ type: "text", text: ` Connection test failed for ${database}: ${errorMessage}` }],
- isError: true,
- _meta: { progressToken: null }
- };
+ const errorMessage = getErrorMessage(error);
+ return createToolResponse(` Connection test failed for ${database}: ${errorMessage}`, true);
  }
 }

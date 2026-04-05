@@ -3,7 +3,21 @@
  * Pure functions for formatting query results and database summaries
  */
 
-import type { QueryResult, DatabaseListItem } from '../types/index.js';
+import type { QueryResult, DatabaseListItem, MCPToolResponse } from '../types/index.js';
+
+/**
+ * Create a standardized MCP tool response
+ */
+export function createToolResponse(text: string, isError = false): MCPToolResponse {
+  const response: MCPToolResponse = {
+    content: [{ type: "text", text }],
+    _meta: { progressToken: null }
+  };
+  if (isError) {
+    response.isError = true;
+  }
+  return response;
+}
 
 /**
  * Format query results as a markdown table

@@ -36,7 +36,7 @@ export class MSSQLAdapter extends DatabaseAdapter {
  requestTimeout: this.connectionTimeout,
  options: {
  encrypt: this.parseConfigValue(this.config.encrypt ?? true, 'boolean', true),
- trustServerCertificate: true, // For self-signed certificates
+ trustServerCertificate: !this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false),
  enableArithAbort: true
  },
  pool: {

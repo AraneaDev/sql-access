@@ -16,7 +16,8 @@ import type {
  DatabaseRedactionConfig,
  FieldRedactionRule
 } from '../types/index.js';
-import { isValidRedactionType } from '../types/index.js';
+import { isValidRedactionType, DEFAULT_DATABASE_PORTS } from '../types/index.js';
+import { getErrorMessage } from './error-handler.js';
 
 /**
  * Configuration validation error
@@ -44,7 +45,7 @@ export function loadConfiguration(configPath?: string): ParsedServerConfig {
  
  return parseConfiguration(rawConfig);
  } catch (error) {
- throw new Error(`Failed to load configuration from ${path}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+ throw new Error(`Failed to load configuration from ${path}: ${getErrorMessage(error)}`);
  }
 }
 
@@ -145,12 +146,13 @@ function validateNetworkedDatabase(name: string, config: Record<string, string>,
  }
 
  dbConfig.host = config.host;
- dbConfig.port = parseInt(config.port) || getDefaultPort(dbConfig.type);
+ dbConfig.port = parseInt(config.port) || (DEFAULT_DATABASE_PORTS[dbConfig.type as DatabaseTypeString] ?? 0);
  dbConfig.database = config.database;
  dbConfig.username = config.username;
  dbConfig.password = config.password;
  dbConfig.ssl = config.ssl === 'true';
- 
+ dbConfig.ssl_verify = config.ssl_verify === 'true';
+
  // Validate timeout
  const timeout = parseInt(config.timeout);
  dbConfig.timeout = isNaN(timeout) ? 30000 : Math.max(1000, Math.min(300000, timeout));
@@ -229,7 +231,7 @@ function parseRedactionConfig(dbName: string, config: Record<string, string>): D
  redactionConfig.rules = parseRedactionRules(config.redaction_rules);
  } catch (error) {
  throw new ConfigValidationError(
- `Database '${dbName}' has invalid redaction rules: ${error instanceof Error ? error.message : 'Unknown error'}`,
+ `Database '${dbName}' has invalid redaction rules: ${getErrorMessage(error)}`,
  'redaction_rules',
  dbName
  );
@@ -392,20 +394,6 @@ function parseExtensionConfig(extensionRaw?: Record<string, string>): ParsedExte
  return extension;
 }
 
-/**
- * Get default port for database type
- */
-function getDefaultPort(type: string): number {
- switch (type.toLowerCase()) {
- case 'mysql': return 3306;
- case 'postgresql':
- case 'postgres': return 5432;
- case 'mssql':
- case 'sqlserver': return 1433;
- case 'sqlite': return 0;
- default: return 0;
- }
-}
 
 /**
  * Validate configuration object

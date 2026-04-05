@@ -39,16 +39,18 @@ export class MySQLAdapter extends DatabaseAdapter {
  if (this.config.ssl !== undefined) {
  const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
  if (sslEnabled) {
- connectionConfig.ssl = { rejectUnauthorized: false };
+ const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+ connectionConfig.ssl = { rejectUnauthorized: sslVerify };
  }
  }
 
  // Special handling for Azure MariaDB/MySQL
- if (this.config.host?.includes('.mariadb.database.azure.com') || 
+ if (this.config.host?.includes('.mariadb.database.azure.com') ||
  this.config.host?.includes('.mysql.database.azure.com')) {
- 
+
  // Azure requires SSL
- connectionConfig.ssl = { rejectUnauthorized: false };
+ const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+ connectionConfig.ssl = { rejectUnauthorized: sslVerify };
  
  // Format username for Azure if needed
  let azureUser = this.config.username!;

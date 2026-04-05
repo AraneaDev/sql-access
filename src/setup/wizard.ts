@@ -7,6 +7,7 @@ import { ui } from '../utils/setup-ui.js';
 import type {
  SetupConfig,
  DatabaseConfig,
+ DatabaseTypeString,
  ExtensionConfig,
  SecurityConfig,
  SetupWizardAction,
@@ -14,6 +15,7 @@ import type {
  DatabaseRedactionConfig,
  FieldRedactionRule
 } from '../types/config.js';
+import { DEFAULT_DATABASE_PORTS } from '../types/config.js';
 
 // const __filename = fileURLToPath(import.meta.url);
 // const __dirname = path.dirname(__filename);
@@ -270,8 +272,9 @@ export class SetupWizard {
  dbConfig.file = await this.askQuestion('SQLite file path: ');
  } else {
  dbConfig.host = await this.askQuestion('Database host: ');
- const portInput = await this.askQuestion(`Database port (default: ${this.getDefaultPort(dbType)}): `);
- dbConfig.port = parseInt(portInput) || this.getDefaultPort(dbType);
+ const defaultPort = DEFAULT_DATABASE_PORTS[dbType as DatabaseTypeString] ?? 0;
+ const portInput = await this.askQuestion(`Database port (default: ${defaultPort}): `);
+ dbConfig.port = parseInt(portInput) || defaultPort;
  dbConfig.database = await this.askQuestion('Database name: ');
  dbConfig.username = await this.askQuestion('Username: ');
  dbConfig.password = await this.askQuestion('Password: ');
@@ -650,17 +653,6 @@ export class SetupWizard {
  return redactionConfig;
  }
 
- private getDefaultPort(dbType: DatabaseType): number {
- const ports = {
- [DatabaseType.POSTGRESQL]: 5432,
- [DatabaseType.POSTGRES]: 5432,
- [DatabaseType.MYSQL]: 3306,
- [DatabaseType.MSSQL]: 1433,
- [DatabaseType.SQLSERVER]: 1433,
- [DatabaseType.SQLITE]: 0 // N/A for SQLite
- };
- return ports[dbType] || 5432;
- }
 
  /**
   *

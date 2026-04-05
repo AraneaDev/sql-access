@@ -18,6 +18,7 @@ import { ConfigGenerator } from './setup/config-generator.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { SERVER_VERSION } from './types/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,9 +48,9 @@ function parseArgs(args: string[]): CliOptions {
  } else if (arg === '--config') {
  options.configPath = args[++i];
  } else if (arg.startsWith('--template=')) {
- const template = arg.split('=')[1] as any;
+ const template = arg.split('=')[1] as string;
  if (['production', 'development', 'minimal', 'sample'].includes(template)) {
- options.generateTemplate = template;
+ options.generateTemplate = template as typeof options.generateTemplate;
  } else {
  // eslint-disable-next-line no-console
  console.error(` Invalid template type: ${template}`);
@@ -58,9 +59,9 @@ function parseArgs(args: string[]): CliOptions {
  process.exit(1);
  }
  } else if (arg === '--template') {
- const template = args[++i] as any;
+ const template = args[++i] as string;
  if (['production', 'development', 'minimal', 'sample'].includes(template)) {
- options.generateTemplate = template;
+ options.generateTemplate = template as typeof options.generateTemplate;
  } else {
  // eslint-disable-next-line no-console
  console.error(` Invalid template type: ${template}`);
@@ -121,7 +122,7 @@ function showVersion(): void {
  console.log(`Claude SQL MCP Server v${packageJson.version}`);
  } catch (error) {
  // eslint-disable-next-line no-console
- console.log('Claude SQL MCP Server v2.3.1');
+ console.log(`Claude SQL MCP Server v${SERVER_VERSION}`);
  }
 }
 

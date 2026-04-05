@@ -22,6 +22,7 @@ import {
 
 import type {
  DatabaseConfig,
+ DatabaseTypeString,
  ParsedServerConfig,
  TestConnectionResult,
  MCPRequest,
@@ -30,7 +31,8 @@ import type {
 
 import {
  SERVER_VERSION,
- SERVER_NAME
+ SERVER_NAME,
+ DEFAULT_DATABASE_PORTS
 } from '../types/index.js';
 
 import { ConnectionManager } from './ConnectionManager.js';
@@ -38,6 +40,7 @@ import { SecurityManager } from './SecurityManager.js';
 import { SchemaManager } from './SchemaManager.js';
 import { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { Logger } from '../utils/logger.js';
+import { getErrorMessage } from '../utils/error-handler.js';
 import { getToolDefinitions } from '../tools/tool-definitions.js';
 import { createToolDispatcher, type ToolDispatchFn } from '../tools/dispatcher.js';
 import type { ToolHandlerContext } from '../tools/handlers/types.js';
@@ -185,7 +188,7 @@ export class SQLMCPServer extends EventEmitter {
       }
      };
     } catch (error) {
-     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+     const errorMessage = getErrorMessage(error);
      return {
       jsonrpc: '2.0',
       id: id || 0,
@@ -228,7 +231,7 @@ export class SQLMCPServer extends EventEmitter {
       await this.schemaManager.captureSchema(database, dbConfig);
      }
     } catch (error) {
-     this.logger.warning('Failed to capture schema', { database, error: error instanceof Error ? error.message : 'Unknown error' });
+     this.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
     }
    }
 
@@ -252,7 +255,7 @@ export class SQLMCPServer extends EventEmitter {
    return {
     success: false,
     database,
-    error: error instanceof Error ? error.message : 'Unknown error',
+    error: getErrorMessage(error),
     ssh_tunnel: false,
     select_only_mode: false,
     schema_captured: false
@@ -326,7 +329,7 @@ export class SQLMCPServer extends EventEmitter {
     };
    } catch (error) {
     this.logger.error(`Error in tool call ${name}`, { error, args });
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = getErrorMessage(error);
     const troubleshooting = [
      '**Troubleshooting:**',
      '- Ensure all required arguments are provided',
@@ -381,7 +384,7 @@ export class SQLMCPServer extends EventEmitter {
    }
   } catch (error) {
    this.logger.error('Failed to load configuration', { error, configPath: finalConfigPath });
-   throw new Error(`Failed to load config.ini: ${error instanceof Error ? error.message : 'Unknown error'}`);
+   throw new Error(`Failed to load config.ini: ${getErrorMessage(error)}`);
   }
  }
 
@@ -443,7 +446,7 @@ export class SQLMCPServer extends EventEmitter {
    if (!config.username) throw new Error(`Database ${name} missing required 'username' field`);
 
    dbConfig.host = config.host as string;
-   dbConfig.port = parseInt(config.port as string) || this.getDefaultPort(type);
+   dbConfig.port = parseInt(config.port as string) || (DEFAULT_DATABASE_PORTS[type as DatabaseTypeString] ?? 0);
    dbConfig.database = config.database as string;
    dbConfig.username = config.username as string;
    dbConfig.password = config.password as string;
@@ -466,16 +469,7 @@ export class SQLMCPServer extends EventEmitter {
   return dbConfig;
  }
 
- private getDefaultPort(type: string): number {
-  switch (type.toLowerCase()) {
-   case 'mysql': return 3306;
-   case 'postgresql':
-   case 'postgres': return 5432;
-   case 'mssql':
-   case 'sqlserver': return 1433;
-   default: return 0;
-  }
- }
+
 
  private async initializeManagers(): Promise<void> {
   if (!this.config) {

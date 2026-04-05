@@ -3,6 +3,7 @@
  */
 
 import type { DatabaseConfig, DatabaseTypeString } from '../../types/index.js';
+import { DEFAULT_DATABASE_PORTS } from '../../types/index.js';
 import { DatabaseAdapter } from './base.js';
 import { MySQLAdapter } from './mysql.js';
 import { PostgreSQLAdapter } from './postgresql.js';
@@ -59,20 +60,7 @@ export class AdapterFactory {
  * Get default port for a database type
  */
  static getDefaultPort(type: DatabaseTypeString): number {
- switch (type.toLowerCase() as DatabaseTypeString) {
- case 'mysql':
- return 3306;
- case 'postgresql':
- case 'postgres':
- return 5432;
- case 'mssql':
- case 'sqlserver':
- return 1433;
- case 'sqlite':
- return 0; // Not applicable
- default:
- return 0;
- }
+ return DEFAULT_DATABASE_PORTS[type.toLowerCase() as DatabaseTypeString] ?? 0;
  }
 
  /**
