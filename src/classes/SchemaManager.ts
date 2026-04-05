@@ -2,7 +2,15 @@
  * Schema Manager for database schema caching and operations
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  unlinkSync,
+  statSync,
+} from 'fs';
 import { join } from 'path';
 import { EventEmitter } from 'events';
 import type {
@@ -10,7 +18,7 @@ import type {
   DatabaseListItem,
   DatabaseConfig,
   ColumnInfo,
-  TableInfo
+  TableInfo,
 } from '../types/index.js';
 import type { ConnectionManager } from './ConnectionManager.js';
 import { getLogger } from '../utils/logger.js';
@@ -47,7 +55,7 @@ export class SchemaManager extends EventEmitter {
 
     this.logger.info('Schema manager initialized', {
       schemaPath: this.schemaPath,
-      cachedSchemas: this.schemas.size
+      cachedSchemas: this.schemas.size,
     });
   }
 
@@ -108,14 +116,13 @@ export class SchemaManager extends EventEmitter {
       this.logger.info(`Schema captured for '${dbName}'`, {
         tables: schema.summary.table_count,
         views: schema.summary.view_count,
-        columns: schema.summary.total_columns
+        columns: schema.summary.total_columns,
       });
 
       // Emit event
       this.emit('schema-cached', dbName);
 
       return schema;
-
     } catch (error) {
       this.logger.error(`Failed to capture schema for '${dbName}'`, error as Error);
       throw error;
@@ -159,14 +166,13 @@ export class SchemaManager extends EventEmitter {
       this.logger.info(`Schema refreshed for '${dbName}'`, {
         tables: schema.summary.table_count,
         views: schema.summary.view_count,
-        columns: schema.summary.total_columns
+        columns: schema.summary.total_columns,
       });
 
       // Emit event
       this.emit('schema-refreshed', dbName);
 
       return schema;
-
     } catch (error) {
       this.logger.error(`Failed to refresh schema for '${dbName}'`, error as Error);
       throw error;
@@ -183,7 +189,9 @@ export class SchemaManager extends EventEmitter {
     }
 
     const parts: string[] = [];
-    parts.push(`${dbName} (${schema.type}) - ${schema.summary.table_count}T ${schema.summary.view_count}V ${schema.summary.total_columns}C`);
+    parts.push(
+      `${dbName} (${schema.type}) - ${schema.summary.table_count}T ${schema.summary.view_count}V ${schema.summary.total_columns}C`
+    );
 
     // Format a single column compactly: name type[flags]
     const fmtCol = (col: ColumnInfo): string => {
@@ -252,7 +260,9 @@ export class SchemaManager extends EventEmitter {
     }
 
     if (!useFullFormat) {
-      parts.push(`\nUse sql_get_schema with table parameter to see full column details for a specific table.`);
+      parts.push(
+        `\nUse sql_get_schema with table parameter to see full column details for a specific table.`
+      );
     }
 
     return parts.join('\n');
@@ -262,14 +272,14 @@ export class SchemaManager extends EventEmitter {
    * Update database list items with schema information
    */
   enrichDatabaseListItems(items: DatabaseListItem[]): DatabaseListItem[] {
-    return items.map(item => {
+    return items.map((item) => {
       const schema = this.schemas.get(item.name);
 
       if (schema) {
         return {
           ...item,
           schema_cached: true,
-          schema_info: schema.summary
+          schema_info: schema.summary,
         };
       }
 
@@ -302,15 +312,15 @@ export class SchemaManager extends EventEmitter {
       totalColumns: schemas.reduce((sum, s) => sum + s.summary.total_columns, 0),
       avgTablesPerDb: 0,
       avgColumnsPerTable: 0,
-      schemasByType: {} as Record<string, number>
+      schemasByType: {} as Record<string, number>,
     };
 
     if (schemas.length > 0) {
-      stats.avgTablesPerDb = Math.round(stats.totalTables / schemas.length * 100) / 100;
+      stats.avgTablesPerDb = Math.round((stats.totalTables / schemas.length) * 100) / 100;
     }
 
     if (stats.totalTables > 0) {
-      stats.avgColumnsPerTable = Math.round(stats.totalColumns / stats.totalTables * 100) / 100;
+      stats.avgColumnsPerTable = Math.round((stats.totalColumns / stats.totalTables) * 100) / 100;
     }
 
     // Count schemas by database type
@@ -337,9 +347,8 @@ export class SchemaManager extends EventEmitter {
       columns: number;
     }> = [];
 
-    const regex = typeof pattern === 'string'
-      ? new RegExp(pattern.replace(/\*/g, '.*'), 'i')
-      : pattern;
+    const regex =
+      typeof pattern === 'string' ? new RegExp(pattern.replace(/\*/g, '.*'), 'i') : pattern;
 
     for (const [dbName, schema] of this.schemas.entries()) {
       // Search tables
@@ -349,7 +358,7 @@ export class SchemaManager extends EventEmitter {
             database: dbName,
             table: tableName,
             type: 'table',
-            columns: table.columns.length
+            columns: table.columns.length,
           });
         }
       }
@@ -361,7 +370,7 @@ export class SchemaManager extends EventEmitter {
             database: dbName,
             table: viewName,
             type: 'view',
-            columns: view.columns.length
+            columns: view.columns.length,
           });
         }
       }
@@ -392,8 +401,7 @@ export class SchemaManager extends EventEmitter {
         return;
       }
 
-      const schemaFiles = readdirSync(this.schemaPath)
-        .filter(file => file.endsWith('.json'));
+      const schemaFiles = readdirSync(this.schemaPath).filter((file) => file.endsWith('.json'));
 
       for (const file of schemaFiles) {
         const dbName = file.replace('.json', '');
@@ -409,7 +417,7 @@ export class SchemaManager extends EventEmitter {
             this.logger.debug(`Loaded cached schema for '${dbName}'`, {
               tables: schema.summary.table_count,
               views: schema.summary.view_count,
-              capturedAt: schema.captured_at
+              capturedAt: schema.captured_at,
             });
           } else {
             this.logger.warning(`Invalid schema file format: ${file}`);
@@ -422,13 +430,15 @@ export class SchemaManager extends EventEmitter {
           try {
             unlinkSync(join(this.schemaPath, file));
           } catch (cleanupError) {
-            this.logger.error(`Error removing corrupted schema file ${file}`, cleanupError as Error);
+            this.logger.error(
+              `Error removing corrupted schema file ${file}`,
+              cleanupError as Error
+            );
           }
         }
       }
 
       this.logger.info(`Loaded ${this.schemas.size} cached schemas`);
-
     } catch (error) {
       this.logger.error('Error loading cached schemas', error as Error);
     }
@@ -450,7 +460,7 @@ export class SchemaManager extends EventEmitter {
 
   private async saveAllSchemas(): Promise<void> {
     const promises = Array.from(this.schemas.entries()).map(([dbName, schema]) =>
-      this.saveSchema(dbName, schema).catch(error => {
+      this.saveSchema(dbName, schema).catch((error) => {
         this.logger.error(`Failed to save schema for '${dbName}'`, error as Error);
       })
     );
@@ -519,7 +529,6 @@ export class SchemaManager extends EventEmitter {
       if (removed.length > 0) {
         this.logger.info(`Cleaned up ${removed.length} old schema files`, { removed });
       }
-
     } catch (error) {
       errors.push(`Error during cleanup: ${(error as Error).message}`);
       this.logger.error('Error during schema cleanup', error as Error);
@@ -542,8 +551,7 @@ export class SchemaManager extends EventEmitter {
 
     try {
       if (existsSync(this.schemaPath)) {
-        const files = readdirSync(this.schemaPath)
-          .filter(file => file.endsWith('.json'));
+        const files = readdirSync(this.schemaPath).filter((file) => file.endsWith('.json'));
 
         filesOnDisk = files.length;
 
@@ -565,7 +573,7 @@ export class SchemaManager extends EventEmitter {
       schemasInMemory: this.schemas.size,
       schemaPath: this.schemaPath,
       filesOnDisk,
-      totalSizeBytes
+      totalSizeBytes,
     };
   }
 }

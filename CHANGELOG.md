@@ -5,6 +5,24 @@ All notable changes to the SQL MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.2] - 2026-03-28
+
+### Changed
+- Migrated repository URLs from Forgejo to GitHub
+- Full spectrum audit: deduplication, type safety improvements, security hardening, and tooling updates
+- Switched test transform from ts-jest to @swc/jest for native ESM/import.meta support
+- Removed dead `getSafeString/Number/Boolean` test cases referencing removed base adapter methods
+
+### Fixed
+- Resolved all 10 failing test suites caused by ts-jest ESM compilation errors with `import.meta.url`
+- All 11 test suites now pass (416 tests)
+
+## [2.4.1] - 2026-03-22
+
+### Fixed
+- Resolved log and schema file paths to project root instead of current working directory
+- Fixed stdout contamination and config path failures causing random MCP connection drops
+
 ## [2.4.0] - 2026-03-14
 
 ### Added
@@ -233,6 +251,6 @@ This project uses [Semantic Versioning](https://semver.org/):
 
 ## Support Policy
 
-- **Current Release (2.3.x)**: Full support including new features and bug fixes
-- **Previous Release (2.2.x)**: Security fixes and critical bug fixes only
-- **Previous Release (2.1.x)**: No longer supported, upgrade recommended
+- **Current Release (2.4.x)**: Full support including new features and bug fixes
+- **Previous Release (2.3.x)**: Security fixes and critical bug fixes only
+- **Previous Release (2.2.x)**: No longer supported, upgrade recommended

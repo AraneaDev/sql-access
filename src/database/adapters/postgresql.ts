@@ -5,12 +5,12 @@
 import * as pg from 'pg';
 import type { Client as PgClient } from 'pg';
 import { DatabaseAdapter } from './base.js';
-import type { 
- DatabaseConnection, 
- QueryResult, 
- DatabaseSchema,
- ColumnInfo,
- TableInfo
+import type {
+  DatabaseConnection,
+  QueryResult,
+  DatabaseSchema,
+  ColumnInfo,
+  TableInfo,
 } from '../../types/index.js';
 
 // ============================================================================
@@ -18,143 +18,146 @@ import type {
 // ============================================================================
 
 export class PostgreSQLAdapter extends DatabaseAdapter {
- 
- // ============================================================================
- // Connection Management
- // ============================================================================
+  // ============================================================================
+  // Connection Management
+  // ============================================================================
 
- async connect(): Promise<DatabaseConnection> {
- this.validateConfig(['host', 'database', 'username', 'password']);
+  async connect(): Promise<DatabaseConnection> {
+    this.validateConfig(['host', 'database', 'username', 'password']);
 
- const connectionConfig: pg.ClientConfig = {
- host: this.config.host!,
- port: this.parseConfigValue(this.config.port, 'number', 5432),
- database: this.config.database!,
- user: this.config.username!,
- password: this.config.password!,
- connectionTimeoutMillis: this.connectionTimeout,
- };
+    const connectionConfig: pg.ClientConfig = {
+      host: this.config.host!,
+      port: this.parseConfigValue(this.config.port, 'number', 5432),
+      database: this.config.database!,
+      user: this.config.username!,
+      password: this.config.password!,
+      connectionTimeoutMillis: this.connectionTimeout,
+    };
 
- // Handle SSL configuration
- if (this.config.ssl !== undefined) {
- const sslEnabled = this.parseConfigValue(this.config.ssl, 'boolean', false);
- if (sslEnabled) {
- const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
- connectionConfig.ssl = { rejectUnauthorized: sslVerify };
- } else {
- connectionConfig.ssl = false;
- }
- }
+    // Handle SSL configuration
+    if (this.config.ssl !== undefined) {
+      const sslEnabled = this.parseConfigValue(this.config.ssl, 'boolean', false);
+      if (sslEnabled) {
+        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+        connectionConfig.ssl = { rejectUnauthorized: sslVerify };
+      } else {
+        connectionConfig.ssl = false;
+      }
+    }
 
- try {
- const client = new pg.Client(connectionConfig);
- await client.connect();
- return client as DatabaseConnection;
- } catch (error) {
- throw this.createError('Failed to connect to PostgreSQL database', error as Error);
- }
- }
+    try {
+      const client = new pg.Client(connectionConfig);
+      await client.connect();
+      return client as DatabaseConnection;
+    } catch (error) {
+      throw this.createError('Failed to connect to PostgreSQL database', error as Error);
+    }
+  }
 
- async disconnect(connection: DatabaseConnection): Promise<void> {
- try {
- const pgClient = connection as PgClient;
- await pgClient.end();
- } catch (error) {
- throw this.createError('Failed to disconnect from PostgreSQL database', error as Error);
- }
- }
+  async disconnect(connection: DatabaseConnection): Promise<void> {
+    try {
+      const pgClient = connection as PgClient;
+      await pgClient.end();
+    } catch (error) {
+      throw this.createError('Failed to disconnect from PostgreSQL database', error as Error);
+    }
+  }
 
- isConnected(connection: DatabaseConnection): boolean {
- try {
- const pgClient = connection as PgClient;
- // PostgreSQL client has _connected property to check connection status
- return pgClient && '_connected' in pgClient && (pgClient as Record<string, unknown>)._connected === true;
- } catch {
- return false;
- }
- }
+  isConnected(connection: DatabaseConnection): boolean {
+    try {
+      const pgClient = connection as PgClient;
+      // PostgreSQL client has _connected property to check connection status
+      return (
+        pgClient &&
+        '_connected' in pgClient &&
+        (pgClient as Record<string, unknown>)._connected === true
+      );
+    } catch {
+      return false;
+    }
+  }
 
- // ============================================================================
- // Query Execution
- // ============================================================================
+  // ============================================================================
+  // Query Execution
+  // ============================================================================
 
- async executeQuery(
- connection: DatabaseConnection,
- query: string,
- params: unknown[] = []
- ): Promise<QueryResult> {
- const startTime = Date.now();
- 
- try {
- const pgClient = connection as PgClient;
- const result = await pgClient.query(query, params);
- 
- return this.normalizeQueryResult(result, startTime);
- } catch (error) {
- throw this.createError('Failed to execute PostgreSQL query', error as Error);
- }
- }
+  async executeQuery(
+    connection: DatabaseConnection,
+    query: string,
+    params: unknown[] = []
+  ): Promise<QueryResult> {
+    const startTime = Date.now();
 
- protected extractRawRows(result: unknown): unknown[] {
- const pgResult = result as pg.QueryResult;
- return Array.isArray(pgResult.rows) ? pgResult.rows : [];
- }
+    try {
+      const pgClient = connection as PgClient;
+      const result = await pgClient.query(query, params);
 
- protected extractFieldNames(result: unknown): string[] {
- const pgResult = result as pg.QueryResult;
- return pgResult.fields?.map((field: pg.FieldDef) => field.name) || [];
- }
+      return this.normalizeQueryResult(result, startTime);
+    } catch (error) {
+      throw this.createError('Failed to execute PostgreSQL query', error as Error);
+    }
+  }
 
- // ============================================================================
- // Transaction Management
- // ============================================================================
+  protected extractRawRows(result: unknown): unknown[] {
+    const pgResult = result as pg.QueryResult;
+    return Array.isArray(pgResult.rows) ? pgResult.rows : [];
+  }
 
- async beginTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const pgClient = connection as PgClient;
- await pgClient.query('BEGIN');
- } catch (error) {
- throw this.createError('Failed to begin PostgreSQL transaction', error as Error);
- }
- }
+  protected extractFieldNames(result: unknown): string[] {
+    const pgResult = result as pg.QueryResult;
+    return pgResult.fields?.map((field: pg.FieldDef) => field.name) || [];
+  }
 
- async commitTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const pgClient = connection as PgClient;
- await pgClient.query('COMMIT');
- } catch (error) {
- throw this.createError('Failed to commit PostgreSQL transaction', error as Error);
- }
- }
+  // ============================================================================
+  // Transaction Management
+  // ============================================================================
 
- async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const pgClient = connection as PgClient;
- await pgClient.query('ROLLBACK');
- } catch (error) {
- throw this.createError('Failed to rollback PostgreSQL transaction', error as Error);
- }
- }
+  async beginTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const pgClient = connection as PgClient;
+      await pgClient.query('BEGIN');
+    } catch (error) {
+      throw this.createError('Failed to begin PostgreSQL transaction', error as Error);
+    }
+  }
 
- // ============================================================================
- // Performance Analysis
- // ============================================================================
+  async commitTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const pgClient = connection as PgClient;
+      await pgClient.query('COMMIT');
+    } catch (error) {
+      throw this.createError('Failed to commit PostgreSQL transaction', error as Error);
+    }
+  }
 
- buildExplainQuery(query: string): string {
- // Use JSON format for better parsing and analysis
- return `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
- }
+  async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const pgClient = connection as PgClient;
+      await pgClient.query('ROLLBACK');
+    } catch (error) {
+      throw this.createError('Failed to rollback PostgreSQL transaction', error as Error);
+    }
+  }
 
- // ============================================================================
- // Schema Capture
- // ============================================================================
+  // ============================================================================
+  // Performance Analysis
+  // ============================================================================
 
- async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
- try {
- const schema = this.createBaseSchema(this.config.database!);
- 
- // Get all tables and views from public schema
- const tablesQuery = `
+  buildExplainQuery(query: string): string {
+    // Use JSON format for better parsing and analysis
+    return `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
+  }
+
+  // ============================================================================
+  // Schema Capture
+  // ============================================================================
+
+  async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
+    try {
+      const schema = this.createBaseSchema(this.config.database!);
+
+      // Get all tables and views from public schema
+      const tablesQuery = `
  SELECT 
  table_name,
  table_type,
@@ -164,40 +167,39 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
  WHERE table_schema = 'public'
  ORDER BY table_name
  `;
- 
- const tablesResult = await (connection as PgClient).query(tablesQuery);
- 
- // Process each table/view
- for (const table of tablesResult.rows) {
- const columns = await this.captureTableColumns(connection, table.table_name);
- 
- const tableInfo: TableInfo = {
- name: table.table_name,
- type: table.table_type,
- comment: table.table_comment || '',
- columns
- };
 
- if (table.table_type === 'BASE TABLE') {
- schema.tables[table.table_name] = tableInfo;
- } else {
- schema.views[table.table_name] = tableInfo;
- }
- }
+      const tablesResult = await (connection as PgClient).query(tablesQuery);
 
- this.updateSchemaSummary(schema);
- return schema;
- 
- } catch (error) {
- throw this.createError('Failed to capture PostgreSQL schema', error as Error);
- }
- }
+      // Process each table/view
+      for (const table of tablesResult.rows) {
+        const columns = await this.captureTableColumns(connection, table.table_name);
 
- private async captureTableColumns(
- connection: DatabaseConnection,
- tableName: string
- ): Promise<ColumnInfo[]> {
- const columnsQuery = `
+        const tableInfo: TableInfo = {
+          name: table.table_name,
+          type: table.table_type,
+          comment: table.table_comment || '',
+          columns,
+        };
+
+        if (table.table_type === 'BASE TABLE') {
+          schema.tables[table.table_name] = tableInfo;
+        } else {
+          schema.views[table.table_name] = tableInfo;
+        }
+      }
+
+      this.updateSchemaSummary(schema);
+      return schema;
+    } catch (error) {
+      throw this.createError('Failed to capture PostgreSQL schema', error as Error);
+    }
+  }
+
+  private async captureTableColumns(
+    connection: DatabaseConnection,
+    tableName: string
+  ): Promise<ColumnInfo[]> {
+    const columnsQuery = `
  SELECT 
  column_name,
  data_type,
@@ -213,61 +215,70 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
  ORDER BY cols.ordinal_position
  `;
 
- const columnsResult = await (connection as PgClient).query(columnsQuery, [tableName]);
+    const columnsResult = await (connection as PgClient).query(columnsQuery, [tableName]);
 
- return columnsResult.rows.map((col): ColumnInfo => ({
- name: col.column_name,
- type: col.data_type,
- nullable: col.is_nullable === 'YES',
- default: col.column_default,
- max_length: col.character_maximum_length,
- precision: col.numeric_precision,
- scale: col.numeric_scale,
- comment: col.column_comment || '',
- key: '', // PostgreSQL doesn't have a direct equivalent to MySQL's COLUMN_KEY
- extra: '' // PostgreSQL doesn't have a direct equivalent to MySQL's EXTRA
- }));
- }
+    return columnsResult.rows.map(
+      (col): ColumnInfo => ({
+        name: col.column_name,
+        type: col.data_type,
+        nullable: col.is_nullable === 'YES',
+        default: col.column_default,
+        max_length: col.character_maximum_length,
+        precision: col.numeric_precision,
+        scale: col.numeric_scale,
+        comment: col.column_comment || '',
+        key: '', // PostgreSQL doesn't have a direct equivalent to MySQL's COLUMN_KEY
+        extra: '', // PostgreSQL doesn't have a direct equivalent to MySQL's EXTRA
+      })
+    );
+  }
 
- // ============================================================================
- // PostgreSQL-specific Methods
- // ============================================================================
+  // ============================================================================
+  // PostgreSQL-specific Methods
+  // ============================================================================
 
- /**
- * Get PostgreSQL version information
- */
- async getVersion(connection: DatabaseConnection): Promise<string> {
- try {
- const pgClient = connection as PgClient;
- const result = await pgClient.query('SELECT version()');
- return result.rows[0]?.version || 'Unknown';
- } catch (error) {
- throw this.createError('Failed to get PostgreSQL version', error as Error);
- }
- }
+  /**
+   * Get PostgreSQL version information
+   */
+  async getVersion(connection: DatabaseConnection): Promise<string> {
+    try {
+      const pgClient = connection as PgClient;
+      const result = await pgClient.query('SELECT version()');
+      return result.rows[0]?.version || 'Unknown';
+    } catch (error) {
+      throw this.createError('Failed to get PostgreSQL version', error as Error);
+    }
+  }
 
- /**
- * Get current database size
- */
- async getDatabaseSize(connection: DatabaseConnection): Promise<string> {
- try {
- const pgClient = connection as PgClient;
- const result = await pgClient.query(`
+  /**
+   * Get current database size
+   */
+  async getDatabaseSize(connection: DatabaseConnection): Promise<string> {
+    try {
+      const pgClient = connection as PgClient;
+      const result = await pgClient.query(
+        `
  SELECT pg_size_pretty(pg_database_size($1)) as size
- `, [this.config.database]);
- return result.rows[0]?.size || 'Unknown';
- } catch (error) {
- throw this.createError('Failed to get PostgreSQL database size', error as Error);
- }
- }
+ `,
+        [this.config.database]
+      );
+      return result.rows[0]?.size || 'Unknown';
+    } catch (error) {
+      throw this.createError('Failed to get PostgreSQL database size', error as Error);
+    }
+  }
 
- /**
- * Get table statistics
- */
- async getTableStats(connection: DatabaseConnection, tableName: string): Promise<Record<string, unknown>> {
- try {
- const pgClient = connection as PgClient;
- const result = await pgClient.query(`
+  /**
+   * Get table statistics
+   */
+  async getTableStats(
+    connection: DatabaseConnection,
+    tableName: string
+  ): Promise<Record<string, unknown>> {
+    try {
+      const pgClient = connection as PgClient;
+      const result = await pgClient.query(
+        `
  SELECT 
  schemaname,
  tablename,
@@ -277,14 +288,16 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
  FROM pg_stats 
  WHERE tablename = $1 AND schemaname = 'public'
  ORDER BY attname
- `, [tableName]);
- 
- return {
- table: tableName,
- columns: result.rows
- };
- } catch (error) {
- throw this.createError('Failed to get PostgreSQL table statistics', error as Error);
- }
- }
+ `,
+        [tableName]
+      );
+
+      return {
+        table: tableName,
+        columns: result.rows,
+      };
+    } catch (error) {
+      throw this.createError('Failed to get PostgreSQL table statistics', error as Error);
+    }
+  }
 }

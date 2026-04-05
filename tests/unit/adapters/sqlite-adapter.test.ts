@@ -1,16 +1,16 @@
 /**
  * SQLite Database Adapter Tests
  * Tests the SQLite-specific database adapter implementation
- * 
+ *
  * NOTE: Some complex async tests have been simplified to avoid hanging issues
  */
 
 import { SQLiteAdapter } from '../../../src/database/adapters/sqlite.js';
-import type { 
- DatabaseConnection, 
- DatabaseConfig, 
- QueryResult, 
- DatabaseSchema 
+import type {
+  DatabaseConnection,
+  DatabaseConfig,
+  QueryResult,
+  DatabaseSchema,
 } from '../../../src/types/index.js';
 
 // Mock variables must be declared before jest.mock() calls
@@ -20,16 +20,16 @@ const mockGet = jest.fn();
 const mockClose = jest.fn();
 
 const mockDatabase = {
- all: mockAll,
- run: mockRun,
- get: mockGet,
- close: mockClose,
- open: true
+  all: mockAll,
+  run: mockRun,
+  get: mockGet,
+  close: mockClose,
+  open: true,
 };
 
 // Mock the 'sqlite3' module
 jest.mock('sqlite3', () => ({
- Database: jest.fn()
+  Database: jest.fn(),
 }));
 
 import * as sqlite3 from 'sqlite3';
@@ -42,540 +42,546 @@ const mockSqlite3Database = jest.mocked(sqlite3.Database);
 // ============================================================================
 
 describe('SQLiteAdapter', () => {
- let config: DatabaseConfig;
- let adapter: SQLiteAdapter;
+  let config: DatabaseConfig;
+  let adapter: SQLiteAdapter;
 
- beforeEach(() => {
- config = {
- type: 'sqlite',
- file: '/tmp/test.db',
- timeout: 30000
- };
+  beforeEach(() => {
+    config = {
+      type: 'sqlite',
+      file: '/tmp/test.db',
+      timeout: 30000,
+    };
 
- adapter = new SQLiteAdapter(config);
+    adapter = new SQLiteAdapter(config);
 
- // Reset mocks
- jest.clearAllMocks();
- 
- // Mock constructor to call callback with no error and return mock database
- (mockSqlite3Database as any).mockImplementation((...args: any[]) => {
- const callback = args.find(arg => typeof arg === 'function');
- if (callback) {
- process.nextTick(() => callback(null));
- }
- return mockDatabase;
- });
+    // Reset mocks
+    jest.clearAllMocks();
 
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, [{ id: 1, name: 'test' }]));
- });
+    // Mock constructor to call callback with no error and return mock database
+    (mockSqlite3Database as any).mockImplementation((...args: any[]) => {
+      const callback = args.find((arg) => typeof arg === 'function');
+      if (callback) {
+        process.nextTick(() => callback(null));
+      }
+      return mockDatabase;
+    });
 
- mockRun.mockImplementation((query: string, callbackOrParams: any, maybeCallback?: Function) => {
- const callback = typeof callbackOrParams === 'function' ? callbackOrParams : maybeCallback;
- if (callback) {
- process.nextTick(() => callback(null));
- }
- });
+    mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+      process.nextTick(() => callback(null, [{ id: 1, name: 'test' }]));
+    });
 
- mockGet.mockImplementation((query: string, callback: Function) => {
- process.nextTick(() => callback(null, { version: '3.39.0' }));
- });
+    mockRun.mockImplementation((query: string, callbackOrParams: any, maybeCallback?: Function) => {
+      const callback = typeof callbackOrParams === 'function' ? callbackOrParams : maybeCallback;
+      if (callback) {
+        process.nextTick(() => callback(null));
+      }
+    });
 
- mockClose.mockImplementation((callback: Function) => {
- process.nextTick(() => callback(null));
- });
+    mockGet.mockImplementation((query: string, callback: Function) => {
+      process.nextTick(() => callback(null, { version: '3.39.0' }));
+    });
 
- mockDatabase.open = true;
- });
+    mockClose.mockImplementation((callback: Function) => {
+      process.nextTick(() => callback(null));
+    });
 
- // ============================================================================
- // Constructor and Configuration Tests
- // ============================================================================
+    mockDatabase.open = true;
+  });
 
- describe('constructor', () => {
- it('should initialize with valid SQLite config', () => {
- expect(adapter.getType()).toBe('sqlite');
- expect(adapter.getConfig().file).toBe('/tmp/test.db');
- });
- });
+  // ============================================================================
+  // Constructor and Configuration Tests
+  // ============================================================================
 
- // ============================================================================
- // Connection Management Tests
- // ============================================================================
+  describe('constructor', () => {
+    it('should initialize with valid SQLite config', () => {
+      expect(adapter.getType()).toBe('sqlite');
+      expect(adapter.getConfig().file).toBe('/tmp/test.db');
+    });
+  });
 
- describe('connect', () => {
- it('should connect to SQLite database successfully', async () => {
- const connection = await adapter.connect();
- 
- expect(mockSqlite3Database).toHaveBeenCalledWith('/tmp/test.db', expect.any(Function));
- expect(connection).toBe(mockDatabase);
- });
+  // ============================================================================
+  // Connection Management Tests
+  // ============================================================================
 
- it('should validate required configuration fields', async () => {
- const incompleteConfig = { type: 'sqlite' as const };
- const incompleteAdapter = new SQLiteAdapter(incompleteConfig);
- 
- await expect(incompleteAdapter.connect()).rejects.toThrow(
- 'Missing required configuration fields: file'
- );
- });
+  describe('connect', () => {
+    it('should connect to SQLite database successfully', async () => {
+      const connection = await adapter.connect();
 
- it('should handle connection errors', async () => {
- const connectionError = new Error('Connection failed');
- (mockSqlite3Database as any).mockImplementation((...args: any[]) => {
- const callback = args.find(arg => typeof arg === 'function');
- if (callback) {
- process.nextTick(() => callback(connectionError));
- }
- return mockDatabase;
- });
- 
- await expect(adapter.connect()).rejects.toThrow(
- 'sqlite adapter error: Failed to connect to SQLite database - Connection failed'
- );
- });
+      expect(mockSqlite3Database).toHaveBeenCalledWith('/tmp/test.db', expect.any(Function));
+      expect(connection).toBe(mockDatabase);
+    });
 
- it('should handle different file paths', async () => {
- const memoryConfig = { ...config, file: ':memory:' };
- const memoryAdapter = new SQLiteAdapter(memoryConfig);
- 
- await memoryAdapter.connect();
- 
- expect(mockSqlite3Database).toHaveBeenCalledWith(':memory:', expect.any(Function));
- });
- });
+    it('should validate required configuration fields', async () => {
+      const incompleteConfig = { type: 'sqlite' as const };
+      const incompleteAdapter = new SQLiteAdapter(incompleteConfig);
 
- describe('disconnect', () => {
- it('should disconnect from SQLite database successfully', async () => {
- const connection = await adapter.connect();
- await adapter.disconnect(connection);
- 
- expect(mockClose).toHaveBeenCalled();
- });
+      await expect(incompleteAdapter.connect()).rejects.toThrow(
+        'Missing required configuration fields: file'
+      );
+    });
 
- it('should handle disconnect errors', async () => {
- const disconnectError = new Error('Disconnect failed');
- mockClose.mockImplementation((callback: Function) => {
- process.nextTick(() => callback(disconnectError));
- });
- 
- const connection = await adapter.connect();
- await expect(adapter.disconnect(connection)).rejects.toThrow(
- 'sqlite adapter error: Failed to disconnect from SQLite database - Disconnect failed'
- );
- });
- });
+    it('should handle connection errors', async () => {
+      const connectionError = new Error('Connection failed');
+      (mockSqlite3Database as any).mockImplementation((...args: any[]) => {
+        const callback = args.find((arg) => typeof arg === 'function');
+        if (callback) {
+          process.nextTick(() => callback(connectionError));
+        }
+        return mockDatabase;
+      });
 
- describe('isConnected', () => {
- it('should return true for connected database', async () => {
- const connection = await adapter.connect();
- mockDatabase.open = true;
- 
- expect(adapter.isConnected(connection)).toBe(true);
- });
+      await expect(adapter.connect()).rejects.toThrow(
+        'sqlite adapter error: Failed to connect to SQLite database - Connection failed'
+      );
+    });
 
- it('should return false for closed database', async () => {
- const connection = await adapter.connect();
- mockDatabase.open = false;
- 
- expect(adapter.isConnected(connection)).toBe(false);
- });
+    it('should handle different file paths', async () => {
+      const memoryConfig = { ...config, file: ':memory:' };
+      const memoryAdapter = new SQLiteAdapter(memoryConfig);
 
- it('should return false for invalid connection', () => {
- expect(adapter.isConnected(null as any)).toBe(false);
- expect(adapter.isConnected({} as any)).toBe(false);
- });
+      await memoryAdapter.connect();
 
- it('should handle exceptions gracefully', () => {
- const badConnection = {
- get open() {
- throw new Error('Property access failed');
- }
- };
- 
- expect(adapter.isConnected(badConnection as any)).toBe(false);
- });
- });
+      expect(mockSqlite3Database).toHaveBeenCalledWith(':memory:', expect.any(Function));
+    });
+  });
 
- // ============================================================================
- // Query Execution Tests
- // ============================================================================
+  describe('disconnect', () => {
+    it('should disconnect from SQLite database successfully', async () => {
+      const connection = await adapter.connect();
+      await adapter.disconnect(connection);
 
- describe('executeQuery', () => {
- let connection: DatabaseConnection;
+      expect(mockClose).toHaveBeenCalled();
+    });
 
- beforeEach(async () => {
- connection = await adapter.connect();
- });
+    it('should handle disconnect errors', async () => {
+      const disconnectError = new Error('Disconnect failed');
+      mockClose.mockImplementation((callback: Function) => {
+        process.nextTick(() => callback(disconnectError));
+      });
 
- it('should execute query successfully', async () => {
- const mockRows = [{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }];
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, mockRows));
- });
+      const connection = await adapter.connect();
+      await expect(adapter.disconnect(connection)).rejects.toThrow(
+        'sqlite adapter error: Failed to disconnect from SQLite database - Disconnect failed'
+      );
+    });
+  });
 
- const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
+  describe('isConnected', () => {
+    it('should return true for connected database', async () => {
+      const connection = await adapter.connect();
+      mockDatabase.open = true;
 
- expect(mockAll).toHaveBeenCalledWith('SELECT * FROM users', [], expect.any(Function));
- expect(result.rows).toEqual(mockRows);
- expect(result.fields).toEqual(['id', 'name']);
- expect(result.rowCount).toBe(2);
- expect(result.truncated).toBe(false);
- expect(result.execution_time_ms).toBeGreaterThanOrEqual(0);
- });
+      expect(adapter.isConnected(connection)).toBe(true);
+    });
 
- it('should execute query with parameters', async () => {
- const mockRows = [{ id: 1, name: 'John' }];
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, mockRows));
- });
+    it('should return false for closed database', async () => {
+      const connection = await adapter.connect();
+      mockDatabase.open = false;
 
- await adapter.executeQuery(connection, 'SELECT * FROM users WHERE id = ?', [1]);
+      expect(adapter.isConnected(connection)).toBe(false);
+    });
 
- expect(mockAll).toHaveBeenCalledWith('SELECT * FROM users WHERE id = ?', [1], expect.any(Function));
- });
+    it('should return false for invalid connection', () => {
+      expect(adapter.isConnected(null as any)).toBe(false);
+      expect(adapter.isConnected({} as any)).toBe(false);
+    });
 
- it('should handle query execution errors', async () => {
- const queryError = new Error('Query execution failed');
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(queryError, null));
- });
+    it('should handle exceptions gracefully', () => {
+      const badConnection = {
+        get open() {
+          throw new Error('Property access failed');
+        },
+      };
 
- await expect(
- adapter.executeQuery(connection, 'INVALID SQL')
- ).rejects.toThrow(
- 'sqlite adapter error: Failed to execute SQLite query - Query execution failed'
- );
- });
+      expect(adapter.isConnected(badConnection as any)).toBe(false);
+    });
+  });
 
- it('should handle empty result sets', async () => {
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, []));
- });
+  // ============================================================================
+  // Query Execution Tests
+  // ============================================================================
 
- const result = await adapter.executeQuery(connection, 'SELECT * FROM empty_table');
+  describe('executeQuery', () => {
+    let connection: DatabaseConnection;
 
- expect(result.rows).toEqual([]);
- expect(result.fields).toEqual([]);
- expect(result.rowCount).toBe(0);
- expect(result.truncated).toBe(false);
- });
+    beforeEach(async () => {
+      connection = await adapter.connect();
+    });
 
- it('should handle result truncation', async () => {
- // Create mock result with more rows than the limit
- const largeRowSet = Array(1500).fill(0).map((_, i) => ({ id: i + 1, name: `User${i + 1}` }));
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, largeRowSet));
- });
+    it('should execute query successfully', async () => {
+      const mockRows = [
+        { id: 1, name: 'John' },
+        { id: 2, name: 'Jane' },
+      ];
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, mockRows));
+      });
 
- const result = await adapter.executeQuery(connection, 'SELECT * FROM large_table');
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
 
- expect(result.rows).toHaveLength(1000); // Should be truncated to max_rows
- expect(result.rowCount).toBe(1500); // Original count before truncation
- expect(result.truncated).toBe(true);
- });
+      expect(mockAll).toHaveBeenCalledWith('SELECT * FROM users', [], expect.any(Function));
+      expect(result.rows).toEqual(mockRows);
+      expect(result.fields).toEqual(['id', 'name']);
+      expect(result.rowCount).toBe(2);
+      expect(result.truncated).toBe(false);
+      expect(result.execution_time_ms).toBeGreaterThanOrEqual(0);
+    });
 
- it('should extract field names from first row', async () => {
- const mockRows = [{ user_id: 1, full_name: 'John', email: 'john@example.com' }];
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, mockRows));
- });
+    it('should execute query with parameters', async () => {
+      const mockRows = [{ id: 1, name: 'John' }];
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, mockRows));
+      });
 
- const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
+      await adapter.executeQuery(connection, 'SELECT * FROM users WHERE id = ?', [1]);
 
- expect(result.fields).toEqual(['user_id', 'full_name', 'email']);
- });
+      expect(mockAll).toHaveBeenCalledWith(
+        'SELECT * FROM users WHERE id = ?',
+        [1],
+        expect.any(Function)
+      );
+    });
 
- it('should handle null results gracefully', async () => {
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, null));
- });
+    it('should handle query execution errors', async () => {
+      const queryError = new Error('Query execution failed');
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(queryError, null));
+      });
 
- const result = await adapter.executeQuery(connection, 'SELECT * FROM test');
- expect(result.rows).toEqual([]);
- expect(result.fields).toEqual([]);
- });
- });
+      await expect(adapter.executeQuery(connection, 'INVALID SQL')).rejects.toThrow(
+        'sqlite adapter error: Failed to execute SQLite query - Query execution failed'
+      );
+    });
 
- // ============================================================================
- // Transaction Management Tests
- // ============================================================================
+    it('should handle empty result sets', async () => {
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, []));
+      });
 
- describe('transaction management', () => {
- let connection: DatabaseConnection;
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM empty_table');
 
- beforeEach(async () => {
- connection = await adapter.connect();
- });
+      expect(result.rows).toEqual([]);
+      expect(result.fields).toEqual([]);
+      expect(result.rowCount).toBe(0);
+      expect(result.truncated).toBe(false);
+    });
 
- describe('beginTransaction', () => {
- it('should begin transaction successfully', async () => {
- await adapter.beginTransaction(connection);
- expect(mockRun).toHaveBeenCalledWith('BEGIN TRANSACTION', expect.any(Function));
- });
+    it('should handle result truncation', async () => {
+      // Create mock result with more rows than the limit
+      const largeRowSet = Array(1500)
+        .fill(0)
+        .map((_, i) => ({ id: i + 1, name: `User${i + 1}` }));
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, largeRowSet));
+      });
 
- it('should handle begin transaction errors', async () => {
- const transactionError = new Error('Begin failed');
- mockRun.mockImplementation((query: string, callback: Function) => {
- if (query === 'BEGIN TRANSACTION') {
- process.nextTick(() => callback(transactionError));
- } else {
- process.nextTick(() => callback(null));
- }
- });
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM large_table');
 
- await expect(adapter.beginTransaction(connection)).rejects.toThrow(
- 'sqlite adapter error: Failed to begin SQLite transaction - Begin failed'
- );
- });
- });
+      expect(result.rows).toHaveLength(1000); // Should be truncated to max_rows
+      expect(result.rowCount).toBe(1500); // Original count before truncation
+      expect(result.truncated).toBe(true);
+    });
 
- describe('commitTransaction', () => {
- it('should commit transaction successfully', async () => {
- await adapter.commitTransaction(connection);
- expect(mockRun).toHaveBeenCalledWith('COMMIT', expect.any(Function));
- });
+    it('should extract field names from first row', async () => {
+      const mockRows = [{ user_id: 1, full_name: 'John', email: 'john@example.com' }];
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, mockRows));
+      });
 
- it('should handle commit transaction errors', async () => {
- const commitError = new Error('Commit failed');
- mockRun.mockImplementation((query: string, callback: Function) => {
- if (query === 'COMMIT') {
- process.nextTick(() => callback(commitError));
- } else {
- process.nextTick(() => callback(null));
- }
- });
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
 
- await expect(adapter.commitTransaction(connection)).rejects.toThrow(
- 'sqlite adapter error: Failed to commit SQLite transaction - Commit failed'
- );
- });
- });
+      expect(result.fields).toEqual(['user_id', 'full_name', 'email']);
+    });
 
- describe('rollbackTransaction', () => {
- it('should rollback transaction successfully', async () => {
- await adapter.rollbackTransaction(connection);
- expect(mockRun).toHaveBeenCalledWith('ROLLBACK', expect.any(Function));
- });
+    it('should handle null results gracefully', async () => {
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, null));
+      });
 
- it('should handle rollback transaction errors', async () => {
- const rollbackError = new Error('Rollback failed');
- mockRun.mockImplementation((query: string, callback: Function) => {
- if (query === 'ROLLBACK') {
- process.nextTick(() => callback(rollbackError));
- } else {
- process.nextTick(() => callback(null));
- }
- });
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM test');
+      expect(result.rows).toEqual([]);
+      expect(result.fields).toEqual([]);
+    });
+  });
 
- await expect(adapter.rollbackTransaction(connection)).rejects.toThrow(
- 'sqlite adapter error: Failed to rollback SQLite transaction - Rollback failed'
- );
- });
- });
- });
+  // ============================================================================
+  // Transaction Management Tests
+  // ============================================================================
 
- // ============================================================================
- // Performance Analysis Tests
- // ============================================================================
+  describe('transaction management', () => {
+    let connection: DatabaseConnection;
 
- describe('buildExplainQuery', () => {
- it('should build SQLite explain query plan', () => {
- const query = 'SELECT * FROM users WHERE active = 1';
- const explainQuery = adapter.buildExplainQuery(query);
- 
- expect(explainQuery).toBe(
- 'EXPLAIN QUERY PLAN SELECT * FROM users WHERE active = 1'
- );
- });
+    beforeEach(async () => {
+      connection = await adapter.connect();
+    });
 
- it('should handle complex queries', () => {
- const complexQuery = `
+    describe('beginTransaction', () => {
+      it('should begin transaction successfully', async () => {
+        await adapter.beginTransaction(connection);
+        expect(mockRun).toHaveBeenCalledWith('BEGIN TRANSACTION', expect.any(Function));
+      });
+
+      it('should handle begin transaction errors', async () => {
+        const transactionError = new Error('Begin failed');
+        mockRun.mockImplementation((query: string, callback: Function) => {
+          if (query === 'BEGIN TRANSACTION') {
+            process.nextTick(() => callback(transactionError));
+          } else {
+            process.nextTick(() => callback(null));
+          }
+        });
+
+        await expect(adapter.beginTransaction(connection)).rejects.toThrow(
+          'sqlite adapter error: Failed to begin SQLite transaction - Begin failed'
+        );
+      });
+    });
+
+    describe('commitTransaction', () => {
+      it('should commit transaction successfully', async () => {
+        await adapter.commitTransaction(connection);
+        expect(mockRun).toHaveBeenCalledWith('COMMIT', expect.any(Function));
+      });
+
+      it('should handle commit transaction errors', async () => {
+        const commitError = new Error('Commit failed');
+        mockRun.mockImplementation((query: string, callback: Function) => {
+          if (query === 'COMMIT') {
+            process.nextTick(() => callback(commitError));
+          } else {
+            process.nextTick(() => callback(null));
+          }
+        });
+
+        await expect(adapter.commitTransaction(connection)).rejects.toThrow(
+          'sqlite adapter error: Failed to commit SQLite transaction - Commit failed'
+        );
+      });
+    });
+
+    describe('rollbackTransaction', () => {
+      it('should rollback transaction successfully', async () => {
+        await adapter.rollbackTransaction(connection);
+        expect(mockRun).toHaveBeenCalledWith('ROLLBACK', expect.any(Function));
+      });
+
+      it('should handle rollback transaction errors', async () => {
+        const rollbackError = new Error('Rollback failed');
+        mockRun.mockImplementation((query: string, callback: Function) => {
+          if (query === 'ROLLBACK') {
+            process.nextTick(() => callback(rollbackError));
+          } else {
+            process.nextTick(() => callback(null));
+          }
+        });
+
+        await expect(adapter.rollbackTransaction(connection)).rejects.toThrow(
+          'sqlite adapter error: Failed to rollback SQLite transaction - Rollback failed'
+        );
+      });
+    });
+  });
+
+  // ============================================================================
+  // Performance Analysis Tests
+  // ============================================================================
+
+  describe('buildExplainQuery', () => {
+    it('should build SQLite explain query plan', () => {
+      const query = 'SELECT * FROM users WHERE active = 1';
+      const explainQuery = adapter.buildExplainQuery(query);
+
+      expect(explainQuery).toBe('EXPLAIN QUERY PLAN SELECT * FROM users WHERE active = 1');
+    });
+
+    it('should handle complex queries', () => {
+      const complexQuery = `
  SELECT u.name, p.title 
  FROM users u 
  JOIN posts p ON u.id = p.user_id 
  WHERE u.created_at > '2023-01-01'
  `;
- 
- const explainQuery = adapter.buildExplainQuery(complexQuery);
- expect(explainQuery).toContain('EXPLAIN QUERY PLAN');
- expect(explainQuery).toContain(complexQuery);
- });
- });
 
- // ============================================================================
- // Schema Capture Tests (Simplified)
- // ============================================================================
+      const explainQuery = adapter.buildExplainQuery(complexQuery);
+      expect(explainQuery).toContain('EXPLAIN QUERY PLAN');
+      expect(explainQuery).toContain(complexQuery);
+    });
+  });
 
- describe('captureSchema', () => {
- let connection: DatabaseConnection;
+  // ============================================================================
+  // Schema Capture Tests (Simplified)
+  // ============================================================================
 
- beforeEach(async () => {
- connection = await adapter.connect();
- });
+  describe('captureSchema', () => {
+    let connection: DatabaseConnection;
 
- it('should capture basic database schema', async () => {
- // Mock simple schema result
- const tablesResult = [
- { name: 'users', type: 'table' }
- ];
+    beforeEach(async () => {
+      connection = await adapter.connect();
+    });
 
- const usersColumnsResult = [
- {
- cid: 0,
- name: 'id',
- type: 'INTEGER',
- notnull: 1,
- dflt_value: null,
- pk: 1
- },
- {
- cid: 1,
- name: 'name',
- type: 'TEXT',
- notnull: 1,
- dflt_value: null,
- pk: 0
- }
- ];
+    it('should capture basic database schema', async () => {
+      // Mock simple schema result
+      const tablesResult = [{ name: 'users', type: 'table' }];
 
- mockAll
- .mockImplementationOnce((query: string, callback: Function) => {
- process.nextTick(() => callback(null, tablesResult));
- })
- .mockImplementationOnce((query: string, callback: Function) => {
- process.nextTick(() => callback(null, usersColumnsResult));
- });
+      const usersColumnsResult = [
+        {
+          cid: 0,
+          name: 'id',
+          type: 'INTEGER',
+          notnull: 1,
+          dflt_value: null,
+          pk: 1,
+        },
+        {
+          cid: 1,
+          name: 'name',
+          type: 'TEXT',
+          notnull: 1,
+          dflt_value: null,
+          pk: 0,
+        },
+      ];
 
- const schema = await adapter.captureSchema(connection);
+      mockAll
+        .mockImplementationOnce((query: string, callback: Function) => {
+          process.nextTick(() => callback(null, tablesResult));
+        })
+        .mockImplementationOnce((query: string, callback: Function) => {
+          process.nextTick(() => callback(null, usersColumnsResult));
+        });
 
- expect(schema.database).toBe('/tmp/test.db');
- expect(schema.type).toBe('sqlite');
- expect(schema.tables.users).toBeDefined();
- expect(schema.tables.users.columns).toHaveLength(2);
- expect(schema.summary.table_count).toBe(1);
- });
+      const schema = await adapter.captureSchema(connection);
 
- it('should handle schema capture errors', async () => {
- const schemaError = new Error('Schema query failed');
- mockAll.mockImplementation((query: string, callback: Function) => {
- process.nextTick(() => callback(schemaError, null));
- });
+      expect(schema.database).toBe('/tmp/test.db');
+      expect(schema.type).toBe('sqlite');
+      expect(schema.tables.users).toBeDefined();
+      expect(schema.tables.users.columns).toHaveLength(2);
+      expect(schema.summary.table_count).toBe(1);
+    });
 
- await expect(adapter.captureSchema(connection)).rejects.toThrow(
- 'sqlite adapter error: Failed to capture SQLite schema'
- );
- });
+    it('should handle schema capture errors', async () => {
+      const schemaError = new Error('Schema query failed');
+      mockAll.mockImplementation((query: string, callback: Function) => {
+        process.nextTick(() => callback(schemaError, null));
+      });
 
- it('should handle empty schema results', async () => {
- mockAll.mockImplementation((query: string, callback: Function) => {
- process.nextTick(() => callback(null, []));
- });
+      await expect(adapter.captureSchema(connection)).rejects.toThrow(
+        'sqlite adapter error: Failed to capture SQLite schema'
+      );
+    });
 
- const schema = await adapter.captureSchema(connection);
+    it('should handle empty schema results', async () => {
+      mockAll.mockImplementation((query: string, callback: Function) => {
+        process.nextTick(() => callback(null, []));
+      });
 
- expect(schema.tables).toEqual({});
- expect(schema.views).toEqual({});
- expect(schema.summary.table_count).toBe(0);
- });
- });
+      const schema = await adapter.captureSchema(connection);
 
- // ============================================================================
- // SQLite-specific Methods Tests (Simplified)
- // ============================================================================
+      expect(schema.tables).toEqual({});
+      expect(schema.views).toEqual({});
+      expect(schema.summary.table_count).toBe(0);
+    });
+  });
 
- describe('SQLite-specific methods', () => {
- let connection: DatabaseConnection;
+  // ============================================================================
+  // SQLite-specific Methods Tests (Simplified)
+  // ============================================================================
 
- beforeEach(async () => {
- connection = await adapter.connect();
- });
+  describe('SQLite-specific methods', () => {
+    let connection: DatabaseConnection;
 
- describe('getVersion', () => {
- it('should get SQLite version successfully', async () => {
- mockGet.mockImplementation((query: string, callback: Function) => {
- process.nextTick(() => callback(null, { version: '3.39.0' }));
- });
+    beforeEach(async () => {
+      connection = await adapter.connect();
+    });
 
- const version = await adapter.getVersion(connection);
+    describe('getVersion', () => {
+      it('should get SQLite version successfully', async () => {
+        mockGet.mockImplementation((query: string, callback: Function) => {
+          process.nextTick(() => callback(null, { version: '3.39.0' }));
+        });
 
- expect(mockGet).toHaveBeenCalledWith('SELECT sqlite_version() as version', expect.any(Function));
- expect(version).toBe('3.39.0');
- });
+        const version = await adapter.getVersion(connection);
 
- it('should handle version query errors', async () => {
- const versionError = new Error('Version query failed');
- mockGet.mockImplementation((query: string, callback: Function) => {
- process.nextTick(() => callback(versionError, null));
- });
+        expect(mockGet).toHaveBeenCalledWith(
+          'SELECT sqlite_version() as version',
+          expect.any(Function)
+        );
+        expect(version).toBe('3.39.0');
+      });
 
- await expect(adapter.getVersion(connection)).rejects.toThrow(
- 'sqlite adapter error: Failed to get SQLite version - Version query failed'
- );
- });
+      it('should handle version query errors', async () => {
+        const versionError = new Error('Version query failed');
+        mockGet.mockImplementation((query: string, callback: Function) => {
+          process.nextTick(() => callback(versionError, null));
+        });
 
- it('should handle empty version result', async () => {
- mockGet.mockImplementation((query: string, callback: Function) => {
- process.nextTick(() => callback(null, null));
- });
+        await expect(adapter.getVersion(connection)).rejects.toThrow(
+          'sqlite adapter error: Failed to get SQLite version - Version query failed'
+        );
+      });
 
- const version = await adapter.getVersion(connection);
- expect(version).toBe('Unknown');
- });
- });
- });
+      it('should handle empty version result', async () => {
+        mockGet.mockImplementation((query: string, callback: Function) => {
+          process.nextTick(() => callback(null, null));
+        });
 
- // ============================================================================
- // Integration Scenarios Tests (Simplified)
- // ============================================================================
+        const version = await adapter.getVersion(connection);
+        expect(version).toBe('Unknown');
+      });
+    });
+  });
 
- describe('integration scenarios', () => {
- it('should handle basic workflow', async () => {
- // Connect
- const connection = await adapter.connect();
- expect(adapter.isConnected(connection)).toBe(true);
+  // ============================================================================
+  // Integration Scenarios Tests (Simplified)
+  // ============================================================================
 
- // Execute query
- const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
- expect(result).toBeDefined();
+  describe('integration scenarios', () => {
+    it('should handle basic workflow', async () => {
+      // Connect
+      const connection = await adapter.connect();
+      expect(adapter.isConnected(connection)).toBe(true);
 
- // Transaction workflow
- await adapter.beginTransaction(connection);
- await adapter.commitTransaction(connection);
+      // Execute query
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM users');
+      expect(result).toBeDefined();
 
- // Disconnect
- await adapter.disconnect(connection);
- expect(mockClose).toHaveBeenCalled();
- });
- });
+      // Transaction workflow
+      await adapter.beginTransaction(connection);
+      await adapter.commitTransaction(connection);
 
- // ============================================================================
- // Error Handling and Edge Cases (Simplified)
- // ============================================================================
+      // Disconnect
+      await adapter.disconnect(connection);
+      expect(mockClose).toHaveBeenCalled();
+    });
+  });
 
- describe('error handling and edge cases', () => {
- it('should handle malformed query results gracefully', async () => {
- const connection = await adapter.connect();
- 
- // Mock a result that's not an array
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, 'not an array'));
- });
+  // ============================================================================
+  // Error Handling and Edge Cases (Simplified)
+  // ============================================================================
 
- const result = await adapter.executeQuery(connection, 'SELECT 1');
- expect(result.rows).toEqual([]);
- expect(result.fields).toEqual([]);
- });
+  describe('error handling and edge cases', () => {
+    it('should handle malformed query results gracefully', async () => {
+      const connection = await adapter.connect();
 
- it('should handle empty rows when extracting field names', async () => {
- const connection = await adapter.connect();
- 
- mockAll.mockImplementation((query: string, params: any, callback: Function) => {
- process.nextTick(() => callback(null, []));
- });
+      // Mock a result that's not an array
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, 'not an array'));
+      });
 
- const result = await adapter.executeQuery(connection, 'SELECT * FROM empty_table');
- expect(result.fields).toEqual([]);
- });
- });
+      const result = await adapter.executeQuery(connection, 'SELECT 1');
+      expect(result.rows).toEqual([]);
+      expect(result.fields).toEqual([]);
+    });
+
+    it('should handle empty rows when extracting field names', async () => {
+      const connection = await adapter.connect();
+
+      mockAll.mockImplementation((query: string, params: any, callback: Function) => {
+        process.nextTick(() => callback(null, []));
+      });
+
+      const result = await adapter.executeQuery(connection, 'SELECT * FROM empty_table');
+      expect(result.fields).toEqual([]);
+    });
+  });
 });

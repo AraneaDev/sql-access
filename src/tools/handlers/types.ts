@@ -11,22 +11,22 @@ import type { Logger } from '../../utils/logger.js';
 import { ConfigurationError } from '../../utils/error-handler.js';
 
 export interface ToolHandlerContext {
- connectionManager: ConnectionManager;
- securityManager: SecurityManager;
- schemaManager: SchemaManager;
- sshTunnelManager: EnhancedSSHTunnelManager;
- config: ParsedServerConfig;
- configPath: string;
- logger: Logger;
+  connectionManager: ConnectionManager;
+  securityManager: SecurityManager;
+  schemaManager: SchemaManager;
+  sshTunnelManager: EnhancedSSHTunnelManager;
+  config: ParsedServerConfig;
+  configPath: string;
+  logger: Logger;
 }
 
 /**
  * Get database config or throw a typed error
  */
 export function requireDbConfig(config: ParsedServerConfig, database: string): DatabaseConfig {
- const dbConfig = config.databases[database];
- if (!dbConfig) {
- throw new ConfigurationError(`Database configuration '${database}' not found`);
- }
- return dbConfig;
+  const dbConfig = config.databases[database];
+  if (!dbConfig) {
+    throw new ConfigurationError(`Database configuration '${database}' not found`);
+  }
+  return dbConfig;
 }

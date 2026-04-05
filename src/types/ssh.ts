@@ -10,35 +10,35 @@ import type * as net from 'net';
 // ============================================================================
 
 export interface SSHConnectionConfig {
- host: string;
- port: number;
- username: string;
- password?: string;
- privateKey?: Buffer | string;
- passphrase?: string;
+  host: string;
+  port: number;
+  username: string;
+  password?: string;
+  privateKey?: Buffer | string;
+  passphrase?: string;
 }
 
 export interface SSHForwardConfig {
- sourceHost: string;
- sourcePort: number;
- destinationHost: string;
- destinationPort: number;
+  sourceHost: string;
+  sourcePort: number;
+  destinationHost: string;
+  destinationPort: number;
 }
 
 export interface SSHTunnelInfo {
- server: net.Server;
- connection: SSHClient;
- localPort: number;
- localHost: string;
- remoteHost: string;
- remotePort: number;
- isActive: boolean;
+  server: net.Server;
+  connection: SSHClient;
+  localPort: number;
+  localHost: string;
+  remoteHost: string;
+  remotePort: number;
+  isActive: boolean;
 }
 
 export interface SSHTunnelCreateOptions {
- sshConfig: SSHConnectionConfig;
- forwardConfig: SSHForwardConfig;
- localPort?: number; // 0 for auto-assignment
+  sshConfig: SSHConnectionConfig;
+  forwardConfig: SSHForwardConfig;
+  localPort?: number; // 0 for auto-assignment
 }
 
 // ============================================================================
@@ -46,29 +46,24 @@ export interface SSHTunnelCreateOptions {
 // ============================================================================
 
 export interface ISSHTunnelManager {
- createTunnel(_dbName: string, _options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo>;
- getTunnel(_dbName: string): SSHTunnelInfo | undefined;
- closeTunnel(_dbName: string): Promise<void>;
- closeAllTunnels(): Promise<void>;
- isConnected(_dbName: string): boolean;
+  createTunnel(_dbName: string, _options: SSHTunnelCreateOptions): Promise<SSHTunnelInfo>;
+  getTunnel(_dbName: string): SSHTunnelInfo | undefined;
+  closeTunnel(_dbName: string): Promise<void>;
+  closeAllTunnels(): Promise<void>;
+  isConnected(_dbName: string): boolean;
 }
 
 // ============================================================================
 // SSH Connection Events
 // ============================================================================
 
-export type SSHConnectionEvent = 
- | 'ready'
- | 'error'
- | 'close'
- | 'end'
- | 'timeout';
+export type SSHConnectionEvent = 'ready' | 'error' | 'close' | 'end' | 'timeout';
 
 export interface SSHEventPayload {
- event: SSHConnectionEvent;
- tunnel: SSHTunnelInfo;
- error?: Error;
- message?: string;
+  event: SSHConnectionEvent;
+  tunnel: SSHTunnelInfo;
+  error?: Error;
+  message?: string;
 }
 
 // ============================================================================
@@ -78,28 +73,28 @@ export interface SSHEventPayload {
 export type SSHAuthMethod = 'password' | 'privateKey' | 'agent';
 
 export interface SSHAuthInfo {
- method: SSHAuthMethod;
- username: string;
- hasCredentials: boolean;
+  method: SSHAuthMethod;
+  username: string;
+  hasCredentials: boolean;
 }
 
 // ============================================================================
 // SSH Tunnel Status
 // ============================================================================
 
-export type SSHTunnelStatus = 
- | 'connecting'
- | 'connected'
- | 'error'
- | 'disconnected'
- | 'reconnecting';
+export type SSHTunnelStatus =
+  | 'connecting'
+  | 'connected'
+  | 'error'
+  | 'disconnected'
+  | 'reconnecting';
 
 export interface SSHTunnelStatusInfo {
- status: SSHTunnelStatus;
- connectedAt?: Date;
- lastError?: string;
- reconnectAttempts: number;
- isHealthy: boolean;
+  status: SSHTunnelStatus;
+  connectedAt?: Date;
+  lastError?: string;
+  reconnectAttempts: number;
+  isHealthy: boolean;
 }
 
 // ============================================================================
@@ -110,21 +105,21 @@ export interface SSHTunnelStatusInfo {
  *
  */
 export function isSSHConnectionEvent(value: string): value is SSHConnectionEvent {
- return ['ready', 'error', 'close', 'end', 'timeout'].includes(value);
+  return ['ready', 'error', 'close', 'end', 'timeout'].includes(value);
 }
 
 /**
  *
  */
 export function isSSHAuthMethod(value: string): value is SSHAuthMethod {
- return ['password', 'privateKey', 'agent'].includes(value);
+  return ['password', 'privateKey', 'agent'].includes(value);
 }
 
 /**
  *
  */
 export function isSSHTunnelStatus(value: string): value is SSHTunnelStatus {
- return ['connecting', 'connected', 'error', 'disconnected', 'reconnecting'].includes(value);
+  return ['connecting', 'connected', 'error', 'disconnected', 'reconnecting'].includes(value);
 }
 
 // ============================================================================
@@ -132,45 +127,45 @@ export function isSSHTunnelStatus(value: string): value is SSHTunnelStatus {
 // ============================================================================
 
 export interface SSHTunnelValidationResult {
- isValid: boolean;
- errors: string[];
- warnings: string[];
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
 }
 
 /**
  *
  */
 export function validateSSHConfig(config: SSHConnectionConfig): SSHTunnelValidationResult {
- const errors: string[] = [];
- const warnings: string[] = [];
+  const errors: string[] = [];
+  const warnings: string[] = [];
 
- if (!config.host || config.host.trim() === '') {
- errors.push('SSH host is required');
- }
+  if (!config.host || config.host.trim() === '') {
+    errors.push('SSH host is required');
+  }
 
- if (!config.port || config.port < 1 || config.port > 65535) {
- errors.push('SSH port must be between 1 and 65535');
- }
+  if (!config.port || config.port < 1 || config.port > 65535) {
+    errors.push('SSH port must be between 1 and 65535');
+  }
 
- if (!config.username || config.username.trim() === '') {
- errors.push('SSH username is required');
- }
+  if (!config.username || config.username.trim() === '') {
+    errors.push('SSH username is required');
+  }
 
- if (!config.password && !config.privateKey) {
- errors.push('Either password or private key must be provided');
- }
+  if (!config.password && !config.privateKey) {
+    errors.push('Either password or private key must be provided');
+  }
 
- if (config.password && config.privateKey) {
- warnings.push('Both password and private key provided, private key will take precedence');
- }
+  if (config.password && config.privateKey) {
+    warnings.push('Both password and private key provided, private key will take precedence');
+  }
 
- if (config.privateKey && !config.passphrase) {
- warnings.push('Private key provided without passphrase, ensure key is not encrypted');
- }
+  if (config.privateKey && !config.passphrase) {
+    warnings.push('Private key provided without passphrase, ensure key is not encrypted');
+  }
 
- return {
- isValid: errors.length === 0,
- errors,
- warnings
- };
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
 }

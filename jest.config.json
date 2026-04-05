@@ -1,6 +1,4 @@
 {
-  "preset": "ts-jest/presets/default-esm",
-  "extensionsToTreatAsEsm": [".ts"],
   "testEnvironment": "node",
   "roots": ["<rootDir>/tests"],
   "testMatch": [
@@ -47,12 +45,22 @@
   },
   "transform": {
     "^.+\\.ts$": [
-      "ts-jest",
+      "@swc/jest",
       {
-        "useESM": true
+        "jsc": {
+          "parser": {
+            "syntax": "typescript",
+            "decorators": true
+          },
+          "target": "es2022"
+        },
+        "module": {
+          "type": "commonjs"
+        }
       }
     ]
   },
   "testTimeout": 10000,
-  "maxWorkers": 1
+  "maxWorkers": 1,
+  "forceExit": true
 }

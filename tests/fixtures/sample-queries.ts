@@ -2,30 +2,31 @@
  * Sample SQL queries for testing various scenarios
  */
 export class SampleQueries {
- /**
- * Basic SELECT queries
- */
- static readonly basicQueries = {
- simple: 'SELECT * FROM users',
- withLimit: 'SELECT * FROM users LIMIT 10',
- withWhere: 'SELECT id, name FROM users WHERE id = 1',
- withOrderBy: 'SELECT * FROM users ORDER BY name ASC',
- withGroupBy: 'SELECT COUNT(*) as user_count FROM users GROUP BY created_at::date'
- };
+  /**
+   * Basic SELECT queries
+   */
+  static readonly basicQueries = {
+    simple: 'SELECT * FROM users',
+    withLimit: 'SELECT * FROM users LIMIT 10',
+    withWhere: 'SELECT id, name FROM users WHERE id = 1',
+    withOrderBy: 'SELECT * FROM users ORDER BY name ASC',
+    withGroupBy: 'SELECT COUNT(*) as user_count FROM users GROUP BY created_at::date',
+  };
 
- /**
- * JOIN queries of varying complexity
- */
- static readonly joinQueries = {
- simple: 'SELECT u.name, p.title FROM users u JOIN posts p ON u.id = p.user_id',
- leftJoin: 'SELECT u.name, COUNT(p.id) as post_count FROM users u LEFT JOIN posts p ON u.id = p.user_id GROUP BY u.id, u.name',
- multipleJoins: `
+  /**
+   * JOIN queries of varying complexity
+   */
+  static readonly joinQueries = {
+    simple: 'SELECT u.name, p.title FROM users u JOIN posts p ON u.id = p.user_id',
+    leftJoin:
+      'SELECT u.name, COUNT(p.id) as post_count FROM users u LEFT JOIN posts p ON u.id = p.user_id GROUP BY u.id, u.name',
+    multipleJoins: `
  SELECT u.name, p.title, c.content as comment 
  FROM users u 
  JOIN posts p ON u.id = p.user_id 
  JOIN comments c ON p.id = c.post_id
  `,
- complexJoins: `
+    complexJoins: `
  SELECT 
  u.name,
  p.title,
@@ -38,16 +39,17 @@ export class SampleQueries {
  GROUP BY u.id, u.name, p.id, p.title
  HAVING COUNT(c.id) > 0
  ORDER BY avg_comment_score DESC
- `
- };
+ `,
+  };
 
- /**
- * Subquery examples
- */
- static readonly subqueryQueries = {
- simpleSubquery: 'SELECT * FROM users WHERE id IN (SELECT user_id FROM posts)',
- correlatedSubquery: 'SELECT * FROM users u WHERE EXISTS (SELECT 1 FROM posts p WHERE p.user_id = u.id)',
- nestedSubqueries: `
+  /**
+   * Subquery examples
+   */
+  static readonly subqueryQueries = {
+    simpleSubquery: 'SELECT * FROM users WHERE id IN (SELECT user_id FROM posts)',
+    correlatedSubquery:
+      'SELECT * FROM users u WHERE EXISTS (SELECT 1 FROM posts p WHERE p.user_id = u.id)',
+    nestedSubqueries: `
  SELECT name FROM users 
  WHERE id IN (
  SELECT user_id FROM posts 
@@ -57,7 +59,7 @@ export class SampleQueries {
  )
  )
  `,
- subqueryInFrom: `
+    subqueryInFrom: `
  SELECT avg_scores.user_id, avg_scores.average_score
  FROM (
  SELECT user_id, AVG(score) as average_score
@@ -65,29 +67,29 @@ export class SampleQueries {
  GROUP BY user_id
  ) as avg_scores
  WHERE avg_scores.average_score > 50
- `
- };
+ `,
+  };
 
- /**
- * UNION queries
- */
- static readonly unionQueries = {
- simple: 'SELECT name FROM users UNION SELECT title as name FROM posts',
- unionAll: 'SELECT name FROM users UNION ALL SELECT title as name FROM posts',
- multipleUnions: `
+  /**
+   * UNION queries
+   */
+  static readonly unionQueries = {
+    simple: 'SELECT name FROM users UNION SELECT title as name FROM posts',
+    unionAll: 'SELECT name FROM users UNION ALL SELECT title as name FROM posts',
+    multipleUnions: `
  SELECT name, 'user' as type FROM users
  UNION
  SELECT title as name, 'post' as type FROM posts
  UNION
  SELECT content as name, 'comment' as type FROM comments
- `
- };
+ `,
+  };
 
- /**
- * Common Table Expressions (WITH clauses)
- */
- static readonly cteQueries = {
- simple: `
+  /**
+   * Common Table Expressions (WITH clauses)
+   */
+  static readonly cteQueries = {
+    simple: `
  WITH user_stats AS (
  SELECT user_id, COUNT(*) as post_count
  FROM posts
@@ -97,7 +99,7 @@ export class SampleQueries {
  FROM users u
  JOIN user_stats us ON u.id = us.user_id
  `,
- recursive: `
+    recursive: `
  WITH RECURSIVE category_tree AS (
  SELECT id, name, parent_id, 1 as level
  FROM categories
@@ -111,7 +113,7 @@ export class SampleQueries {
  )
  SELECT * FROM category_tree ORDER BY level, name
  `,
- multipleCTEs: `
+    multipleCTEs: `
  WITH 
  active_users AS (
  SELECT * FROM users WHERE last_login > NOW() - INTERVAL '30 days'
@@ -122,14 +124,14 @@ export class SampleQueries {
  SELECT au.name, pp.title
  FROM active_users au
  JOIN popular_posts pp ON au.id = pp.user_id
- `
- };
+ `,
+  };
 
- /**
- * Window function queries
- */
- static readonly windowQueries = {
- ranking: `
+  /**
+   * Window function queries
+   */
+  static readonly windowQueries = {
+    ranking: `
  SELECT 
  name,
  score,
@@ -137,7 +139,7 @@ export class SampleQueries {
  RANK() OVER (ORDER BY score DESC) as dense_rank
  FROM users
  `,
- partitioned: `
+    partitioned: `
  SELECT 
  user_id,
  title,
@@ -146,7 +148,7 @@ export class SampleQueries {
  score - AVG(score) OVER (PARTITION BY user_id) as score_diff
  FROM posts
  `,
- leadLag: `
+    leadLag: `
  SELECT 
  created_at,
  score,
@@ -154,14 +156,14 @@ export class SampleQueries {
  LEAD(score, 1) OVER (ORDER BY created_at) as next_score
  FROM posts
  ORDER BY created_at
- `
- };
+ `,
+  };
 
- /**
- * Complex analytical queries
- */
- static readonly analyticalQueries = {
- timeSeriesAnalysis: `
+  /**
+   * Complex analytical queries
+   */
+  static readonly analyticalQueries = {
+    timeSeriesAnalysis: `
  WITH daily_stats AS (
  SELECT 
  DATE(created_at) as date,
@@ -189,7 +191,7 @@ export class SampleQueries {
  )
  SELECT * FROM moving_averages ORDER BY date
  `,
- cohortAnalysis: `
+    cohortAnalysis: `
  WITH user_cohorts AS (
  SELECT 
  user_id,
@@ -222,86 +224,88 @@ export class SampleQueries {
  FROM monthly_activity ma
  JOIN cohort_sizes cs ON ma.cohort_month = cs.cohort_month
  ORDER BY ma.cohort_month, ma.activity_month
- `
- };
+ `,
+  };
 
- /**
- * Modification queries (will be blocked in SELECT-only mode)
- */
- static readonly modificationQueries = {
- insert: 'INSERT INTO users (name, email) VALUES (\'New User\', \'new@example.com\')',
- insertMultiple: `
+  /**
+   * Modification queries (will be blocked in SELECT-only mode)
+   */
+  static readonly modificationQueries = {
+    insert: "INSERT INTO users (name, email) VALUES ('New User', 'new@example.com')",
+    insertMultiple: `
  INSERT INTO users (name, email) VALUES 
  ('User 1', 'user1@example.com'),
  ('User 2', 'user2@example.com'),
  ('User 3', 'user3@example.com')
  `,
- update: 'UPDATE users SET email = \'updated@example.com\' WHERE id = 1',
- updateWithJoin: `
+    update: "UPDATE users SET email = 'updated@example.com' WHERE id = 1",
+    updateWithJoin: `
  UPDATE posts 
  SET score = posts.score + 1 
  FROM users 
  WHERE posts.user_id = users.id 
  AND users.name = 'John Doe'
  `,
- delete: 'DELETE FROM posts WHERE score < 10',
- deleteWithSubquery: 'DELETE FROM posts WHERE user_id IN (SELECT id FROM users WHERE name = \'Inactive User\')'
- };
+    delete: 'DELETE FROM posts WHERE score < 10',
+    deleteWithSubquery:
+      "DELETE FROM posts WHERE user_id IN (SELECT id FROM users WHERE name = 'Inactive User')",
+  };
 
- /**
- * DDL queries (will be blocked in SELECT-only mode)
- */
- static readonly ddlQueries = {
- createTable: `
+  /**
+   * DDL queries (will be blocked in SELECT-only mode)
+   */
+  static readonly ddlQueries = {
+    createTable: `
  CREATE TABLE new_table (
  id SERIAL PRIMARY KEY,
  name VARCHAR(255) NOT NULL,
  created_at TIMESTAMP DEFAULT NOW()
  )
  `,
- alterTable: 'ALTER TABLE users ADD COLUMN phone VARCHAR(20)',
- dropTable: 'DROP TABLE temp_table',
- createIndex: 'CREATE INDEX idx_users_email ON users(email)',
- dropIndex: 'DROP INDEX idx_users_email',
- createView: `
+    alterTable: 'ALTER TABLE users ADD COLUMN phone VARCHAR(20)',
+    dropTable: 'DROP TABLE temp_table',
+    createIndex: 'CREATE INDEX idx_users_email ON users(email)',
+    dropIndex: 'DROP INDEX idx_users_email',
+    createView: `
  CREATE VIEW user_post_summary AS
  SELECT u.name, COUNT(p.id) as post_count, AVG(p.score) as avg_score
  FROM users u
  LEFT JOIN posts p ON u.id = p.user_id
  GROUP BY u.id, u.name
- `
- };
+ `,
+  };
 
- /**
- * Utility and administrative queries
- */
- static readonly utilityQueries = {
- explain: 'EXPLAIN SELECT * FROM users WHERE email = \'test@example.com\'',
- explainAnalyze: 'EXPLAIN ANALYZE SELECT u.*, COUNT(p.id) FROM users u LEFT JOIN posts p ON u.id = p.user_id GROUP BY u.id',
- showTables: 'SHOW TABLES',
- describeTable: 'DESCRIBE users',
- showColumns: 'SHOW COLUMNS FROM users',
- showIndexes: 'SHOW INDEXES FROM users',
- showCreateTable: 'SHOW CREATE TABLE users'
- };
+  /**
+   * Utility and administrative queries
+   */
+  static readonly utilityQueries = {
+    explain: "EXPLAIN SELECT * FROM users WHERE email = 'test@example.com'",
+    explainAnalyze:
+      'EXPLAIN ANALYZE SELECT u.*, COUNT(p.id) FROM users u LEFT JOIN posts p ON u.id = p.user_id GROUP BY u.id',
+    showTables: 'SHOW TABLES',
+    describeTable: 'DESCRIBE users',
+    showColumns: 'SHOW COLUMNS FROM users',
+    showIndexes: 'SHOW INDEXES FROM users',
+    showCreateTable: 'SHOW CREATE TABLE users',
+  };
 
- /**
- * Potentially dangerous queries
- */
- static readonly dangerousQueries = {
- deleteAll: 'DELETE FROM users',
- updateAll: 'UPDATE users SET email = \'hacked@example.com\'',
- dropDatabase: 'DROP DATABASE production',
- truncateTable: 'TRUNCATE TABLE users',
- disableForeignKeys: 'SET foreign_key_checks = 0',
- changeUserPassword: 'UPDATE users SET password = \'hacked\' WHERE role = \'admin\''
- };
+  /**
+   * Potentially dangerous queries
+   */
+  static readonly dangerousQueries = {
+    deleteAll: 'DELETE FROM users',
+    updateAll: "UPDATE users SET email = 'hacked@example.com'",
+    dropDatabase: 'DROP DATABASE production',
+    truncateTable: 'TRUNCATE TABLE users',
+    disableForeignKeys: 'SET foreign_key_checks = 0',
+    changeUserPassword: "UPDATE users SET password = 'hacked' WHERE role = 'admin'",
+  };
 
- /**
- * Complex queries that might hit security limits
- */
- static readonly complexityTestQueries = {
- manyJoins: `
+  /**
+   * Complex queries that might hit security limits
+   */
+  static readonly complexityTestQueries = {
+    manyJoins: `
  SELECT *
  FROM table1 t1
  JOIN table2 t2 ON t1.id = t2.t1_id
@@ -316,7 +320,7 @@ export class SampleQueries {
  JOIN table11 t11 ON t10.id = t11.t10_id
  JOIN table12 t12 ON t11.id = t12.t11_id
  `,
- manySubqueries: `
+    manySubqueries: `
  SELECT * FROM users WHERE id IN (
  SELECT user_id FROM posts WHERE id IN (
  SELECT post_id FROM comments WHERE id IN (
@@ -331,7 +335,7 @@ export class SampleQueries {
  )
  )
  `,
- manyUnions: `
+    manyUnions: `
  SELECT name FROM users
  UNION SELECT title FROM posts
  UNION SELECT content FROM comments
@@ -343,7 +347,7 @@ export class SampleQueries {
  UNION SELECT content FROM articles
  UNION SELECT name FROM organizations
  `,
- manyGroupBys: `
+    manyGroupBys: `
  SELECT 
  user_id,
  category_id,
@@ -365,7 +369,7 @@ export class SampleQueries {
  location_id,
  status_id
  `,
- veryLongQuery: `
+    veryLongQuery: `
  SELECT 
  users.id as user_id,
  users.name as user_name,
@@ -404,20 +408,25 @@ export class SampleQueries {
  AND organizations.active = true
  ORDER BY posts.score DESC, comments.score DESC, likes.created_at DESC
  LIMIT 1000
- `.replace(/\s+/g, ' ').repeat(10) // Make it very long
- };
+ `
+      .replace(/\s+/g, ' ')
+      .repeat(10), // Make it very long
+  };
 
- /**
- * Queries for testing different database features
- */
- static readonly featureTestQueries = {
- jsonQuery: 'SELECT data->\'name\' as name FROM json_table WHERE data->>\'active\' = \'true\'',
- arrayQuery: 'SELECT * FROM table WHERE tags && ARRAY[\'sql\', \'database\']',
- regexQuery: 'SELECT * FROM users WHERE email ~ \'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$\'',
- fullTextSearch: 'SELECT * FROM articles WHERE to_tsvector(content) @@ to_tsquery(\'database & sql\')',
- geometryQuery: 'SELECT * FROM locations WHERE ST_DWithin(geom, ST_Point(-122.4194, 37.7749), 1000)',
- dateQuery: 'SELECT * FROM events WHERE event_date BETWEEN \'2023-01-01\' AND \'2023-12-31\'',
- caseQuery: `
+  /**
+   * Queries for testing different database features
+   */
+  static readonly featureTestQueries = {
+    jsonQuery: "SELECT data->'name' as name FROM json_table WHERE data->>'active' = 'true'",
+    arrayQuery: "SELECT * FROM table WHERE tags && ARRAY['sql', 'database']",
+    regexQuery:
+      "SELECT * FROM users WHERE email ~ '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'",
+    fullTextSearch:
+      "SELECT * FROM articles WHERE to_tsvector(content) @@ to_tsquery('database & sql')",
+    geometryQuery:
+      'SELECT * FROM locations WHERE ST_DWithin(geom, ST_Point(-122.4194, 37.7749), 1000)',
+    dateQuery: "SELECT * FROM events WHERE event_date BETWEEN '2023-01-01' AND '2023-12-31'",
+    caseQuery: `
  SELECT 
  name,
  CASE 
@@ -427,56 +436,56 @@ export class SampleQueries {
  ELSE 'Poor'
  END as grade
  FROM users
- `
- };
+ `,
+  };
 
- /**
- * Get all query categories
- */
- static getAllQueryCategories(): Record<string, Record<string, string>> {
- return {
- basic: this.basicQueries,
- joins: this.joinQueries,
- subqueries: this.subqueryQueries,
- unions: this.unionQueries,
- cte: this.cteQueries,
- windows: this.windowQueries,
- analytical: this.analyticalQueries,
- modifications: this.modificationQueries,
- ddl: this.ddlQueries,
- utility: this.utilityQueries,
- dangerous: this.dangerousQueries,
- complexity: this.complexityTestQueries,
- features: this.featureTestQueries
- };
- }
+  /**
+   * Get all query categories
+   */
+  static getAllQueryCategories(): Record<string, Record<string, string>> {
+    return {
+      basic: this.basicQueries,
+      joins: this.joinQueries,
+      subqueries: this.subqueryQueries,
+      unions: this.unionQueries,
+      cte: this.cteQueries,
+      windows: this.windowQueries,
+      analytical: this.analyticalQueries,
+      modifications: this.modificationQueries,
+      ddl: this.ddlQueries,
+      utility: this.utilityQueries,
+      dangerous: this.dangerousQueries,
+      complexity: this.complexityTestQueries,
+      features: this.featureTestQueries,
+    };
+  }
 
- /**
- * Get queries by type for testing
- */
- static getSafeQueries(): string[] {
- return [
- ...Object.values(this.basicQueries),
- ...Object.values(this.joinQueries),
- ...Object.values(this.subqueryQueries),
- ...Object.values(this.unionQueries),
- ...Object.values(this.cteQueries),
- ...Object.values(this.windowQueries),
- ...Object.values(this.analyticalQueries),
- ...Object.values(this.utilityQueries),
- ...Object.values(this.featureTestQueries)
- ];
- }
+  /**
+   * Get queries by type for testing
+   */
+  static getSafeQueries(): string[] {
+    return [
+      ...Object.values(this.basicQueries),
+      ...Object.values(this.joinQueries),
+      ...Object.values(this.subqueryQueries),
+      ...Object.values(this.unionQueries),
+      ...Object.values(this.cteQueries),
+      ...Object.values(this.windowQueries),
+      ...Object.values(this.analyticalQueries),
+      ...Object.values(this.utilityQueries),
+      ...Object.values(this.featureTestQueries),
+    ];
+  }
 
- static getUnsafeQueries(): string[] {
- return [
- ...Object.values(this.modificationQueries),
- ...Object.values(this.ddlQueries),
- ...Object.values(this.dangerousQueries)
- ];
- }
+  static getUnsafeQueries(): string[] {
+    return [
+      ...Object.values(this.modificationQueries),
+      ...Object.values(this.ddlQueries),
+      ...Object.values(this.dangerousQueries),
+    ];
+  }
 
- static getComplexityTestQueries(): string[] {
- return Object.values(this.complexityTestQueries);
- }
+  static getComplexityTestQueries(): string[] {
+    return Object.values(this.complexityTestQueries);
+  }
 }

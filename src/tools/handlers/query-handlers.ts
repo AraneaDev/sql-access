@@ -4,211 +4,229 @@
  */
 
 import type {
- SQLQueryArgs,
- SQLBatchQueryArgs,
- SQLAnalyzePerformanceArgs,
- MCPToolResponse
+  SQLQueryArgs,
+  SQLBatchQueryArgs,
+  SQLAnalyzePerformanceArgs,
+  MCPToolResponse,
 } from '../../types/index.js';
 import { SecurityViolationError } from '../../types/index.js';
-import { formatTableResults, formatCondensedTableResults, createToolResponse } from '../../utils/response-formatter.js';
+import {
+  formatTableResults,
+  formatCondensedTableResults,
+  createToolResponse,
+} from '../../utils/response-formatter.js';
 import { getErrorMessage, ValidationError } from '../../utils/error-handler.js';
 import type { ToolHandlerContext } from './types.js';
 import { requireDbConfig } from './types.js';
 
-export async function handleSqlQuery(ctx: ToolHandlerContext, args: SQLQueryArgs): Promise<MCPToolResponse> {
- const { database, query, params = [] } = args;
+export async function handleSqlQuery(
+  ctx: ToolHandlerContext,
+  args: SQLQueryArgs
+): Promise<MCPToolResponse> {
+  const { database, query, params = [] } = args;
 
- try {
- const dbConfig = requireDbConfig(ctx.config, database);
+  try {
+    const dbConfig = requireDbConfig(ctx.config, database);
 
- // Security validation for SELECT-only mode
- if (dbConfig.select_only) {
- const validation = ctx.securityManager.validateSelectOnlyQuery(query, dbConfig.type);
- if (!validation.allowed) {
- throw new SecurityViolationError(
- `Query blocked: Database '${database}' is configured for SELECT-only access. ${validation.reason}`,
- { database, query: query.substring(0, 100), reason: validation.reason }
- );
- }
- }
+    // Security validation for SELECT-only mode
+    if (dbConfig.select_only) {
+      const validation = ctx.securityManager.validateSelectOnlyQuery(query, dbConfig.type);
+      if (!validation.allowed) {
+        throw new SecurityViolationError(
+          `Query blocked: Database '${database}' is configured for SELECT-only access. ${validation.reason}`,
+          { database, query: query.substring(0, 100), reason: validation.reason }
+        );
+      }
+    }
 
- if (dbConfig.ssh_host) {
- ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
- }
+    if (dbConfig.ssh_host) {
+      ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
+    }
 
- const result = await ctx.connectionManager.executeQuery(database, query, params);
+    const result = await ctx.connectionManager.executeQuery(database, query, params);
 
- // Capture schema if not cached
- if (!ctx.schemaManager.hasSchema(database)) {
- try {
- const connection = await ctx.connectionManager.getConnection(database);
- if (connection) {
- await ctx.schemaManager.captureSchema(database, dbConfig);
- }
- } catch (error) {
- ctx.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
- }
- }
+    // Capture schema if not cached
+    if (!ctx.schemaManager.hasSchema(database)) {
+      try {
+        const connection = await ctx.connectionManager.getConnection(database);
+        if (connection) {
+          await ctx.schemaManager.captureSchema(database, dbConfig);
+        }
+      } catch (error) {
+        ctx.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
+      }
+    }
 
- let responseText = ` Query executed successfully on ${database}\n`;
- if (ctx.sshTunnelManager.hasTunnel(database)) responseText += ` Connected via SSH tunnel\n`;
- if (dbConfig.select_only) responseText += ` SELECT-only mode active\n`;
- responseText += ` Results: ${result.rowCount} rows`;
- if (result.truncated) responseText += ` (limited to ${result.rows.length})`;
- responseText += '\n\n';
+    let responseText = ` Query executed successfully on ${database}\n`;
+    if (ctx.sshTunnelManager.hasTunnel(database)) responseText += ` Connected via SSH tunnel\n`;
+    if (dbConfig.select_only) responseText += ` SELECT-only mode active\n`;
+    responseText += ` Results: ${result.rowCount} rows`;
+    if (result.truncated) responseText += ` (limited to ${result.rows.length})`;
+    responseText += '\n\n';
 
- if (result.rows.length > 0) {
- responseText += formatTableResults(result);
- } else {
- responseText += 'No results returned.\n';
- }
+    if (result.rows.length > 0) {
+      responseText += formatTableResults(result);
+    } else {
+      responseText += 'No results returned.\n';
+    }
 
- return createToolResponse(responseText);
+    return createToolResponse(responseText);
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
+    let responseText = ` Query failed on ${database}: ${errorMessage}`;
 
- } catch (error) {
- const errorMessage = getErrorMessage(error);
- let responseText = ` Query failed on ${database}: ${errorMessage}`;
+    if (error instanceof SecurityViolationError) {
+      responseText += '\n\n **Security Information:**\n';
+      responseText += 'This database is configured with SELECT-only mode for safety.\n';
+      responseText += 'Only SELECT, WITH, SHOW, EXPLAIN, and DESCRIBE statements are allowed.\n';
+      responseText += 'To modify data, use a database configured with full access permissions.';
+    }
 
- if (error instanceof SecurityViolationError) {
- responseText += '\n\n **Security Information:**\n';
- responseText += 'This database is configured with SELECT-only mode for safety.\n';
- responseText += 'Only SELECT, WITH, SHOW, EXPLAIN, and DESCRIBE statements are allowed.\n';
- responseText += 'To modify data, use a database configured with full access permissions.';
- }
-
- return createToolResponse(responseText, true);
- }
+    return createToolResponse(responseText, true);
+  }
 }
 
-export async function handleBatchQuery(ctx: ToolHandlerContext, args: SQLBatchQueryArgs): Promise<MCPToolResponse> {
- const { database, queries, transaction = false } = args;
+export async function handleBatchQuery(
+  ctx: ToolHandlerContext,
+  args: SQLBatchQueryArgs
+): Promise<MCPToolResponse> {
+  const { database, queries, transaction = false } = args;
 
- if (!queries || queries.length === 0) {
- throw new ValidationError('No queries provided for batch execution');
- }
+  if (!queries || queries.length === 0) {
+    throw new ValidationError('No queries provided for batch execution');
+  }
 
- const maxBatchSize = ctx.config.extension?.max_batch_size || 10;
- if (queries.length > maxBatchSize) {
- throw new ValidationError(`Batch size exceeds maximum of ${maxBatchSize} queries`);
- }
+  const maxBatchSize = ctx.config.extension?.max_batch_size || 10;
+  if (queries.length > maxBatchSize) {
+    throw new ValidationError(`Batch size exceeds maximum of ${maxBatchSize} queries`);
+  }
 
- try {
- const dbConfig = requireDbConfig(ctx.config, database);
+  try {
+    const dbConfig = requireDbConfig(ctx.config, database);
 
- if (dbConfig.select_only) {
- for (const query of queries) {
- const validation = ctx.securityManager.validateSelectOnlyQuery(query.query, dbConfig.type);
- if (!validation.allowed) {
- throw new SecurityViolationError(
- `Batch contains blocked query: ${validation.reason}`,
- { database, query: query.query.substring(0, 100), reason: validation.reason }
- );
- }
- }
- }
+    if (dbConfig.select_only) {
+      for (const query of queries) {
+        const validation = ctx.securityManager.validateSelectOnlyQuery(query.query, dbConfig.type);
+        if (!validation.allowed) {
+          throw new SecurityViolationError(`Batch contains blocked query: ${validation.reason}`, {
+            database,
+            query: query.query.substring(0, 100),
+            reason: validation.reason,
+          });
+        }
+      }
+    }
 
- if (dbConfig.ssh_host) {
- ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
- }
+    if (dbConfig.ssh_host) {
+      ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
+    }
 
- const result = await ctx.connectionManager.executeBatch(database, queries, transaction && !dbConfig.select_only);
+    const result = await ctx.connectionManager.executeBatch(
+      database,
+      queries,
+      transaction && !dbConfig.select_only
+    );
 
- let responseText = ` **Batch Query Results** (${database})\n\n`;
- responseText += `**Execution Summary:**\n`;
- responseText += ` - Total Time: ${result.totalExecutionTime}ms\n`;
- responseText += ` - Queries Executed: ${result.results.length}\n`;
- responseText += ` - Successful: ${result.successCount} [OK]\n`;
- responseText += ` - Failed: ${result.failureCount} ${result.failureCount > 0 ? '[ERROR]' : '[OK]'}\n`;
+    let responseText = ` **Batch Query Results** (${database})\n\n`;
+    responseText += `**Execution Summary:**\n`;
+    responseText += ` - Total Time: ${result.totalExecutionTime}ms\n`;
+    responseText += ` - Queries Executed: ${result.results.length}\n`;
+    responseText += ` - Successful: ${result.successCount} [OK]\n`;
+    responseText += ` - Failed: ${result.failureCount} ${result.failureCount > 0 ? '[ERROR]' : '[OK]'}\n`;
 
- if (transaction && !dbConfig.select_only) {
- responseText += ` - Transaction: ${result.transactionUsed ? 'Committed' : 'Used'} [OK]\n`;
- }
- if (dbConfig.select_only) {
- responseText += ` - Security: SELECT-only mode active [LOCK]\n`;
- }
- if (ctx.sshTunnelManager.hasTunnel(database)) {
- responseText += ` - Connection: SSH tunnel [OK]\n`;
- }
+    if (transaction && !dbConfig.select_only) {
+      responseText += ` - Transaction: ${result.transactionUsed ? 'Committed' : 'Used'} [OK]\n`;
+    }
+    if (dbConfig.select_only) {
+      responseText += ` - Security: SELECT-only mode active [LOCK]\n`;
+    }
+    if (ctx.sshTunnelManager.hasTunnel(database)) {
+      responseText += ` - Connection: SSH tunnel [OK]\n`;
+    }
 
- responseText += `\n **Individual Results:**\n\n`;
+    responseText += `\n **Individual Results:**\n\n`;
 
- for (const queryResult of result.results) {
- responseText += `**${queryResult.label || `Query ${queryResult.index}`}**:\n`;
+    for (const queryResult of result.results) {
+      responseText += `**${queryResult.label || `Query ${queryResult.index}`}**:\n`;
 
- if (queryResult.success && queryResult.data) {
- responseText += `[OK] Success`;
- if (queryResult.data.execution_time_ms) {
- responseText += ` (${queryResult.data.execution_time_ms}ms)`;
- }
- responseText += `\n`;
+      if (queryResult.success && queryResult.data) {
+        responseText += `[OK] Success`;
+        if (queryResult.data.execution_time_ms) {
+          responseText += ` (${queryResult.data.execution_time_ms}ms)`;
+        }
+        responseText += `\n`;
 
- if (queryResult.data.rows && queryResult.data.rows.length > 0) {
- responseText += ` Results: ${queryResult.data.rowCount} rows`;
- if (queryResult.data.truncated) {
- responseText += ` (showing ${queryResult.data.rows.length})`;
- }
- responseText += '\n';
- responseText += formatCondensedTableResults(queryResult.data);
- } else {
- responseText += ' No results returned\n';
- }
- } else {
- responseText += `[ERROR] Failed: ${queryResult.error}\n`;
- }
+        if (queryResult.data.rows && queryResult.data.rows.length > 0) {
+          responseText += ` Results: ${queryResult.data.rowCount} rows`;
+          if (queryResult.data.truncated) {
+            responseText += ` (showing ${queryResult.data.rows.length})`;
+          }
+          responseText += '\n';
+          responseText += formatCondensedTableResults(queryResult.data);
+        } else {
+          responseText += ' No results returned\n';
+        }
+      } else {
+        responseText += `[ERROR] Failed: ${queryResult.error}\n`;
+      }
 
- responseText += ` Query: \`${queryResult.query?.substring(0, 100)}${queryResult.query && queryResult.query.length > 100 ? '...' : ''}\`\n\n`;
- }
+      responseText += ` Query: \`${queryResult.query?.substring(0, 100)}${queryResult.query && queryResult.query.length > 100 ? '...' : ''}\`\n\n`;
+    }
 
- return createToolResponse(responseText);
+    return createToolResponse(responseText);
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
+    let responseText = ` **Batch Query Failed** (${database})\n\n`;
+    responseText += ` **Error:** ${errorMessage}\n\n`;
 
- } catch (error) {
- const errorMessage = getErrorMessage(error);
- let responseText = ` **Batch Query Failed** (${database})\n\n`;
- responseText += ` **Error:** ${errorMessage}\n\n`;
+    if (error instanceof SecurityViolationError) {
+      responseText += '\n **Security Information:**\n';
+      responseText += 'This database is configured with SELECT-only mode for safety.\n';
+      responseText += 'All queries in the batch must comply with security restrictions.';
+    }
 
- if (error instanceof SecurityViolationError) {
- responseText += '\n **Security Information:**\n';
- responseText += 'This database is configured with SELECT-only mode for safety.\n';
- responseText += 'All queries in the batch must comply with security restrictions.';
- }
-
- return createToolResponse(responseText, true);
- }
+    return createToolResponse(responseText, true);
+  }
 }
 
-export async function handleAnalyzePerformance(ctx: ToolHandlerContext, args: SQLAnalyzePerformanceArgs): Promise<MCPToolResponse> {
- const { database, query } = args;
+export async function handleAnalyzePerformance(
+  ctx: ToolHandlerContext,
+  args: SQLAnalyzePerformanceArgs
+): Promise<MCPToolResponse> {
+  const { database, query } = args;
 
- try {
- const dbConfig = requireDbConfig(ctx.config, database);
+  try {
+    const dbConfig = requireDbConfig(ctx.config, database);
 
- if (dbConfig.ssh_host) {
- ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
- }
+    if (dbConfig.ssh_host) {
+      ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
+    }
 
- const analysis = await ctx.connectionManager.analyzePerformance(database, query);
+    const analysis = await ctx.connectionManager.analyzePerformance(database, query);
 
- let responseText = ` **Query Performance Analysis** (${database})\n\n`;
- responseText += `**Execution Times:**\n`;
- responseText += ` - Query Execution: ${analysis.executionTime}ms\n`;
- responseText += ` - Explain Analysis: ${analysis.explainTime}ms\n\n`;
+    let responseText = ` **Query Performance Analysis** (${database})\n\n`;
+    responseText += `**Execution Times:**\n`;
+    responseText += ` - Query Execution: ${analysis.executionTime}ms\n`;
+    responseText += ` - Explain Analysis: ${analysis.explainTime}ms\n\n`;
 
- responseText += `**Query Results:**\n`;
- responseText += ` - Rows Returned: ${analysis.rowCount}\n`;
- responseText += ` - Columns: ${analysis.columnCount}\n\n`;
+    responseText += `**Query Results:**\n`;
+    responseText += ` - Rows Returned: ${analysis.rowCount}\n`;
+    responseText += ` - Columns: ${analysis.columnCount}\n\n`;
 
- responseText += ` **Execution Plan:**\n`;
- responseText += '```\n';
- responseText += analysis.executionPlan;
- responseText += '```\n\n';
+    responseText += ` **Execution Plan:**\n`;
+    responseText += '```\n';
+    responseText += analysis.executionPlan;
+    responseText += '```\n\n';
 
- responseText += ` **Performance Recommendations:**\n`;
- responseText += analysis.recommendations;
+    responseText += ` **Performance Recommendations:**\n`;
+    responseText += analysis.recommendations;
 
- return createToolResponse(responseText);
-
- } catch (error) {
- const errorMessage = getErrorMessage(error);
- return createToolResponse(` Performance analysis failed for ${database}: ${errorMessage}`, true);
- }
+    return createToolResponse(responseText);
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
+    return createToolResponse(
+      ` Performance analysis failed for ${database}: ${errorMessage}`,
+      true
+    );
+  }
 }

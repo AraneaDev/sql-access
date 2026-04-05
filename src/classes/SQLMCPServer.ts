@@ -9,31 +9,24 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const PROJECT_ROOT = resolve(__dirname, '..', '..');
+const _currentFile = fileURLToPath(import.meta.url);
+const _currentDir = dirname(_currentFile);
+const PROJECT_ROOT = resolve(_currentDir, '..', '..');
 import { parse as parseIni } from 'ini';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
- CallToolRequestSchema,
- ListToolsRequestSchema
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import type {
- DatabaseConfig,
- DatabaseTypeString,
- ParsedServerConfig,
- TestConnectionResult,
- MCPRequest,
- MCPResponse
+  DatabaseConfig,
+  DatabaseTypeString,
+  ParsedServerConfig,
+  TestConnectionResult,
+  MCPRequest,
+  MCPResponse,
 } from '../types/index.js';
 
-import {
- SERVER_VERSION,
- SERVER_NAME,
- DEFAULT_DATABASE_PORTS
-} from '../types/index.js';
+import { SERVER_VERSION, SERVER_NAME, DEFAULT_DATABASE_PORTS } from '../types/index.js';
 
 import { ConnectionManager } from './ConnectionManager.js';
 import { SecurityManager } from './SecurityManager.js';
@@ -49,438 +42,480 @@ import type { ToolHandlerContext } from '../tools/handlers/types.js';
  * Main SQL MCP Server class that coordinates all operations
  */
 export class SQLMCPServer extends EventEmitter {
- private readonly connectionManager: ConnectionManager;
- private readonly securityManager: SecurityManager;
- private readonly schemaManager: SchemaManager;
- private readonly sshTunnelManager: EnhancedSSHTunnelManager;
- private readonly logger: Logger;
- private mcpServer: Server;
- private dispatchToolCall: ToolDispatchFn | null = null;
+  private readonly connectionManager: ConnectionManager;
+  private readonly securityManager: SecurityManager;
+  private readonly schemaManager: SchemaManager;
+  private readonly sshTunnelManager: EnhancedSSHTunnelManager;
+  private readonly logger: Logger;
+  private mcpServer: Server;
+  private dispatchToolCall: ToolDispatchFn | null = null;
 
- private config: ParsedServerConfig | null = null;
- private configPath: string = '';
- private initialized = false;
+  private config: ParsedServerConfig | null = null;
+  private configPath: string = '';
+  private initialized = false;
 
- constructor() {
-  super();
+  constructor() {
+    super();
 
-  this.logger = new Logger({
-   logFile: join(PROJECT_ROOT, 'sql-mcp-server.log'),
-   logLevel: 'INFO',
-   component: 'SQLMCPServer',
-   enableConsole: false
-  });
-
-  this.mcpServer = new Server(
-   { name: SERVER_NAME, version: SERVER_VERSION },
-   { capabilities: { tools: {}, logging: {} } }
-  );
-
-  this.sshTunnelManager = new EnhancedSSHTunnelManager();
-  this.securityManager = new SecurityManager();
-  this.connectionManager = new ConnectionManager(this.sshTunnelManager);
-  this.schemaManager = new SchemaManager(this.connectionManager, join(PROJECT_ROOT, 'schemas'));
-
-  this.setupEventListeners();
-  this.registerMCPHandlers();
- }
-
- /**
-  * Initialize the MCP server
-  */
- public async initialize(configPath?: string): Promise<void> {
-  this.logger.info('Initializing SQL MCP Server...');
-
-  try {
-   this.loadConfig(configPath);
-   await this.initializeManagers();
-
-   // Create the tool dispatcher with a late-binding context
-   // (property access is deferred so test mocks applied after init still work)
-   // eslint-disable-next-line @typescript-eslint/no-this-alias
-   const server = this;
-   const ctx: ToolHandlerContext = {
-    get connectionManager() { return server.connectionManager; },
-    get securityManager() { return server.securityManager; },
-    get schemaManager() { return server.schemaManager; },
-    get sshTunnelManager() { return server.sshTunnelManager; },
-    get config() { return server.config!; },
-    get configPath() { return server.configPath; },
-    get logger() { return server.logger; }
-   };
-   this.dispatchToolCall = createToolDispatcher(ctx);
-
-   this.initialized = true;
-   this.logger.info('SQL MCP Server initialization complete');
-   this.emit('initialized');
-  } catch (error) {
-   this.logger.error('Failed to initialize server', error as Error);
-   throw error;
-  }
- }
-
- /**
-  * Cleanup and shutdown the server
-  */
- public async cleanup(): Promise<void> {
-  this.logger.info('Starting server cleanup...');
-
-  try {
-   await this.connectionManager.closeAllConnections();
-   await this.sshTunnelManager.closeAllTunnels();
-
-   this.initialized = false;
-   this.logger.info('Server cleanup complete');
-   this.emit('cleanup');
-  } catch (error) {
-   this.logger.error('Error during cleanup', error as Error);
-   throw error;
-  }
- }
-
- /**
-  * Run the MCP server using SDK stdio transport
-  */
- public async run(): Promise<void> {
-  try {
-   await this.initialize();
-   const transport = new StdioServerTransport();
-   await this.mcpServer.connect(transport);
-   this.logger.info("SQL MCP Server running on stdio (MCP SDK transport)");
-  } catch (error) {
-   this.logger.error('Server initialization failed', error as Error);
-   // Write to stderr so the MCP client can see why startup failed
-   try { process.stderr.write(`MCP server startup failed: ${error instanceof Error ? error.message : error}\n`); } catch { /* ignore */ }
-   process.exit(1);
-  }
- }
-
- /**
-  * Handle a raw JSON-RPC request (used for testing)
-  */
- public async handleRequest(request: MCPRequest): Promise<MCPResponse | null> {
-  const { method, params, id } = request;
-
-  try {
-   if (method === 'tools/list') {
-    return {
-     jsonrpc: '2.0',
-     id: id || 0,
-     result: { tools: getToolDefinitions() }
-    };
-   }
-
-   if (method === 'tools/call') {
-    const { name, arguments: args } = params as { name: string; arguments: Record<string, unknown> };
-
-    if (!this.dispatchToolCall) {
-     throw new Error('Server not initialized');
-    }
-
-    try {
-     const result = await this.dispatchToolCall(name, args || {});
-     return {
-      jsonrpc: '2.0',
-      id: id || 0,
-      result: {
-       content: result.content.map(c => ({ type: "text" as const, text: c.text || '' })),
-       isError: result.isError || false
-      }
-     };
-    } catch (error) {
-     const errorMessage = getErrorMessage(error);
-     return {
-      jsonrpc: '2.0',
-      id: id || 0,
-      result: {
-       content: [{ type: "text" as const, text: ` Error in ${name}: ${errorMessage}` }],
-       isError: true
-      }
-     };
-    }
-   }
-
-   return null;
-  } catch (error) {
-   return {
-    jsonrpc: '2.0',
-    id: id || 0,
-    error: { code: -32603, message: error instanceof Error ? error.message : 'Internal error' }
-   };
-  }
- }
-
- /**
-  * Test database connection (public API used by index.ts testConnection path)
-  */
- public async testConnection(database: string): Promise<TestConnectionResult> {
-  try {
-   const dbConfig = this.config?.databases[database];
-   if (!dbConfig) {
-    throw new Error(`Database configuration '${database}' not found`);
-   }
-
-   if (dbConfig.ssh_host) {
-    this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
-   }
-
-   if (!this.schemaManager.hasSchema(database)) {
-    try {
-     const connection = await this.connectionManager.getConnection(database);
-     if (connection) {
-      await this.schemaManager.captureSchema(database, dbConfig);
-     }
-    } catch (error) {
-     this.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
-    }
-   }
-
-   const schema = this.schemaManager.getSchema(database);
-
-   return {
-    success: true,
-    database,
-    message: 'Connection successful',
-    ssh_tunnel: this.sshTunnelManager.hasTunnel(database),
-    select_only_mode: !!dbConfig.select_only,
-    schema_captured: !!schema,
-    schema_info: schema ? {
-     table_count: schema.summary.table_count,
-     view_count: schema.summary.view_count,
-     total_columns: schema.summary.total_columns
-    } : undefined
-   };
-
-  } catch (error) {
-   return {
-    success: false,
-    database,
-    error: getErrorMessage(error),
-    ssh_tunnel: false,
-    select_only_mode: false,
-    schema_captured: false
-   };
-  }
- }
-
- // =========================================================================
- // Private Methods
- // =========================================================================
-
- private setupEventListeners(): void {
-  this.connectionManager.on('connected', (dbName: string) => {
-   this.logger.info(`Database connection established: ${dbName}`);
-  });
-  this.connectionManager.on('disconnected', (dbName: string) => {
-   this.logger.info(`Database connection closed: ${dbName}`);
-  });
-  this.connectionManager.on('error', (error: Error, dbName?: string) => {
-   this.logger.error(`Database connection error${dbName ? ` (${dbName})` : ''}`, error);
-  });
-
-  this.sshTunnelManager.on('tunnel-connected', (dbName: string) => {
-   this.logger.info(`SSH tunnel established: ${dbName}`);
-  });
-  this.sshTunnelManager.on('tunnel-disconnected', (dbName: string) => {
-   this.logger.info(`SSH tunnel closed: ${dbName}`);
-  });
-  this.sshTunnelManager.on('tunnel-error', (error: Error, dbName?: string) => {
-   this.logger.error(`SSH tunnel error${dbName ? ` (${dbName})` : ''}`, error);
-  });
-
-  this.schemaManager.on('schema-cached', (dbName: string) => {
-   this.logger.info(`Schema cached: ${dbName}`);
-  });
-  this.schemaManager.on('schema-refreshed', (dbName: string) => {
-   this.logger.info(`Schema refreshed: ${dbName}`);
-  });
-
-  this.securityManager.on('query-blocked', (dbName: string, reason: string) => {
-   this.logger.warning(`Query blocked in ${dbName}: ${reason}`);
-  });
-  this.securityManager.on('query-approved', (dbName: string) => {
-   this.logger.info(`Query approved for ${dbName}`);
-  });
- }
-
- private registerMCPHandlers(): void {
-  this.mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
-   this.logger.info('Handling tools/list request');
-   return { tools: getToolDefinitions() };
-  });
-
-  this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-   const { name, arguments: args } = request.params;
-   this.logger.info(`Handling tool call: ${name}`, { args });
-
-   try {
-    if (!args || typeof args !== 'object') {
-     throw new Error(`Invalid arguments provided for tool '${name}'. Expected object, got ${typeof args}`);
-    }
-
-    if (!this.dispatchToolCall) {
-     throw new Error('Server not initialized');
-    }
-
-    const result = await this.dispatchToolCall(name, args as Record<string, unknown>);
-    return {
-     content: result.content.map(c => ({ type: "text" as const, text: c.text || '' })),
-     isError: result.isError || false
-    };
-   } catch (error) {
-    this.logger.error(`Error in tool call ${name}`, { error, args });
-    const errorMessage = getErrorMessage(error);
-    const troubleshooting = [
-     '**Troubleshooting:**',
-     '- Ensure all required arguments are provided',
-     '- Check that the database name exists in your configuration',
-     '- Verify your database connection is working',
-     '- Review the server logs for more details'
-    ].join('\n');
-
-    return {
-     content: [{ type: "text" as const, text: ` Error in ${name}: ${errorMessage}\n\n${troubleshooting}` }],
-     isError: true
-    };
-   }
-  });
- }
-
- private loadConfig(configPath?: string): void {
-  const cwdConfigPath = join(process.cwd(), 'config.ini');
-  // Fallback: resolve config.ini relative to the project root (two levels up from dist/classes/)
-  // This handles MCP clients that launch the server from a different working directory
-  const scriptDir = dirname(fileURLToPath(import.meta.url));
-  const projectConfigPath = join(scriptDir, '..', '..', 'config.ini');
-
-  let finalConfigPath: string;
-  if (configPath) {
-   finalConfigPath = configPath;
-  } else if (existsSync(cwdConfigPath)) {
-   finalConfigPath = cwdConfigPath;
-  } else if (existsSync(projectConfigPath)) {
-   finalConfigPath = projectConfigPath;
-  } else {
-   finalConfigPath = cwdConfigPath; // Will fail below with a clear error
-  }
-  this.configPath = finalConfigPath;
-
-  if (!existsSync(finalConfigPath)) {
-   throw new Error(`No config.ini found at ${finalConfigPath}. Run setup to configure databases.`);
-  }
-
-  try {
-   const configContent = readFileSync(finalConfigPath, 'utf-8');
-   const rawConfig = parseIni(configContent);
-   this.config = this.parseConfig(rawConfig);
-
-   this.logger.info(`Configuration loaded: ${Object.keys(this.config.databases).length} databases configured`);
-
-   if (this.config.security) {
-    this.logger.info('Security configuration loaded', {
-     maxJoins: this.config.security.max_joins,
-     maxComplexity: this.config.security.max_complexity_score
+    this.logger = new Logger({
+      logFile: join(PROJECT_ROOT, 'sql-mcp-server.log'),
+      logLevel: 'INFO',
+      component: 'SQLMCPServer',
+      enableConsole: false,
     });
-   }
-  } catch (error) {
-   this.logger.error('Failed to load configuration', { error, configPath: finalConfigPath });
-   throw new Error(`Failed to load config.ini: ${getErrorMessage(error)}`);
+
+    this.mcpServer = new Server(
+      { name: SERVER_NAME, version: SERVER_VERSION },
+      { capabilities: { tools: {}, logging: {} } }
+    );
+
+    this.sshTunnelManager = new EnhancedSSHTunnelManager();
+    this.securityManager = new SecurityManager();
+    this.connectionManager = new ConnectionManager(this.sshTunnelManager);
+    this.schemaManager = new SchemaManager(this.connectionManager, join(PROJECT_ROOT, 'schemas'));
+
+    this.setupEventListeners();
+    this.registerMCPHandlers();
   }
- }
 
- private parseConfig(rawConfig: Record<string, unknown>): ParsedServerConfig {
-  const databases: Record<string, DatabaseConfig> = {};
+  /**
+   * Initialize the MCP server
+   */
+  public async initialize(configPath?: string): Promise<void> {
+    this.logger.info('Initializing SQL MCP Server...');
 
-  if (rawConfig.database && typeof rawConfig.database === 'object') {
-   for (const [name, config] of Object.entries(rawConfig.database as Record<string, unknown>)) {
-    databases[name] = this.parseDatabaseConfig(name, config as Record<string, unknown>);
-   }
-  }
+    try {
+      this.loadConfig(configPath);
+      await this.initializeManagers();
 
-  for (const [key, value] of Object.entries(rawConfig)) {
-   if (key.startsWith('database.')) {
-    const dbName = key.replace('database.', '');
-    if (!databases[dbName]) {
-     databases[dbName] = this.parseDatabaseConfig(dbName, value as Record<string, unknown>);
+      // Create the tool dispatcher with a late-binding context
+      // (property access is deferred so test mocks applied after init still work)
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      const server = this;
+      const ctx: ToolHandlerContext = {
+        get connectionManager() {
+          return server.connectionManager;
+        },
+        get securityManager() {
+          return server.securityManager;
+        },
+        get schemaManager() {
+          return server.schemaManager;
+        },
+        get sshTunnelManager() {
+          return server.sshTunnelManager;
+        },
+        get config() {
+          return server.config!;
+        },
+        get configPath() {
+          return server.configPath;
+        },
+        get logger() {
+          return server.logger;
+        },
+      };
+      this.dispatchToolCall = createToolDispatcher(ctx);
+
+      this.initialized = true;
+      this.logger.info('SQL MCP Server initialization complete');
+      this.emit('initialized');
+    } catch (error) {
+      this.logger.error('Failed to initialize server', error as Error);
+      throw error;
     }
-   }
   }
 
-  return {
-   databases,
-   security: rawConfig.security ? (() => {
-    const sec = rawConfig.security as Record<string, string>;
+  /**
+   * Cleanup and shutdown the server
+   */
+  public async cleanup(): Promise<void> {
+    this.logger.info('Starting server cleanup...');
+
+    try {
+      await this.connectionManager.closeAllConnections();
+      await this.sshTunnelManager.closeAllTunnels();
+
+      this.initialized = false;
+      this.logger.info('Server cleanup complete');
+      this.emit('cleanup');
+    } catch (error) {
+      this.logger.error('Error during cleanup', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run the MCP server using SDK stdio transport
+   */
+  public async run(): Promise<void> {
+    try {
+      await this.initialize();
+      const transport = new StdioServerTransport();
+      await this.mcpServer.connect(transport);
+      this.logger.info('SQL MCP Server running on stdio (MCP SDK transport)');
+    } catch (error) {
+      this.logger.error('Server initialization failed', error as Error);
+      // Write to stderr so the MCP client can see why startup failed
+      try {
+        process.stderr.write(
+          `MCP server startup failed: ${error instanceof Error ? error.message : error}\n`
+        );
+      } catch {
+        /* ignore */
+      }
+      process.exit(1);
+    }
+  }
+
+  /**
+   * Handle a raw JSON-RPC request (used for testing)
+   */
+  public async handleRequest(request: MCPRequest): Promise<MCPResponse | null> {
+    const { method, params, id } = request;
+
+    try {
+      if (method === 'tools/list') {
+        return {
+          jsonrpc: '2.0',
+          id: id || 0,
+          result: { tools: getToolDefinitions() },
+        };
+      }
+
+      if (method === 'tools/call') {
+        const { name, arguments: args } = params as {
+          name: string;
+          arguments: Record<string, unknown>;
+        };
+
+        if (!this.dispatchToolCall) {
+          throw new Error('Server not initialized');
+        }
+
+        try {
+          const result = await this.dispatchToolCall(name, args || {});
+          return {
+            jsonrpc: '2.0',
+            id: id || 0,
+            result: {
+              content: result.content.map((c) => ({ type: 'text' as const, text: c.text || '' })),
+              isError: result.isError || false,
+            },
+          };
+        } catch (error) {
+          const errorMessage = getErrorMessage(error);
+          return {
+            jsonrpc: '2.0',
+            id: id || 0,
+            result: {
+              content: [{ type: 'text' as const, text: ` Error in ${name}: ${errorMessage}` }],
+              isError: true,
+            },
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      return {
+        jsonrpc: '2.0',
+        id: id || 0,
+        error: { code: -32603, message: error instanceof Error ? error.message : 'Internal error' },
+      };
+    }
+  }
+
+  /**
+   * Test database connection (public API used by index.ts testConnection path)
+   */
+  public async testConnection(database: string): Promise<TestConnectionResult> {
+    try {
+      const dbConfig = this.config?.databases[database];
+      if (!dbConfig) {
+        throw new Error(`Database configuration '${database}' not found`);
+      }
+
+      if (dbConfig.ssh_host) {
+        this.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
+      }
+
+      if (!this.schemaManager.hasSchema(database)) {
+        try {
+          const connection = await this.connectionManager.getConnection(database);
+          if (connection) {
+            await this.schemaManager.captureSchema(database, dbConfig);
+          }
+        } catch (error) {
+          this.logger.warning('Failed to capture schema', {
+            database,
+            error: getErrorMessage(error),
+          });
+        }
+      }
+
+      const schema = this.schemaManager.getSchema(database);
+
+      return {
+        success: true,
+        database,
+        message: 'Connection successful',
+        ssh_tunnel: this.sshTunnelManager.hasTunnel(database),
+        select_only_mode: !!dbConfig.select_only,
+        schema_captured: !!schema,
+        schema_info: schema
+          ? {
+              table_count: schema.summary.table_count,
+              view_count: schema.summary.view_count,
+              total_columns: schema.summary.total_columns,
+            }
+          : undefined,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        database,
+        error: getErrorMessage(error),
+        ssh_tunnel: false,
+        select_only_mode: false,
+        schema_captured: false,
+      };
+    }
+  }
+
+  // =========================================================================
+  // Private Methods
+  // =========================================================================
+
+  private setupEventListeners(): void {
+    this.connectionManager.on('connected', (dbName: string) => {
+      this.logger.info(`Database connection established: ${dbName}`);
+    });
+    this.connectionManager.on('disconnected', (dbName: string) => {
+      this.logger.info(`Database connection closed: ${dbName}`);
+    });
+    this.connectionManager.on('error', (error: Error, dbName?: string) => {
+      this.logger.error(`Database connection error${dbName ? ` (${dbName})` : ''}`, error);
+    });
+
+    this.sshTunnelManager.on('tunnel-connected', (dbName: string) => {
+      this.logger.info(`SSH tunnel established: ${dbName}`);
+    });
+    this.sshTunnelManager.on('tunnel-disconnected', (dbName: string) => {
+      this.logger.info(`SSH tunnel closed: ${dbName}`);
+    });
+    this.sshTunnelManager.on('tunnel-error', (error: Error, dbName?: string) => {
+      this.logger.error(`SSH tunnel error${dbName ? ` (${dbName})` : ''}`, error);
+    });
+
+    this.schemaManager.on('schema-cached', (dbName: string) => {
+      this.logger.info(`Schema cached: ${dbName}`);
+    });
+    this.schemaManager.on('schema-refreshed', (dbName: string) => {
+      this.logger.info(`Schema refreshed: ${dbName}`);
+    });
+
+    this.securityManager.on('query-blocked', (dbName: string, reason: string) => {
+      this.logger.warning(`Query blocked in ${dbName}: ${reason}`);
+    });
+    this.securityManager.on('query-approved', (dbName: string) => {
+      this.logger.info(`Query approved for ${dbName}`);
+    });
+  }
+
+  private registerMCPHandlers(): void {
+    this.mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+      this.logger.info('Handling tools/list request');
+      return { tools: getToolDefinitions() };
+    });
+
+    this.mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      this.logger.info(`Handling tool call: ${name}`, { args });
+
+      try {
+        if (!args || typeof args !== 'object') {
+          throw new Error(
+            `Invalid arguments provided for tool '${name}'. Expected object, got ${typeof args}`
+          );
+        }
+
+        if (!this.dispatchToolCall) {
+          throw new Error('Server not initialized');
+        }
+
+        const result = await this.dispatchToolCall(name, args as Record<string, unknown>);
+        return {
+          content: result.content.map((c) => ({ type: 'text' as const, text: c.text || '' })),
+          isError: result.isError || false,
+        };
+      } catch (error) {
+        this.logger.error(`Error in tool call ${name}`, { error, args });
+        const errorMessage = getErrorMessage(error);
+        const troubleshooting = [
+          '**Troubleshooting:**',
+          '- Ensure all required arguments are provided',
+          '- Check that the database name exists in your configuration',
+          '- Verify your database connection is working',
+          '- Review the server logs for more details',
+        ].join('\n');
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: ` Error in ${name}: ${errorMessage}\n\n${troubleshooting}`,
+            },
+          ],
+          isError: true,
+        };
+      }
+    });
+  }
+
+  private loadConfig(configPath?: string): void {
+    const cwdConfigPath = join(process.cwd(), 'config.ini');
+    // Fallback: resolve config.ini relative to the project root (two levels up from dist/classes/)
+    // This handles MCP clients that launch the server from a different working directory
+    const scriptDir = _currentDir;
+    const projectConfigPath = join(scriptDir, '..', '..', 'config.ini');
+
+    let finalConfigPath: string;
+    if (configPath) {
+      finalConfigPath = configPath;
+    } else if (existsSync(cwdConfigPath)) {
+      finalConfigPath = cwdConfigPath;
+    } else if (existsSync(projectConfigPath)) {
+      finalConfigPath = projectConfigPath;
+    } else {
+      finalConfigPath = cwdConfigPath; // Will fail below with a clear error
+    }
+    this.configPath = finalConfigPath;
+
+    if (!existsSync(finalConfigPath)) {
+      throw new Error(
+        `No config.ini found at ${finalConfigPath}. Run setup to configure databases.`
+      );
+    }
+
+    try {
+      const configContent = readFileSync(finalConfigPath, 'utf-8');
+      const rawConfig = parseIni(configContent);
+      this.config = this.parseConfig(rawConfig);
+
+      this.logger.info(
+        `Configuration loaded: ${Object.keys(this.config.databases).length} databases configured`
+      );
+
+      if (this.config.security) {
+        this.logger.info('Security configuration loaded', {
+          maxJoins: this.config.security.max_joins,
+          maxComplexity: this.config.security.max_complexity_score,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to load configuration', { error, configPath: finalConfigPath });
+      throw new Error(`Failed to load config.ini: ${getErrorMessage(error)}`);
+    }
+  }
+
+  private parseConfig(rawConfig: Record<string, unknown>): ParsedServerConfig {
+    const databases: Record<string, DatabaseConfig> = {};
+
+    if (rawConfig.database && typeof rawConfig.database === 'object') {
+      for (const [name, config] of Object.entries(rawConfig.database as Record<string, unknown>)) {
+        databases[name] = this.parseDatabaseConfig(name, config as Record<string, unknown>);
+      }
+    }
+
+    for (const [key, value] of Object.entries(rawConfig)) {
+      if (key.startsWith('database.')) {
+        const dbName = key.replace('database.', '');
+        if (!databases[dbName]) {
+          databases[dbName] = this.parseDatabaseConfig(dbName, value as Record<string, unknown>);
+        }
+      }
+    }
+
     return {
-     max_joins: parseInt(sec.max_joins) || 10,
-     max_subqueries: parseInt(sec.max_subqueries) || 5,
-     max_unions: parseInt(sec.max_unions) || 3,
-     max_group_bys: parseInt(sec.max_group_bys) || 5,
-     max_complexity_score: parseInt(sec.max_complexity_score) || 100,
-     max_query_length: parseInt(sec.max_query_length) || 10000
+      databases,
+      security: rawConfig.security
+        ? (() => {
+            const sec = rawConfig.security as Record<string, string>;
+            return {
+              max_joins: parseInt(sec.max_joins) || 10,
+              max_subqueries: parseInt(sec.max_subqueries) || 5,
+              max_unions: parseInt(sec.max_unions) || 3,
+              max_group_bys: parseInt(sec.max_group_bys) || 5,
+              max_complexity_score: parseInt(sec.max_complexity_score) || 100,
+              max_query_length: parseInt(sec.max_query_length) || 10000,
+            };
+          })()
+        : undefined,
+      extension: rawConfig.extension
+        ? (() => {
+            const ext = rawConfig.extension as Record<string, string>;
+            return {
+              max_rows: parseInt(ext.max_rows) || 1000,
+              max_batch_size: parseInt(ext.max_batch_size) || 10,
+              query_timeout: parseInt(ext.query_timeout) || 30000,
+            };
+          })()
+        : undefined,
     };
-   })() : undefined,
-   extension: rawConfig.extension ? (() => {
-    const ext = rawConfig.extension as Record<string, string>;
-    return {
-     max_rows: parseInt(ext.max_rows) || 1000,
-     max_batch_size: parseInt(ext.max_batch_size) || 10,
-     query_timeout: parseInt(ext.query_timeout) || 30000
+  }
+
+  private parseDatabaseConfig(name: string, config: Record<string, unknown>): DatabaseConfig {
+    if (!config.type) {
+      throw new Error(`Database ${name} missing required 'type' field`);
+    }
+
+    const type = config.type as string;
+    const dbConfig: DatabaseConfig = {
+      type: type as DatabaseConfig['type'],
+      select_only: config.select_only === 'true' || config.select_only === true,
     };
-   })() : undefined
-  };
- }
 
- private parseDatabaseConfig(name: string, config: Record<string, unknown>): DatabaseConfig {
-  if (!config.type) {
-   throw new Error(`Database ${name} missing required 'type' field`);
+    if (type !== 'sqlite') {
+      if (!config.host) throw new Error(`Database ${name} missing required 'host' field`);
+      if (!config.username) throw new Error(`Database ${name} missing required 'username' field`);
+
+      dbConfig.host = config.host as string;
+      dbConfig.port =
+        parseInt(config.port as string) ||
+        (DEFAULT_DATABASE_PORTS[type as DatabaseTypeString] ?? 0);
+      dbConfig.database = config.database as string;
+      dbConfig.username = config.username as string;
+      dbConfig.password = config.password as string;
+      dbConfig.ssl = config.ssl === 'true' || config.ssl === true;
+      dbConfig.timeout = parseInt(config.timeout as string) || 30000;
+    } else {
+      if (!config.file) throw new Error(`SQLite database ${name} missing required 'file' field`);
+      dbConfig.file = config.file as string;
+    }
+
+    if (config.ssh_host) {
+      dbConfig.ssh_host = config.ssh_host as string;
+      dbConfig.ssh_port = parseInt(config.ssh_port as string) || 22;
+      dbConfig.ssh_username = config.ssh_username as string;
+      dbConfig.ssh_password = config.ssh_password as string;
+      dbConfig.ssh_private_key = config.ssh_private_key as string;
+      dbConfig.ssh_passphrase = config.ssh_passphrase as string;
+    }
+
+    return dbConfig;
   }
 
-  const type = config.type as string;
-  const dbConfig: DatabaseConfig = {
-   type: type as DatabaseConfig['type'],
-   select_only: config.select_only === 'true' || config.select_only === true
-  };
+  private async initializeManagers(): Promise<void> {
+    if (!this.config) {
+      throw new Error('Configuration not loaded');
+    }
 
-  if (type !== 'sqlite') {
-   if (!config.host) throw new Error(`Database ${name} missing required 'host' field`);
-   if (!config.username) throw new Error(`Database ${name} missing required 'username' field`);
+    this.securityManager.initialize(this.config);
+    await this.schemaManager.initialize();
+    this.connectionManager.initialize(this.config.databases);
+    this.sshTunnelManager.initialize();
 
-   dbConfig.host = config.host as string;
-   dbConfig.port = parseInt(config.port as string) || (DEFAULT_DATABASE_PORTS[type as DatabaseTypeString] ?? 0);
-   dbConfig.database = config.database as string;
-   dbConfig.username = config.username as string;
-   dbConfig.password = config.password as string;
-   dbConfig.ssl = config.ssl === 'true' || config.ssl === true;
-   dbConfig.timeout = parseInt(config.timeout as string) || 30000;
-  } else {
-   if (!config.file) throw new Error(`SQLite database ${name} missing required 'file' field`);
-   dbConfig.file = config.file as string;
+    this.logger.info('All managers initialized successfully');
   }
-
-  if (config.ssh_host) {
-   dbConfig.ssh_host = config.ssh_host as string;
-   dbConfig.ssh_port = parseInt(config.ssh_port as string) || 22;
-   dbConfig.ssh_username = config.ssh_username as string;
-   dbConfig.ssh_password = config.ssh_password as string;
-   dbConfig.ssh_private_key = config.ssh_private_key as string;
-   dbConfig.ssh_passphrase = config.ssh_passphrase as string;
-  }
-
-  return dbConfig;
- }
-
-
-
- private async initializeManagers(): Promise<void> {
-  if (!this.config) {
-   throw new Error('Configuration not loaded');
-  }
-
-  this.securityManager.initialize(this.config);
-  await this.schemaManager.initialize();
-  this.connectionManager.initialize(this.config.databases);
-  this.sshTunnelManager.initialize();
-
-  this.logger.info('All managers initialized successfully');
- }
 }

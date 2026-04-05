@@ -12,181 +12,248 @@ import type { ToolHandlerContext } from './types.js';
 import { requireDbConfig } from './types.js';
 import { ValidationError, ConfigurationError } from '../../utils/error-handler.js';
 
-export async function handleAddDatabase(ctx: ToolHandlerContext, args: Record<string, unknown>): Promise<MCPToolResponse> {
- const name = args.name as string;
+export async function handleAddDatabase(
+  ctx: ToolHandlerContext,
+  args: Record<string, unknown>
+): Promise<MCPToolResponse> {
+  const name = args.name as string;
 
- if (ctx.config.databases[name]) {
- throw new ConfigurationError(`Database '${name}' already exists. Use sql_update_database to modify it.`);
- }
+  if (ctx.config.databases[name]) {
+    throw new ConfigurationError(
+      `Database '${name}' already exists. Use sql_update_database to modify it.`
+    );
+  }
 
- const dbType = (args.type as string).toLowerCase();
- const validTypes = ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'];
- if (!validTypes.includes(dbType)) {
- throw new ValidationError(`Invalid database type '${dbType}'. Valid types: ${validTypes.join(', ')}`);
- }
+  const dbType = (args.type as string).toLowerCase();
+  const validTypes = ['mysql', 'postgresql', 'postgres', 'sqlite', 'mssql', 'sqlserver'];
+  if (!validTypes.includes(dbType)) {
+    throw new ValidationError(
+      `Invalid database type '${dbType}'. Valid types: ${validTypes.join(', ')}`
+    );
+  }
 
- const dbConfig: DatabaseConfig = {
- type: dbType as DatabaseConfig['type'],
- select_only: args.select_only !== false,
- mcp_configurable: true
- };
+  const dbConfig: DatabaseConfig = {
+    type: dbType as DatabaseConfig['type'],
+    select_only: args.select_only !== false,
+    mcp_configurable: true,
+  };
 
- if (dbType === 'sqlite') {
- if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter");
- dbConfig.file = args.file as string;
- } else {
- if (!args.host) throw new ValidationError(`Database type '${dbType}' requires 'host' parameter`);
- if (!args.username) throw new ValidationError(`Database type '${dbType}' requires 'username' parameter`);
- dbConfig.host = args.host as string;
- dbConfig.port = (args.port as number) || (DEFAULT_DATABASE_PORTS[dbType as DatabaseTypeString] ?? 0);
- dbConfig.database = args.database as string;
- dbConfig.username = args.username as string;
- dbConfig.password = args.password as string;
- dbConfig.ssl = (args.ssl as boolean) || false;
- dbConfig.ssl_verify = (args.ssl_verify as boolean) || false;
- dbConfig.timeout = 30000;
- }
+  if (dbType === 'sqlite') {
+    if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter");
+    dbConfig.file = args.file as string;
+  } else {
+    if (!args.host)
+      throw new ValidationError(`Database type '${dbType}' requires 'host' parameter`);
+    if (!args.username)
+      throw new ValidationError(`Database type '${dbType}' requires 'username' parameter`);
+    dbConfig.host = args.host as string;
+    dbConfig.port =
+      (args.port as number) || (DEFAULT_DATABASE_PORTS[dbType as DatabaseTypeString] ?? 0);
+    dbConfig.database = args.database as string;
+    dbConfig.username = args.username as string;
+    dbConfig.password = args.password as string;
+    dbConfig.ssl = (args.ssl as boolean) || false;
+    dbConfig.ssl_verify = (args.ssl_verify as boolean) || false;
+    dbConfig.timeout = 30000;
+  }
 
- if (args.ssh_host) {
- dbConfig.ssh_host = args.ssh_host as string;
- dbConfig.ssh_port = (args.ssh_port as number) || 22;
- dbConfig.ssh_username = args.ssh_username as string;
- dbConfig.ssh_password = args.ssh_password as string;
- dbConfig.ssh_private_key = args.ssh_private_key as string;
- }
+  if (args.ssh_host) {
+    dbConfig.ssh_host = args.ssh_host as string;
+    dbConfig.ssh_port = (args.ssh_port as number) || 22;
+    dbConfig.ssh_username = args.ssh_username as string;
+    dbConfig.ssh_password = args.ssh_password as string;
+    dbConfig.ssh_private_key = args.ssh_private_key as string;
+  }
 
- ctx.config.databases[name] = dbConfig;
- ctx.connectionManager.registerDatabase(name, dbConfig);
+  ctx.config.databases[name] = dbConfig;
+  ctx.connectionManager.registerDatabase(name, dbConfig);
 
- saveConfigFile(ctx.config, ctx.configPath);
- ctx.logger.info(`Database '${name}' added via MCP`, { type: dbType });
+  saveConfigFile(ctx.config, ctx.configPath);
+  ctx.logger.info(`Database '${name}' added via MCP`, { type: dbType });
 
- return createToolResponse(
- ` Database '${name}' added successfully (type: ${dbType})\n` +
- ` MCP configurable: yes (can be locked via sql_set_mcp_configurable)\n` +
- ` SELECT-only: ${dbConfig.select_only ? 'yes' : 'no'}\n` +
- `Use sql_test_connection to verify connectivity.`
- );
+  return createToolResponse(
+    ` Database '${name}' added successfully (type: ${dbType})\n` +
+      ` MCP configurable: yes (can be locked via sql_set_mcp_configurable)\n` +
+      ` SELECT-only: ${dbConfig.select_only ? 'yes' : 'no'}\n` +
+      `Use sql_test_connection to verify connectivity.`
+  );
 }
 
-export async function handleUpdateDatabase(ctx: ToolHandlerContext, args: Record<string, unknown>): Promise<MCPToolResponse> {
- const database = args.database as string;
+export async function handleUpdateDatabase(
+  ctx: ToolHandlerContext,
+  args: Record<string, unknown>
+): Promise<MCPToolResponse> {
+  const database = args.database as string;
 
- const dbConfig = requireDbConfig(ctx.config, database);
+  const dbConfig = requireDbConfig(ctx.config, database);
 
- if (!dbConfig.mcp_configurable) {
- throw new ConfigurationError(
- `Database '${database}' is not MCP-configurable. ` +
- `Set mcp_configurable=true in config.ini manually to enable MCP configuration.`
- );
- }
+  if (!dbConfig.mcp_configurable) {
+    throw new ConfigurationError(
+      `Database '${database}' is not MCP-configurable. ` +
+        `Set mcp_configurable=true in config.ini manually to enable MCP configuration.`
+    );
+  }
 
- const updated: string[] = [];
+  const updated: string[] = [];
 
- if (args.host !== undefined) { dbConfig.host = args.host as string; updated.push('host'); }
- if (args.port !== undefined) { dbConfig.port = args.port as number; updated.push('port'); }
- if (args.database_name !== undefined) { dbConfig.database = args.database_name as string; updated.push('database'); }
- if (args.username !== undefined) { dbConfig.username = args.username as string; updated.push('username'); }
- if (args.password !== undefined) { dbConfig.password = args.password as string; updated.push('password'); }
- if (args.file !== undefined) { dbConfig.file = args.file as string; updated.push('file'); }
- if (args.ssl !== undefined) { dbConfig.ssl = args.ssl as boolean; updated.push('ssl'); }
- if (args.ssl_verify !== undefined) { dbConfig.ssl_verify = args.ssl_verify as boolean; updated.push('ssl_verify'); }
- if (args.select_only !== undefined) { dbConfig.select_only = args.select_only as boolean; updated.push('select_only'); }
+  if (args.host !== undefined) {
+    dbConfig.host = args.host as string;
+    updated.push('host');
+  }
+  if (args.port !== undefined) {
+    dbConfig.port = args.port as number;
+    updated.push('port');
+  }
+  if (args.database_name !== undefined) {
+    dbConfig.database = args.database_name as string;
+    updated.push('database');
+  }
+  if (args.username !== undefined) {
+    dbConfig.username = args.username as string;
+    updated.push('username');
+  }
+  if (args.password !== undefined) {
+    dbConfig.password = args.password as string;
+    updated.push('password');
+  }
+  if (args.file !== undefined) {
+    dbConfig.file = args.file as string;
+    updated.push('file');
+  }
+  if (args.ssl !== undefined) {
+    dbConfig.ssl = args.ssl as boolean;
+    updated.push('ssl');
+  }
+  if (args.ssl_verify !== undefined) {
+    dbConfig.ssl_verify = args.ssl_verify as boolean;
+    updated.push('ssl_verify');
+  }
+  if (args.select_only !== undefined) {
+    dbConfig.select_only = args.select_only as boolean;
+    updated.push('select_only');
+  }
 
- if (args.ssh_host !== undefined) { dbConfig.ssh_host = args.ssh_host as string; updated.push('ssh_host'); }
- if (args.ssh_port !== undefined) { dbConfig.ssh_port = args.ssh_port as number; updated.push('ssh_port'); }
- if (args.ssh_username !== undefined) { dbConfig.ssh_username = args.ssh_username as string; updated.push('ssh_username'); }
- if (args.ssh_password !== undefined) { dbConfig.ssh_password = args.ssh_password as string; updated.push('ssh_password'); }
- if (args.ssh_private_key !== undefined) { dbConfig.ssh_private_key = args.ssh_private_key as string; updated.push('ssh_private_key'); }
+  if (args.ssh_host !== undefined) {
+    dbConfig.ssh_host = args.ssh_host as string;
+    updated.push('ssh_host');
+  }
+  if (args.ssh_port !== undefined) {
+    dbConfig.ssh_port = args.ssh_port as number;
+    updated.push('ssh_port');
+  }
+  if (args.ssh_username !== undefined) {
+    dbConfig.ssh_username = args.ssh_username as string;
+    updated.push('ssh_username');
+  }
+  if (args.ssh_password !== undefined) {
+    dbConfig.ssh_password = args.ssh_password as string;
+    updated.push('ssh_password');
+  }
+  if (args.ssh_private_key !== undefined) {
+    dbConfig.ssh_private_key = args.ssh_private_key as string;
+    updated.push('ssh_private_key');
+  }
 
- if (updated.length === 0) {
- return createToolResponse(`No changes provided for database '${database}'.`);
- }
+  if (updated.length === 0) {
+    return createToolResponse(`No changes provided for database '${database}'.`);
+  }
 
- ctx.connectionManager.unregisterDatabase(database);
- ctx.connectionManager.registerDatabase(database, dbConfig);
+  ctx.connectionManager.unregisterDatabase(database);
+  ctx.connectionManager.registerDatabase(database, dbConfig);
 
- saveConfigFile(ctx.config, ctx.configPath);
- ctx.logger.info(`Database '${database}' updated via MCP`, { fields: updated });
+  saveConfigFile(ctx.config, ctx.configPath);
+  ctx.logger.info(`Database '${database}' updated via MCP`, { fields: updated });
 
- return createToolResponse(
- ` Database '${database}' updated successfully\n` +
- ` Changed fields: ${updated.join(', ')}\n` +
- `Use sql_test_connection to verify connectivity with new settings.`
- );
+  return createToolResponse(
+    ` Database '${database}' updated successfully\n` +
+      ` Changed fields: ${updated.join(', ')}\n` +
+      `Use sql_test_connection to verify connectivity with new settings.`
+  );
 }
 
-export async function handleRemoveDatabase(ctx: ToolHandlerContext, database: string): Promise<MCPToolResponse> {
- const dbConfig = requireDbConfig(ctx.config, database);
+export async function handleRemoveDatabase(
+  ctx: ToolHandlerContext,
+  database: string
+): Promise<MCPToolResponse> {
+  const dbConfig = requireDbConfig(ctx.config, database);
 
- if (!dbConfig.mcp_configurable) {
- throw new ConfigurationError(
- `Database '${database}' is not MCP-configurable. ` +
- `Cannot remove databases that are not MCP-configurable. Edit config.ini manually.`
- );
- }
+  if (!dbConfig.mcp_configurable) {
+    throw new ConfigurationError(
+      `Database '${database}' is not MCP-configurable. ` +
+        `Cannot remove databases that are not MCP-configurable. Edit config.ini manually.`
+    );
+  }
 
- ctx.connectionManager.unregisterDatabase(database);
- if (ctx.sshTunnelManager.hasTunnel(database)) {
- await ctx.sshTunnelManager.closeTunnel(database);
- }
+  ctx.connectionManager.unregisterDatabase(database);
+  if (ctx.sshTunnelManager.hasTunnel(database)) {
+    await ctx.sshTunnelManager.closeTunnel(database);
+  }
 
- delete ctx.config.databases[database];
+  delete ctx.config.databases[database];
 
- saveConfigFile(ctx.config, ctx.configPath);
- ctx.logger.info(`Database '${database}' removed via MCP`);
+  saveConfigFile(ctx.config, ctx.configPath);
+  ctx.logger.info(`Database '${database}' removed via MCP`);
 
- return createToolResponse(` Database '${database}' removed successfully\nConnection closed and configuration saved.`);
+  return createToolResponse(
+    ` Database '${database}' removed successfully\nConnection closed and configuration saved.`
+  );
 }
 
-export async function handleGetConfig(ctx: ToolHandlerContext, database: string): Promise<MCPToolResponse> {
- const dbConfig = requireDbConfig(ctx.config, database);
+export async function handleGetConfig(
+  ctx: ToolHandlerContext,
+  database: string
+): Promise<MCPToolResponse> {
+  const dbConfig = requireDbConfig(ctx.config, database);
 
- const redactedConfig: Record<string, unknown> = { ...dbConfig };
+  const redactedConfig: Record<string, unknown> = { ...dbConfig };
 
- if (redactedConfig.password) redactedConfig.password = '***REDACTED***';
- if (redactedConfig.ssh_password) redactedConfig.ssh_password = '***REDACTED***';
- if (redactedConfig.ssh_private_key) redactedConfig.ssh_private_key = '***REDACTED***';
- if (redactedConfig.ssh_passphrase) redactedConfig.ssh_passphrase = '***REDACTED***';
+  if (redactedConfig.password) redactedConfig.password = '***REDACTED***';
+  if (redactedConfig.ssh_password) redactedConfig.ssh_password = '***REDACTED***';
+  if (redactedConfig.ssh_private_key) redactedConfig.ssh_private_key = '***REDACTED***';
+  if (redactedConfig.ssh_passphrase) redactedConfig.ssh_passphrase = '***REDACTED***';
 
- for (const key of Object.keys(redactedConfig)) {
- if (redactedConfig[key] === undefined) delete redactedConfig[key];
- }
+  for (const key of Object.keys(redactedConfig)) {
+    if (redactedConfig[key] === undefined) delete redactedConfig[key];
+  }
 
- let responseText = ` Configuration for '${database}':\n\n`;
- for (const [key, value] of Object.entries(redactedConfig)) {
- if (key === 'redaction' && typeof value === 'object') {
- responseText += ` ${key}: ${JSON.stringify(value, null, 2)}\n`;
- } else {
- responseText += ` ${key}: ${value}\n`;
- }
- }
- responseText += `\n MCP configurable: ${dbConfig.mcp_configurable ? 'yes' : 'no'}`;
+  let responseText = ` Configuration for '${database}':\n\n`;
+  for (const [key, value] of Object.entries(redactedConfig)) {
+    if (key === 'redaction' && typeof value === 'object') {
+      responseText += ` ${key}: ${JSON.stringify(value, null, 2)}\n`;
+    } else {
+      responseText += ` ${key}: ${value}\n`;
+    }
+  }
+  responseText += `\n MCP configurable: ${dbConfig.mcp_configurable ? 'yes' : 'no'}`;
 
- return createToolResponse(responseText);
+  return createToolResponse(responseText);
 }
 
-export async function handleSetMcpConfigurable(ctx: ToolHandlerContext, database: string, enabled: boolean): Promise<MCPToolResponse> {
- const dbConfig = requireDbConfig(ctx.config, database);
+export async function handleSetMcpConfigurable(
+  ctx: ToolHandlerContext,
+  database: string,
+  enabled: boolean
+): Promise<MCPToolResponse> {
+  const dbConfig = requireDbConfig(ctx.config, database);
 
- if (enabled === true) {
- return createToolResponse(
- ` Cannot enable MCP configurability via MCP tools.\n` +
- `For security, setting mcp_configurable=true must be done by manually editing config.ini.\n` +
- `This prevents an AI from re-enabling its own configuration access after a human locks it.\n\n` +
- `To unlock, add this to config.ini under [database.${database}]:\n` +
- `mcp_configurable=true`,
- true
- );
- }
+  if (enabled === true) {
+    return createToolResponse(
+      ` Cannot enable MCP configurability via MCP tools.\n` +
+        `For security, setting mcp_configurable=true must be done by manually editing config.ini.\n` +
+        `This prevents an AI from re-enabling its own configuration access after a human locks it.\n\n` +
+        `To unlock, add this to config.ini under [database.${database}]:\n` +
+        `mcp_configurable=true`,
+      true
+    );
+  }
 
- dbConfig.mcp_configurable = false;
+  dbConfig.mcp_configurable = false;
 
- saveConfigFile(ctx.config, ctx.configPath);
- ctx.logger.info(`Database '${database}' locked from MCP configuration`);
+  saveConfigFile(ctx.config, ctx.configPath);
+  ctx.logger.info(`Database '${database}' locked from MCP configuration`);
 
- return createToolResponse(
- ` Database '${database}' is now locked from MCP configuration changes.\n` +
- `To re-enable MCP configuration, manually set mcp_configurable=true in config.ini.`
- );
+  return createToolResponse(
+    ` Database '${database}' is now locked from MCP configuration changes.\n` +
+      `To re-enable MCP configuration, manually set mcp_configurable=true in config.ini.`
+  );
 }

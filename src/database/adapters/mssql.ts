@@ -5,12 +5,12 @@
 import * as sql from 'mssql';
 import type { ConnectionPool as MSSQLConnectionPool, IResult } from 'mssql';
 import { DatabaseAdapter } from './base.js';
-import type { 
- DatabaseConnection, 
- QueryResult, 
- DatabaseSchema,
- ColumnInfo,
- TableInfo
+import type {
+  DatabaseConnection,
+  QueryResult,
+  DatabaseSchema,
+  ColumnInfo,
+  TableInfo,
 } from '../../types/index.js';
 
 // ============================================================================
@@ -18,159 +18,162 @@ import type {
 // ============================================================================
 
 export class MSSQLAdapter extends DatabaseAdapter {
- 
- // ============================================================================
- // Connection Management
- // ============================================================================
+  // ============================================================================
+  // Connection Management
+  // ============================================================================
 
- async connect(): Promise<DatabaseConnection> {
- this.validateConfig(['host', 'database', 'username', 'password']);
+  async connect(): Promise<DatabaseConnection> {
+    this.validateConfig(['host', 'database', 'username', 'password']);
 
- const connectionConfig: sql.config = {
- server: this.config.host!,
- port: this.parseConfigValue(this.config.port, 'number', 1433),
- database: this.config.database!,
- user: this.config.username!,
- password: this.config.password!,
- connectionTimeout: this.connectionTimeout,
- requestTimeout: this.connectionTimeout,
- options: {
- encrypt: this.parseConfigValue(this.config.encrypt ?? true, 'boolean', true),
- trustServerCertificate: !this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false),
- enableArithAbort: true
- },
- pool: {
- max: 10,
- min: 0,
- idleTimeoutMillis: 30000
- }
- };
+    const connectionConfig: sql.config = {
+      server: this.config.host!,
+      port: this.parseConfigValue(this.config.port, 'number', 1433),
+      database: this.config.database!,
+      user: this.config.username!,
+      password: this.config.password!,
+      connectionTimeout: this.connectionTimeout,
+      requestTimeout: this.connectionTimeout,
+      options: {
+        encrypt: this.parseConfigValue(this.config.encrypt ?? true, 'boolean', true),
+        trustServerCertificate: !this.parseConfigValue(
+          this.config.ssl_verify ?? false,
+          'boolean',
+          false
+        ),
+        enableArithAbort: true,
+      },
+      pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000,
+      },
+    };
 
- try {
- const pool = new sql.ConnectionPool(connectionConfig);
- await pool.connect();
- return pool as DatabaseConnection;
- } catch (error) {
- throw this.createError('Failed to connect to SQL Server database', error as Error);
- }
- }
+    try {
+      const pool = new sql.ConnectionPool(connectionConfig);
+      await pool.connect();
+      return pool as DatabaseConnection;
+    } catch (error) {
+      throw this.createError('Failed to connect to SQL Server database', error as Error);
+    }
+  }
 
- async disconnect(connection: DatabaseConnection): Promise<void> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- await mssqlPool.close();
- } catch (error) {
- throw this.createError('Failed to disconnect from SQL Server database', error as Error);
- }
- }
+  async disconnect(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      await mssqlPool.close();
+    } catch (error) {
+      throw this.createError('Failed to disconnect from SQL Server database', error as Error);
+    }
+  }
 
- isConnected(connection: DatabaseConnection): boolean {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- return !!(mssqlPool && mssqlPool.connected);
- } catch {
- return false;
- }
- }
+  isConnected(connection: DatabaseConnection): boolean {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      return !!(mssqlPool && mssqlPool.connected);
+    } catch {
+      return false;
+    }
+  }
 
- // ============================================================================
- // Query Execution
- // ============================================================================
+  // ============================================================================
+  // Query Execution
+  // ============================================================================
 
- async executeQuery(
- connection: DatabaseConnection,
- query: string,
- params: unknown[] = []
- ): Promise<QueryResult> {
- const startTime = Date.now();
- 
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const request = mssqlPool.request();
- 
- // Add parameters if provided
- params.forEach((param, index) => {
- request.input(`param${index}`, param);
- });
+  async executeQuery(
+    connection: DatabaseConnection,
+    query: string,
+    params: unknown[] = []
+  ): Promise<QueryResult> {
+    const startTime = Date.now();
 
- // Replace ? placeholders with named parameters for SQL Server
- let processedQuery = query;
- params.forEach((_, index) => {
- processedQuery = processedQuery.replace('?', `@param${index}`);
- });
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const request = mssqlPool.request();
 
- const result = await request.query(processedQuery);
- return this.normalizeQueryResult(result, startTime);
- } catch (error) {
- throw this.createError('Failed to execute SQL Server query', error as Error);
- }
- }
+      // Add parameters if provided
+      params.forEach((param, index) => {
+        request.input(`param${index}`, param);
+      });
 
- protected extractRawRows(result: unknown): unknown[] {
- const mssqlResult = result as IResult<unknown>;
- return Array.isArray(mssqlResult.recordset) ? mssqlResult.recordset : [];
- }
+      // Replace ? placeholders with named parameters for SQL Server
+      let processedQuery = query;
+      params.forEach((_, index) => {
+        processedQuery = processedQuery.replace('?', `@param${index}`);
+      });
 
- protected extractFieldNames(result: unknown): string[] {
- const mssqlResult = result as IResult<Record<string, unknown>>;
- if (!Array.isArray(mssqlResult.recordset) || mssqlResult.recordset.length === 0) {
- return [];
- }
- return Object.keys(mssqlResult.recordset[0] || {});
- }
+      const result = await request.query(processedQuery);
+      return this.normalizeQueryResult(result, startTime);
+    } catch (error) {
+      throw this.createError('Failed to execute SQL Server query', error as Error);
+    }
+  }
 
- // ============================================================================
- // Transaction Management
- // ============================================================================
+  protected extractRawRows(result: unknown): unknown[] {
+    const mssqlResult = result as IResult<unknown>;
+    return Array.isArray(mssqlResult.recordset) ? mssqlResult.recordset : [];
+  }
 
- async beginTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const request = mssqlPool.request();
- await request.query('BEGIN TRANSACTION');
- } catch (error) {
- throw this.createError('Failed to begin SQL Server transaction', error as Error);
- }
- }
+  protected extractFieldNames(result: unknown): string[] {
+    const mssqlResult = result as IResult<Record<string, unknown>>;
+    if (!Array.isArray(mssqlResult.recordset) || mssqlResult.recordset.length === 0) {
+      return [];
+    }
+    return Object.keys(mssqlResult.recordset[0] || {});
+  }
 
- async commitTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const request = mssqlPool.request();
- await request.query('COMMIT TRANSACTION');
- } catch (error) {
- throw this.createError('Failed to commit SQL Server transaction', error as Error);
- }
- }
+  // ============================================================================
+  // Transaction Management
+  // ============================================================================
 
- async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const request = mssqlPool.request();
- await request.query('ROLLBACK TRANSACTION');
- } catch (error) {
- throw this.createError('Failed to rollback SQL Server transaction', error as Error);
- }
- }
+  async beginTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const request = mssqlPool.request();
+      await request.query('BEGIN TRANSACTION');
+    } catch (error) {
+      throw this.createError('Failed to begin SQL Server transaction', error as Error);
+    }
+  }
 
- // ============================================================================
- // Performance Analysis
- // ============================================================================
+  async commitTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const request = mssqlPool.request();
+      await request.query('COMMIT TRANSACTION');
+    } catch (error) {
+      throw this.createError('Failed to commit SQL Server transaction', error as Error);
+    }
+  }
 
- buildExplainQuery(query: string): string {
- return `SET SHOWPLAN_ALL ON; ${query}; SET SHOWPLAN_ALL OFF`;
- }
+  async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const request = mssqlPool.request();
+      await request.query('ROLLBACK TRANSACTION');
+    } catch (error) {
+      throw this.createError('Failed to rollback SQL Server transaction', error as Error);
+    }
+  }
 
- // ============================================================================
- // Schema Capture
- // ============================================================================
+  // ============================================================================
+  // Performance Analysis
+  // ============================================================================
 
- async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
- try {
- const schema = this.createBaseSchema(this.config.database!);
- 
- // Get all tables and views
- const tablesQuery = `
+  buildExplainQuery(query: string): string {
+    return `SET SHOWPLAN_ALL ON; ${query}; SET SHOWPLAN_ALL OFF`;
+  }
+
+  // ============================================================================
+  // Schema Capture
+  // ============================================================================
+
+  async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
+    try {
+      const schema = this.createBaseSchema(this.config.database!);
+
+      // Get all tables and views
+      const tablesQuery = `
  SELECT 
  TABLE_NAME,
  TABLE_TYPE,
@@ -179,41 +182,40 @@ export class MSSQLAdapter extends DatabaseAdapter {
  WHERE TABLE_SCHEMA = 'dbo'
  ORDER BY TABLE_NAME
  `;
- 
- const mssqlPool = connection as MSSQLConnectionPool;
- const tablesResult = await mssqlPool.request().query(tablesQuery);
- 
- // Process each table/view
- for (const table of tablesResult.recordset) {
- const columns = await this.captureTableColumns(connection, table.TABLE_NAME);
- 
- const tableInfo: TableInfo = {
- name: table.TABLE_NAME,
- type: table.TABLE_TYPE,
- comment: table.TABLE_COMMENT || '',
- columns
- };
 
- if (table.TABLE_TYPE === 'BASE TABLE') {
- schema.tables[table.TABLE_NAME] = tableInfo;
- } else {
- schema.views[table.TABLE_NAME] = tableInfo;
- }
- }
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const tablesResult = await mssqlPool.request().query(tablesQuery);
 
- this.updateSchemaSummary(schema);
- return schema;
- 
- } catch (error) {
- throw this.createError('Failed to capture SQL Server schema', error as Error);
- }
- }
+      // Process each table/view
+      for (const table of tablesResult.recordset) {
+        const columns = await this.captureTableColumns(connection, table.TABLE_NAME);
 
- private async captureTableColumns(
- connection: DatabaseConnection,
- tableName: string
- ): Promise<ColumnInfo[]> {
- const columnsQuery = `
+        const tableInfo: TableInfo = {
+          name: table.TABLE_NAME,
+          type: table.TABLE_TYPE,
+          comment: table.TABLE_COMMENT || '',
+          columns,
+        };
+
+        if (table.TABLE_TYPE === 'BASE TABLE') {
+          schema.tables[table.TABLE_NAME] = tableInfo;
+        } else {
+          schema.views[table.TABLE_NAME] = tableInfo;
+        }
+      }
+
+      this.updateSchemaSummary(schema);
+      return schema;
+    } catch (error) {
+      throw this.createError('Failed to capture SQL Server schema', error as Error);
+    }
+  }
+
+  private async captureTableColumns(
+    connection: DatabaseConnection,
+    tableName: string
+  ): Promise<ColumnInfo[]> {
+    const columnsQuery = `
  SELECT 
  c.COLUMN_NAME,
  c.DATA_TYPE,
@@ -241,49 +243,51 @@ export class MSSQLAdapter extends DatabaseAdapter {
  ORDER BY c.ORDINAL_POSITION
  `;
 
- const mssqlPool = connection as MSSQLConnectionPool;
- const request = mssqlPool.request();
- request.input('tableName', tableName);
- const columnsResult = await request.query(columnsQuery);
+    const mssqlPool = connection as MSSQLConnectionPool;
+    const request = mssqlPool.request();
+    request.input('tableName', tableName);
+    const columnsResult = await request.query(columnsQuery);
 
- return columnsResult.recordset.map((col): ColumnInfo => ({
- name: col.COLUMN_NAME,
- type: col.DATA_TYPE,
- nullable: col.IS_NULLABLE === 'YES',
- default: col.COLUMN_DEFAULT,
- max_length: col.CHARACTER_MAXIMUM_LENGTH,
- precision: col.NUMERIC_PRECISION,
- scale: col.NUMERIC_SCALE,
- comment: col.COLUMN_COMMENT || '',
- key: col.COLUMN_KEY || '',
- extra: ''
- }));
- }
+    return columnsResult.recordset.map(
+      (col): ColumnInfo => ({
+        name: col.COLUMN_NAME,
+        type: col.DATA_TYPE,
+        nullable: col.IS_NULLABLE === 'YES',
+        default: col.COLUMN_DEFAULT,
+        max_length: col.CHARACTER_MAXIMUM_LENGTH,
+        precision: col.NUMERIC_PRECISION,
+        scale: col.NUMERIC_SCALE,
+        comment: col.COLUMN_COMMENT || '',
+        key: col.COLUMN_KEY || '',
+        extra: '',
+      })
+    );
+  }
 
- // ============================================================================
- // SQL Server-specific Methods
- // ============================================================================
+  // ============================================================================
+  // SQL Server-specific Methods
+  // ============================================================================
 
- /**
- * Get SQL Server version information
- */
- async getVersion(connection: DatabaseConnection): Promise<string> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const result = await mssqlPool.request().query('SELECT @@VERSION as version');
- return result.recordset[0]?.version || 'Unknown';
- } catch (error) {
- throw this.createError('Failed to get SQL Server version', error as Error);
- }
- }
+  /**
+   * Get SQL Server version information
+   */
+  async getVersion(connection: DatabaseConnection): Promise<string> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const result = await mssqlPool.request().query('SELECT @@VERSION as version');
+      return result.recordset[0]?.version || 'Unknown';
+    } catch (error) {
+      throw this.createError('Failed to get SQL Server version', error as Error);
+    }
+  }
 
- /**
- * Get database size information
- */
- async getDatabaseSize(connection: DatabaseConnection): Promise<Record<string, unknown>> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const result = await mssqlPool.request().query(`
+  /**
+   * Get database size information
+   */
+  async getDatabaseSize(connection: DatabaseConnection): Promise<Record<string, unknown>> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const result = await mssqlPool.request().query(`
  SELECT 
  DB_NAME() as database_name,
  SUM(size * 8.0 / 1024) as size_mb,
@@ -291,20 +295,20 @@ export class MSSQLAdapter extends DatabaseAdapter {
  SUM(CASE WHEN type = 1 THEN size * 8.0 / 1024 END) as log_size_mb
  FROM sys.database_files
  `);
- 
- return result.recordset[0] || {};
- } catch (error) {
- throw this.createError('Failed to get SQL Server database size', error as Error);
- }
- }
 
- /**
- * Get table row counts and size information
- */
- async getTableStats(connection: DatabaseConnection): Promise<unknown[]> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const result = await mssqlPool.request().query(`
+      return result.recordset[0] || {};
+    } catch (error) {
+      throw this.createError('Failed to get SQL Server database size', error as Error);
+    }
+  }
+
+  /**
+   * Get table row counts and size information
+   */
+  async getTableStats(connection: DatabaseConnection): Promise<unknown[]> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const result = await mssqlPool.request().query(`
  SELECT 
  t.NAME AS table_name,
  p.rows AS row_count,
@@ -319,20 +323,20 @@ export class MSSQLAdapter extends DatabaseAdapter {
  GROUP BY t.NAME, p.Rows
  ORDER BY t.NAME
  `);
- 
- return result.recordset;
- } catch (error) {
- throw this.createError('Failed to get SQL Server table statistics', error as Error);
- }
- }
 
- /**
- * Get active connections and sessions
- */
- async getActiveConnections(connection: DatabaseConnection): Promise<unknown[]> {
- try {
- const mssqlPool = connection as MSSQLConnectionPool;
- const result = await mssqlPool.request().query(`
+      return result.recordset;
+    } catch (error) {
+      throw this.createError('Failed to get SQL Server table statistics', error as Error);
+    }
+  }
+
+  /**
+   * Get active connections and sessions
+   */
+  async getActiveConnections(connection: DatabaseConnection): Promise<unknown[]> {
+    try {
+      const mssqlPool = connection as MSSQLConnectionPool;
+      const result = await mssqlPool.request().query(`
  SELECT 
  session_id,
  login_time,
@@ -350,10 +354,10 @@ export class MSSQLAdapter extends DatabaseAdapter {
  WHERE is_user_process = 1
  ORDER BY login_time DESC
  `);
- 
- return result.recordset;
- } catch (error) {
- throw this.createError('Failed to get SQL Server active connections', error as Error);
- }
- }
+
+      return result.recordset;
+    } catch (error) {
+      throw this.createError('Failed to get SQL Server active connections', error as Error);
+    }
+  }
 }

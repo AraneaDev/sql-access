@@ -5,12 +5,12 @@
 import * as mysql from 'mysql2/promise';
 import type { Connection as MySQLConnection } from 'mysql2/promise';
 import { DatabaseAdapter } from './base.js';
-import type { 
- DatabaseConnection, 
- QueryResult, 
- DatabaseSchema,
- ColumnInfo,
- TableInfo
+import type {
+  DatabaseConnection,
+  QueryResult,
+  DatabaseSchema,
+  ColumnInfo,
+  TableInfo,
 } from '../../types/index.js';
 
 // ============================================================================
@@ -18,161 +18,161 @@ import type {
 // ============================================================================
 
 export class MySQLAdapter extends DatabaseAdapter {
- 
- // ============================================================================
- // Connection Management
- // ============================================================================
+  // ============================================================================
+  // Connection Management
+  // ============================================================================
 
- async connect(): Promise<DatabaseConnection> {
- this.validateConfig(['host', 'database', 'username', 'password']);
+  async connect(): Promise<DatabaseConnection> {
+    this.validateConfig(['host', 'database', 'username', 'password']);
 
- const connectionConfig: mysql.ConnectionOptions = {
- host: this.config.host!,
- port: this.parseConfigValue(this.config.port, 'number', 3306),
- database: this.config.database!,
- user: this.config.username!,
- password: this.config.password!,
- connectTimeout: this.connectionTimeout
- };
+    const connectionConfig: mysql.ConnectionOptions = {
+      host: this.config.host!,
+      port: this.parseConfigValue(this.config.port, 'number', 3306),
+      database: this.config.database!,
+      user: this.config.username!,
+      password: this.config.password!,
+      connectTimeout: this.connectionTimeout,
+    };
 
- // Handle SSL configuration
- if (this.config.ssl !== undefined) {
- const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
- if (sslEnabled) {
- const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
- connectionConfig.ssl = { rejectUnauthorized: sslVerify };
- }
- }
+    // Handle SSL configuration
+    if (this.config.ssl !== undefined) {
+      const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
+      if (sslEnabled) {
+        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+        connectionConfig.ssl = { rejectUnauthorized: sslVerify };
+      }
+    }
 
- // Special handling for Azure MariaDB/MySQL
- if (this.config.host?.includes('.mariadb.database.azure.com') ||
- this.config.host?.includes('.mysql.database.azure.com')) {
+    // Special handling for Azure MariaDB/MySQL
+    if (
+      this.config.host?.includes('.mariadb.database.azure.com') ||
+      this.config.host?.includes('.mysql.database.azure.com')
+    ) {
+      // Azure requires SSL
+      const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+      connectionConfig.ssl = { rejectUnauthorized: sslVerify };
 
- // Azure requires SSL
- const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
- connectionConfig.ssl = { rejectUnauthorized: sslVerify };
- 
- // Format username for Azure if needed
- let azureUser = this.config.username!;
- if (!azureUser.includes('@') && this.config.host) {
- const serverName = this.config.host.split('.')[0];
- azureUser = `${azureUser}@${serverName}`;
- }
- connectionConfig.user = azureUser;
- }
+      // Format username for Azure if needed
+      let azureUser = this.config.username!;
+      if (!azureUser.includes('@') && this.config.host) {
+        const serverName = this.config.host.split('.')[0];
+        azureUser = `${azureUser}@${serverName}`;
+      }
+      connectionConfig.user = azureUser;
+    }
 
- try {
- const connection = await mysql.createConnection(connectionConfig);
- return connection as DatabaseConnection;
- } catch (error) {
- throw this.createError('Failed to connect to MySQL database', error as Error);
- }
- }
+    try {
+      const connection = await mysql.createConnection(connectionConfig);
+      return connection as DatabaseConnection;
+    } catch (error) {
+      throw this.createError('Failed to connect to MySQL database', error as Error);
+    }
+  }
 
- async disconnect(connection: DatabaseConnection): Promise<void> {
- try {
- const mysqlConn = connection as MySQLConnection;
- await mysqlConn.end();
- } catch (error) {
- throw this.createError('Failed to disconnect from MySQL database', error as Error);
- }
- }
+  async disconnect(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mysqlConn = connection as MySQLConnection;
+      await mysqlConn.end();
+    } catch (error) {
+      throw this.createError('Failed to disconnect from MySQL database', error as Error);
+    }
+  }
 
- isConnected(connection: DatabaseConnection): boolean {
- try {
- if (!connection) {
- return false;
- }
- const mysqlConn = connection as MySQLConnection;
- // MySQL connection doesn't have a direct isConnected method
- // We'll use a simple approach - if the connection exists and hasn't been destroyed
- return mysqlConn && typeof mysqlConn.execute === 'function';
- } catch {
- return false;
- }
- }
+  isConnected(connection: DatabaseConnection): boolean {
+    try {
+      if (!connection) {
+        return false;
+      }
+      const mysqlConn = connection as MySQLConnection;
+      // MySQL connection doesn't have a direct isConnected method
+      // We'll use a simple approach - if the connection exists and hasn't been destroyed
+      return mysqlConn && typeof mysqlConn.execute === 'function';
+    } catch {
+      return false;
+    }
+  }
 
- // ============================================================================
- // Query Execution
- // ============================================================================
+  // ============================================================================
+  // Query Execution
+  // ============================================================================
 
- async executeQuery(
- connection: DatabaseConnection,
- query: string,
- params: unknown[] = []
- ): Promise<QueryResult> {
- const startTime = Date.now();
- 
- try {
- const mysqlConn = connection as MySQLConnection;
- const [rows, fields] = await mysqlConn.execute(query, params);
- 
- return this.normalizeQueryResult({ rows, fields }, startTime);
- } catch (error) {
- throw this.createError('Failed to execute MySQL query', error as Error);
- }
- }
+  async executeQuery(
+    connection: DatabaseConnection,
+    query: string,
+    params: unknown[] = []
+  ): Promise<QueryResult> {
+    const startTime = Date.now();
 
- protected extractRawRows(result: unknown): unknown[] {
- const mysqlResult = result as { rows: unknown[]; fields: unknown[] };
- return Array.isArray(mysqlResult.rows) ? mysqlResult.rows : [];
- }
+    try {
+      const mysqlConn = connection as MySQLConnection;
+      const [rows, fields] = await mysqlConn.execute(query, params);
 
- protected extractFieldNames(result: unknown): string[] {
- const mysqlResult = result as { rows: unknown[]; fields: mysql.FieldPacket[] };
- return mysqlResult.fields?.map((field: mysql.FieldPacket) => field.name) || [];
- }
+      return this.normalizeQueryResult({ rows, fields }, startTime);
+    } catch (error) {
+      throw this.createError('Failed to execute MySQL query', error as Error);
+    }
+  }
 
- // ============================================================================
- // Transaction Management
- // ============================================================================
+  protected extractRawRows(result: unknown): unknown[] {
+    const mysqlResult = result as { rows: unknown[]; fields: unknown[] };
+    return Array.isArray(mysqlResult.rows) ? mysqlResult.rows : [];
+  }
 
- async beginTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const mysqlConn = connection as MySQLConnection;
- await mysqlConn.beginTransaction();
- } catch (error) {
- throw this.createError('Failed to begin MySQL transaction', error as Error);
- }
- }
+  protected extractFieldNames(result: unknown): string[] {
+    const mysqlResult = result as { rows: unknown[]; fields: mysql.FieldPacket[] };
+    return mysqlResult.fields?.map((field: mysql.FieldPacket) => field.name) || [];
+  }
 
- async commitTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const mysqlConn = connection as MySQLConnection;
- await mysqlConn.commit();
- } catch (error) {
- throw this.createError('Failed to commit MySQL transaction', error as Error);
- }
- }
+  // ============================================================================
+  // Transaction Management
+  // ============================================================================
 
- async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
- try {
- const mysqlConn = connection as MySQLConnection;
- await mysqlConn.rollback();
- } catch (error) {
- throw this.createError('Failed to rollback MySQL transaction', error as Error);
- }
- }
+  async beginTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mysqlConn = connection as MySQLConnection;
+      await mysqlConn.beginTransaction();
+    } catch (error) {
+      throw this.createError('Failed to begin MySQL transaction', error as Error);
+    }
+  }
 
- // ============================================================================
- // Performance Analysis
- // ============================================================================
+  async commitTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mysqlConn = connection as MySQLConnection;
+      await mysqlConn.commit();
+    } catch (error) {
+      throw this.createError('Failed to commit MySQL transaction', error as Error);
+    }
+  }
 
- buildExplainQuery(query: string): string {
- // Use JSON format for structured analysis (MySQL 5.7+)
- return `EXPLAIN FORMAT=JSON ${query}`;
- }
+  async rollbackTransaction(connection: DatabaseConnection): Promise<void> {
+    try {
+      const mysqlConn = connection as MySQLConnection;
+      await mysqlConn.rollback();
+    } catch (error) {
+      throw this.createError('Failed to rollback MySQL transaction', error as Error);
+    }
+  }
 
- // ============================================================================
- // Schema Capture
- // ============================================================================
+  // ============================================================================
+  // Performance Analysis
+  // ============================================================================
 
- async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
- try {
- const schema = this.createBaseSchema(this.config.database!);
- 
- // Get all tables and views
- const tablesQuery = `
+  buildExplainQuery(query: string): string {
+    // Use JSON format for structured analysis (MySQL 5.7+)
+    return `EXPLAIN FORMAT=JSON ${query}`;
+  }
+
+  // ============================================================================
+  // Schema Capture
+  // ============================================================================
+
+  async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
+    try {
+      const schema = this.createBaseSchema(this.config.database!);
+
+      // Get all tables and views
+      const tablesQuery = `
  SELECT 
  TABLE_NAME,
  TABLE_TYPE,
@@ -181,45 +181,46 @@ export class MySQLAdapter extends DatabaseAdapter {
  WHERE TABLE_SCHEMA = ?
  ORDER BY TABLE_NAME
  `;
- 
- const [tablesRows] = await (connection as MySQLConnection).execute(tablesQuery, [this.config.database]);
- const tables = tablesRows as Array<{
- TABLE_NAME: string;
- TABLE_TYPE: string;
- TABLE_COMMENT: string;
- }>;
 
- // Process each table/view
- for (const table of tables) {
- const columns = await this.captureTableColumns(connection, table.TABLE_NAME);
- 
- const tableInfo: TableInfo = {
- name: table.TABLE_NAME,
- type: table.TABLE_TYPE,
- comment: table.TABLE_COMMENT || '',
- columns
- };
+      const [tablesRows] = await (connection as MySQLConnection).execute(tablesQuery, [
+        this.config.database,
+      ]);
+      const tables = tablesRows as Array<{
+        TABLE_NAME: string;
+        TABLE_TYPE: string;
+        TABLE_COMMENT: string;
+      }>;
 
- if (table.TABLE_TYPE === 'BASE TABLE') {
- schema.tables[table.TABLE_NAME] = tableInfo;
- } else {
- schema.views[table.TABLE_NAME] = tableInfo;
- }
- }
+      // Process each table/view
+      for (const table of tables) {
+        const columns = await this.captureTableColumns(connection, table.TABLE_NAME);
 
- this.updateSchemaSummary(schema);
- return schema;
- 
- } catch (error) {
- throw this.createError('Failed to capture MySQL schema', error as Error);
- }
- }
+        const tableInfo: TableInfo = {
+          name: table.TABLE_NAME,
+          type: table.TABLE_TYPE,
+          comment: table.TABLE_COMMENT || '',
+          columns,
+        };
 
- private async captureTableColumns(
- connection: DatabaseConnection,
- tableName: string
- ): Promise<ColumnInfo[]> {
- const columnsQuery = `
+        if (table.TABLE_TYPE === 'BASE TABLE') {
+          schema.tables[table.TABLE_NAME] = tableInfo;
+        } else {
+          schema.views[table.TABLE_NAME] = tableInfo;
+        }
+      }
+
+      this.updateSchemaSummary(schema);
+      return schema;
+    } catch (error) {
+      throw this.createError('Failed to capture MySQL schema', error as Error);
+    }
+  }
+
+  private async captureTableColumns(
+    connection: DatabaseConnection,
+    tableName: string
+  ): Promise<ColumnInfo[]> {
+    const columnsQuery = `
  SELECT 
  COLUMN_NAME,
  DATA_TYPE,
@@ -236,35 +237,37 @@ export class MySQLAdapter extends DatabaseAdapter {
  ORDER BY ORDINAL_POSITION
  `;
 
- const [columnsRows] = await (connection as MySQLConnection).execute(columnsQuery, [
- this.config.database,
- tableName
- ]);
+    const [columnsRows] = await (connection as MySQLConnection).execute(columnsQuery, [
+      this.config.database,
+      tableName,
+    ]);
 
- const columns = columnsRows as Array<{
- COLUMN_NAME: string;
- DATA_TYPE: string;
- IS_NULLABLE: string;
- COLUMN_DEFAULT: unknown;
- CHARACTER_MAXIMUM_LENGTH: number | null;
- NUMERIC_PRECISION: number | null;
- NUMERIC_SCALE: number | null;
- COLUMN_COMMENT: string;
- COLUMN_KEY: string;
- EXTRA: string;
- }>;
+    const columns = columnsRows as Array<{
+      COLUMN_NAME: string;
+      DATA_TYPE: string;
+      IS_NULLABLE: string;
+      COLUMN_DEFAULT: unknown;
+      CHARACTER_MAXIMUM_LENGTH: number | null;
+      NUMERIC_PRECISION: number | null;
+      NUMERIC_SCALE: number | null;
+      COLUMN_COMMENT: string;
+      COLUMN_KEY: string;
+      EXTRA: string;
+    }>;
 
- return columns.map((col): ColumnInfo => ({
- name: col.COLUMN_NAME,
- type: col.DATA_TYPE,
- nullable: col.IS_NULLABLE === 'YES',
- default: col.COLUMN_DEFAULT,
- max_length: col.CHARACTER_MAXIMUM_LENGTH,
- precision: col.NUMERIC_PRECISION,
- scale: col.NUMERIC_SCALE,
- comment: col.COLUMN_COMMENT || '',
- key: col.COLUMN_KEY || '',
- extra: col.EXTRA || ''
- }));
- }
+    return columns.map(
+      (col): ColumnInfo => ({
+        name: col.COLUMN_NAME,
+        type: col.DATA_TYPE,
+        nullable: col.IS_NULLABLE === 'YES',
+        default: col.COLUMN_DEFAULT,
+        max_length: col.CHARACTER_MAXIMUM_LENGTH,
+        precision: col.NUMERIC_PRECISION,
+        scale: col.NUMERIC_SCALE,
+        comment: col.COLUMN_COMMENT || '',
+        key: col.COLUMN_KEY || '',
+        extra: col.EXTRA || '',
+      })
+    );
+  }
 }
