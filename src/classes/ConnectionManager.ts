@@ -803,6 +803,8 @@ export class ConnectionManager extends EventEmitter {
     // 3. Execute the query
     const startTime = Date.now();
     try {
+      // Note: on timeout, the underlying query continues running on the database;
+      // cancellation would require adapter-level support (e.g. KILL QUERY).
       const queryTimeout = this.getDatabaseConfig(dbName)?.query_timeout ?? 30000;
       let timeoutHandle: ReturnType<typeof setTimeout>;
       const timeoutPromise = new Promise<never>((_, reject) => {
