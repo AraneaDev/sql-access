@@ -46,6 +46,9 @@ export interface ValidationResult {
 const SHELL_METACHAR_RE = /[;&|$()><]/;
 const EMBEDDED_CREDENTIALS_RE = /[^@]+:[^@]+@/;
 
+/**
+ *
+ */
 export function validateDatabaseConfig(config: DatabaseConfig): ValidationResult {
   const errors: ConfigFieldError[] = [];
   const t = config.type;
@@ -53,13 +56,13 @@ export function validateDatabaseConfig(config: DatabaseConfig): ValidationResult
   if (t === 'mysql' || t === 'postgresql' || t === 'mssql') {
     if (!config.host) errors.push({ field: 'host', message: 'host is required' });
     if (!config.port) errors.push({ field: 'port', message: 'port is required' });
-    if (!(config as any).user && !config.username)
+    if (!(config as unknown as Record<string, unknown>).user && !config.username)
       errors.push({ field: 'user', message: 'user is required' });
     if (!config.password) errors.push({ field: 'password', message: 'password is required' });
     if (!config.database) errors.push({ field: 'database', message: 'database is required' });
   }
   if (t === 'sqlite') {
-    if (!(config as any).filename && !(config as any).file)
+    if (!(config as unknown as Record<string, unknown>).filename && !(config as unknown as Record<string, unknown>).file)
       errors.push({ field: 'filename', message: 'filename is required for sqlite' });
   }
   if (config.host) {
@@ -530,6 +533,7 @@ function validateDatabaseConfiguration(name: string, config: DatabaseConfig): vo
   const result = validateDatabaseConfig(config);
   if (!result.valid) {
     for (const err of result.errors) {
+      // eslint-disable-next-line no-console -- logger.ts uses ESM imports incompatible with this module's test harness
       console.warn(`[config] Database '${name}' validation warning: ${err.field}: ${err.message}`);
     }
   }

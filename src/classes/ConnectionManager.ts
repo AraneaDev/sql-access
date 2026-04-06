@@ -18,10 +18,11 @@ import type { DatabaseAdapter } from '../database/adapters/index.js';
 import { AdapterFactory } from '../database/adapters/index.js';
 import type { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { getLogger } from '../utils/logger.js';
-import { MetricsManager } from './MetricsManager.js';
-import { QueryCache } from './QueryCache.js';
+import type { MetricsManager } from './MetricsManager.js';
+import type { QueryCache } from './QueryCache.js';
+import type {
+  CircuitBreakerState} from '../utils/circuit-breaker.js';
 import {
-  CircuitBreakerState,
   initialCircuitState,
   shouldReject,
   recordFailure,
@@ -829,7 +830,7 @@ export class ConnectionManager extends EventEmitter {
       // Fire-and-forget audit log
       const dbConfig = this.getDatabaseConfig(dbName);
       if (dbConfig?.audit_log) {
-        writeAuditLog(dbName, query, durationMs, 'success').catch(() => {});
+        writeAuditLog(dbName, query, durationMs, 'success').catch(/* audit is best-effort */ () => undefined);
       }
 
       return result;
@@ -859,7 +860,7 @@ export class ConnectionManager extends EventEmitter {
       // Fire-and-forget audit log
       const dbConfig = this.getDatabaseConfig(dbName);
       if (dbConfig?.audit_log) {
-        writeAuditLog(dbName, query, durationMs, `error:${category}`).catch(() => {});
+        writeAuditLog(dbName, query, durationMs, `error:${category}`).catch(/* audit is best-effort */ () => undefined);
       }
 
       throw error;
