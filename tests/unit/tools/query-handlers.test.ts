@@ -466,12 +466,14 @@ describe('query-handlers', () => {
       const ctx = createMockContext({
         testdb: { type: 'mssql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
-      (ctx.securityManager.validateAnyQuery as jest.Mock).mockReturnValueOnce({
-        allowed: true,
-      }).mockReturnValueOnce({
-        allowed: false,
-        reason: 'EXEC is not allowed',
-      });
+      (ctx.securityManager.validateAnyQuery as jest.Mock)
+        .mockReturnValueOnce({
+          allowed: true,
+        })
+        .mockReturnValueOnce({
+          allowed: false,
+          reason: 'EXEC is not allowed',
+        });
 
       const result = await handleBatchQuery(ctx, {
         database: 'testdb',

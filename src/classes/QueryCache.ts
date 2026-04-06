@@ -24,6 +24,9 @@ function makeKey(dbName: string, sql: string, params: unknown[]): string {
     .digest('hex');
 }
 
+/**
+ *
+ */
 export class QueryCache {
   private readonly store = new Map<string, Map<string, CacheEntry>>();
   private readonly maxEntries: number;
@@ -32,15 +35,24 @@ export class QueryCache {
     this.maxEntries = options.maxEntriesPerDb ?? 100;
   }
 
+  /**
+   *
+   */
   shouldCache(sql: string): boolean {
     if (!SELECT_RE.test(sql)) return false;
     if (NON_DETERMINISTIC_RE.test(sql)) return false;
     return true;
   }
+  /**
+   *
+   */
   isMutation(sql: string): boolean {
     return MUTATION_RE.test(sql);
   }
 
+  /**
+   *
+   */
   get(dbName: string, sql: string, params: unknown[]): QueryResult | undefined {
     if (!this.shouldCache(sql)) return undefined;
     const db = this.store.get(dbName);
@@ -57,6 +69,9 @@ export class QueryCache {
     return entry.result;
   }
 
+  /**
+   *
+   */
   set(
     dbName: string,
     sql: string,
@@ -78,6 +93,9 @@ export class QueryCache {
     db.set(key, { result, expiresAt: Date.now() + ttlSeconds * 1000 });
   }
 
+  /**
+   *
+   */
   invalidate(dbName: string): void {
     this.store.get(dbName)?.clear();
   }

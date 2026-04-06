@@ -41,10 +41,11 @@ export async function handleSqlQuery(
       // Even in write mode, block always-dangerous commands (EXEC, LOAD, etc.)
       const validation = ctx.securityManager.validateAnyQuery(query, dbConfig.type);
       if (!validation.allowed) {
-        throw new SecurityViolationError(
-          `Query blocked: ${validation.reason}`,
-          { database, query: query.substring(0, 100), reason: validation.reason }
-        );
+        throw new SecurityViolationError(`Query blocked: ${validation.reason}`, {
+          database,
+          query: query.substring(0, 100),
+          reason: validation.reason,
+        });
       }
     }
 
@@ -129,10 +130,11 @@ export async function handleBatchQuery(
       for (const query of queries) {
         const validation = ctx.securityManager.validateAnyQuery(query.query, dbConfig.type);
         if (!validation.allowed) {
-          throw new SecurityViolationError(
-            `Batch contains blocked query: ${validation.reason}`,
-            { database, query: query.query.substring(0, 100), reason: validation.reason }
-          );
+          throw new SecurityViolationError(`Batch contains blocked query: ${validation.reason}`, {
+            database,
+            query: query.query.substring(0, 100),
+            reason: validation.reason,
+          });
         }
       }
     }

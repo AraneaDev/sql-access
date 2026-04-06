@@ -1148,24 +1148,18 @@ describe('SecurityManager', () => {
 
   describe('MySQL version-conditional comment bypass', () => {
     test('should block queries with /*! version-conditional comments', async () => {
-      const result = await securityManager.validateQuery(
-        'SELECT 1 /*!50000 ; DROP TABLE users */'
-      );
+      const result = await securityManager.validateQuery('SELECT 1 /*!50000 ; DROP TABLE users */');
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('version-conditional');
     });
 
     test('should block queries with /*! without version number', async () => {
-      const result = await securityManager.validateQuery(
-        'SELECT 1 /*! DROP TABLE users */'
-      );
+      const result = await securityManager.validateQuery('SELECT 1 /*! DROP TABLE users */');
       expect(result.allowed).toBe(false);
     });
 
     test('should still allow normal comments', async () => {
-      const result = await securityManager.validateQuery(
-        'SELECT /* this is fine */ 1 FROM users'
-      );
+      const result = await securityManager.validateQuery('SELECT /* this is fine */ 1 FROM users');
       expect(result.allowed).toBe(true);
     });
   });

@@ -59,8 +59,15 @@ export async function handleAddDatabase(
     if (filePath.includes('..')) {
       throw new ValidationError('SQLite file path traversal (..) is not allowed', 'file');
     }
-    if (resolved.startsWith('/dev/') || resolved.startsWith('/proc/') || resolved.startsWith('/sys/')) {
-      throw new ValidationError(`SQLite file path '${resolved}' is not allowed — must be a regular file path`, 'file');
+    if (
+      resolved.startsWith('/dev/') ||
+      resolved.startsWith('/proc/') ||
+      resolved.startsWith('/sys/')
+    ) {
+      throw new ValidationError(
+        `SQLite file path '${resolved}' is not allowed — must be a regular file path`,
+        'file'
+      );
     }
 
     dbConfig.file = filePath;

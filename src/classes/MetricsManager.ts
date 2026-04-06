@@ -55,6 +55,9 @@ function computeLatencyStats(latencies: number[]): LatencyStats {
   };
 }
 
+/**
+ *
+ */
 export class MetricsManager {
   private readonly dbs = new Map<string, DBMetrics>();
 
@@ -67,6 +70,9 @@ export class MetricsManager {
     return m;
   }
 
+  /**
+   *
+   */
   recordQuery(dbName: string, durationMs: number, success: boolean, errorCategory?: string): void {
     const m = this.getOrCreate(dbName);
     m.queries.total++;
@@ -80,24 +86,45 @@ export class MetricsManager {
     if (m.latencies.length > LATENCY_WINDOW) m.latencies.shift();
   }
 
+  /**
+   *
+   */
   recordCircuitEvent(dbName: string, event: 'open' | 'closed' | 'half_open'): void {
     this.getOrCreate(dbName).circuitEvents.push({ ts: Date.now(), event });
   }
 
+  /**
+   *
+   */
   recordCacheHit(dbName: string): void {
     this.getOrCreate(dbName).cacheHits++;
   }
+  /**
+   *
+   */
   recordCacheMiss(dbName: string): void {
     this.getOrCreate(dbName).cacheMisses++;
   }
 
+  /**
+   *
+   */
   getSnapshot(dbName: string): MetricsSnapshot;
+  /**
+   *
+   */
   getSnapshot(): MetricsSnapshot[];
+  /**
+   *
+   */
   getSnapshot(dbName?: string): MetricsSnapshot | MetricsSnapshot[] {
     if (dbName !== undefined) return this.buildSnapshot(dbName, this.getOrCreate(dbName));
     return [...this.dbs.entries()].map(([name, m]) => this.buildSnapshot(name, m));
   }
 
+  /**
+   *
+   */
   reset(dbName?: string): void {
     if (dbName !== undefined) {
       this.dbs.set(dbName, emptyMetrics());
