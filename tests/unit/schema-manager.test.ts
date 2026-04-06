@@ -164,7 +164,7 @@ describe('SchemaManager', () => {
 
       await schemaManager.initialize();
 
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', { recursive: true });
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', { recursive: true, mode: 0o700 });
     });
 
     it('should initialize successfully with existing schema directory', async () => {
@@ -238,7 +238,7 @@ describe('SchemaManager', () => {
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         './test-schemas/testdb.json',
         JSON.stringify(mockSchema, null, 2),
-        'utf-8'
+        { encoding: 'utf-8', mode: 0o600 }
       );
       expect(schemaManager.hasSchema('testdb')).toBe(false);
     });
@@ -1042,6 +1042,41 @@ describe('SchemaManager', () => {
       // but getConnection + getAdapter are called for each, so the key check is that
       // both resolved successfully without errors
       expect(r1).toEqual(r2);
+    });
+  });
+
+  // ============================================================================
+  // File Permissions Tests
+  // ============================================================================
+
+  describe('file permissions', () => {
+    it('should create schema directory with 0o700 permissions', async () => {
+      mockFs.existsSync.mockReturnValue(false);
+
+      await schemaManager.initialize();
+
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', {
+        recursive: true,
+        mode: 0o700,
+      });
+    });
+
+    it('should write schema files with 0o600 permissions', async () => {
+      mockFs.existsSync.mockReturnValue(false);
+      await schemaManager.initialize();
+
+      // Capture a schema which triggers saveSchema internally
+      await schemaManager.captureSchema('testdb', {
+        type: 'postgresql',
+        host: 'localhost',
+        database: 'testdb',
+      } as DatabaseConfig);
+
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        './test-schemas/testdb.json',
+        JSON.stringify(mockSchema, null, 2),
+        { encoding: 'utf-8', mode: 0o600 }
+      );
     });
   });
 

@@ -390,7 +390,7 @@ export class SchemaManager extends EventEmitter {
 
   private ensureSchemaDirectory(): void {
     if (!existsSync(this.schemaPath)) {
-      mkdirSync(this.schemaPath, { recursive: true });
+      mkdirSync(this.schemaPath, { recursive: true, mode: 0o700 });
       this.logger.info(`Created schema directory: ${this.schemaPath}`);
     }
   }
@@ -449,7 +449,7 @@ export class SchemaManager extends EventEmitter {
       const filePath = join(this.schemaPath, `${dbName}.json`);
       const schemaJson = JSON.stringify(schema, null, 2);
 
-      writeFileSync(filePath, schemaJson, 'utf-8');
+      writeFileSync(filePath, schemaJson, { encoding: 'utf-8', mode: 0o600 });
 
       this.logger.debug(`Schema saved for '${dbName}' to ${filePath}`);
     } catch (error) {
