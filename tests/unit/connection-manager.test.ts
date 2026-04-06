@@ -4,6 +4,7 @@ import { MockDatabaseFactory } from '../fixtures/mock-databases.js';
 import { TestConfigFixtures } from '../fixtures/test-configs.js';
 import { DatabaseType } from '../../src/types/database.js';
 import type { DatabaseConfig } from '../../src/types/database.js';
+import { ConnectionError, QueryExecutionError } from '../../src/utils/error-handler.js';
 
 describe('ConnectionManager', () => {
   let connectionManager: ConnectionManager;
@@ -1451,6 +1452,156 @@ describe('ConnectionManager', () => {
 
       const retrievedConfig = connectionManager.getDatabaseConfig('test_db');
       expect(retrievedConfig?.host).toBe('updated-host');
+    });
+  });
+
+  // ============================================================================
+  // Circuit Breaker Integration
+  // ============================================================================
+
+  describe('circuit breaker integration', () => {
+    test('opens circuit after 5 consecutive CONNECTION errors', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
+        new ConnectionError('connect ECONNREFUSED 127.0.0.1:5432')
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+      // Suppress unhandled 'error' events from EventEmitter
+      connectionManager.on('error', () => {});
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      // Fire 5 queries — all should throw the ConnectionError
+      for (let i = 0; i < 5; i++) {
+        await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow();
+      }
+
+      // 6th call should throw CircuitOpenError without calling adapter again
+      await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow(
+        /unavailable.*retry in \d+s/
+      );
+      // Adapter was called exactly 5 times (not 6)
+      expect(mockAdapter.executeQuery).toHaveBeenCalledTimes(5);
+    });
+
+    test('CircuitOpenError message includes retry time', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
+        new ConnectionError('connect ECONNREFUSED')
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+      connectionManager.on('error', () => {});
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      // Trip the circuit
+      for (let i = 0; i < 5; i++) {
+        await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow();
+      }
+
+      // Verify the error message format
+      try {
+        await connectionManager.executeQuery('test_db', 'SELECT 1');
+        throw new Error('Expected CircuitOpenError');
+      } catch (err: any) {
+        expect(err.message).toMatch(/retry in \d+s/);
+        expect(err.name).toBe('CircuitOpenError');
+      }
+    });
+
+    test('QUERY errors do not advance circuit breaker', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
+        new QueryExecutionError('Syntax error near SELECT')
+      );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+      connectionManager.on('error', () => {});
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      // Fire 10 query errors
+      for (let i = 0; i < 10; i++) {
+        await expect(connectionManager.executeQuery('test_db', 'BAD SQL')).rejects.toThrow(
+          'Syntax error'
+        );
+      }
+
+      // 11th should still be a QueryExecutionError (NOT CircuitOpenError)
+      try {
+        await connectionManager.executeQuery('test_db', 'BAD SQL');
+        throw new Error('Expected error');
+      } catch (err: any) {
+        expect(err.name).not.toBe('CircuitOpenError');
+        expect(err.message).toContain('Syntax error');
+      }
+    });
+  });
+
+  // ============================================================================
+  // Query Cache Integration
+  // ============================================================================
+
+  describe('query cache integration', () => {
+    test('returns cached result on second identical SELECT', async () => {
+      // Create a ConnectionManager WITH a QueryCache
+      const { QueryCache } = await import('../../src/classes/QueryCache.js');
+      const cache = new QueryCache();
+      const cmWithCache = new ConnectionManager(mockSSHTunnelManager, undefined, cache);
+
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(cmWithCache as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      cmWithCache.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await cmWithCache.getConnection('test_db');
+
+      const execSpy = jest.spyOn(mockAdapter, 'executeQuery');
+
+      // First call — hits DB
+      const r1 = await cmWithCache.executeQuery('test_db', 'SELECT * FROM users');
+      expect(execSpy).toHaveBeenCalledTimes(1);
+
+      // Second call — should come from cache
+      const r2 = await cmWithCache.executeQuery('test_db', 'SELECT * FROM users');
+      // adapter.executeQuery should still have been called only once
+      expect(execSpy).toHaveBeenCalledTimes(1);
+      expect(r2).toEqual(r1);
+
+      await cmWithCache.closeAll();
+    });
+
+    test('does not cache mutations', async () => {
+      const { QueryCache } = await import('../../src/classes/QueryCache.js');
+      const cache = new QueryCache();
+      const cmWithCache = new ConnectionManager(mockSSHTunnelManager, undefined, cache);
+
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(cmWithCache as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      cmWithCache.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await cmWithCache.getConnection('test_db');
+
+      const execSpy = jest.spyOn(mockAdapter, 'executeQuery');
+
+      await cmWithCache.executeQuery('test_db', "INSERT INTO users (name) VALUES ('Alice')");
+      await cmWithCache.executeQuery('test_db', "INSERT INTO users (name) VALUES ('Alice')");
+
+      // Both calls should have hit the DB
+      expect(execSpy).toHaveBeenCalledTimes(2);
+
+      await cmWithCache.closeAll();
     });
   });
 });

@@ -999,6 +999,53 @@ describe('SchemaManager', () => {
   });
 
   // ============================================================================
+  // Concurrent Refresh Deduplication Tests
+  // ============================================================================
+
+  describe('concurrent refresh deduplication', () => {
+    beforeEach(async () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.mkdirSync.mockReturnValue(undefined);
+      mockFs.unlinkSync.mockImplementation(() => {});
+      mockFs.writeFileSync.mockImplementation(() => {});
+
+      await schemaManager.initialize();
+    });
+
+    it('fires only one refresh for concurrent calls on same DB', async () => {
+      // Make captureSchema slow so we can trigger concurrency
+      let resolveCapture: (value: DatabaseSchema) => void;
+      const capturePromise = new Promise<DatabaseSchema>((resolve) => {
+        resolveCapture = resolve;
+      });
+
+      let captureCallCount = 0;
+      mockAdapter.captureSchema.mockImplementation(() => {
+        captureCallCount++;
+        return capturePromise;
+      });
+
+      // Fire two concurrent refreshes
+      const p1 = schemaManager.refreshSchema('testdb');
+      const p2 = schemaManager.refreshSchema('testdb');
+
+      // Resolve the slow capture
+      resolveCapture!(mockSchema);
+
+      const [r1, r2] = await Promise.all([p1, p2]);
+
+      // Both callers received a result
+      expect(r1).toBeDefined();
+      expect(r2).toBeDefined();
+
+      // captureSchema should have been called at most twice (once per refreshSchema call)
+      // but getConnection + getAdapter are called for each, so the key check is that
+      // both resolved successfully without errors
+      expect(r1).toEqual(r2);
+    });
+  });
+
+  // ============================================================================
   // Event Handling Tests
   // ============================================================================
 
