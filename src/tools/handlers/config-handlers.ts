@@ -6,7 +6,7 @@
 
 import type { DatabaseConfig, DatabaseTypeString, MCPToolResponse } from '../../types/index.js';
 import { DEFAULT_DATABASE_PORTS } from '../../types/index.js';
-import { saveConfigFile } from '../../utils/config.js';
+import { saveConfigFile, validateDatabaseConfig } from '../../utils/config.js';
 import { createToolResponse } from '../../utils/response-formatter.js';
 import type { ToolHandlerContext } from './types.js';
 import { requireDbConfig } from './types.js';
@@ -73,6 +73,16 @@ export async function handleAddDatabase(
     dbConfig.ssh_username = args.ssh_username as string;
     dbConfig.ssh_password = args.ssh_password as string;
     dbConfig.ssh_private_key = args.ssh_private_key as string;
+  }
+
+  // Validate the complete config (shell metacharacters, embedded credentials, port range)
+  const validationResult = validateDatabaseConfig(dbConfig);
+  if (!validationResult.valid) {
+    const messages = validationResult.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+    throw new ValidationError(
+      `Invalid database configuration: ${messages}`,
+      validationResult.errors[0]?.field ?? 'config'
+    );
   }
 
   ctx.config.databases[name] = dbConfig;

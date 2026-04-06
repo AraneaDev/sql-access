@@ -57,6 +57,21 @@ describe('database name validation', () => {
   });
 });
 
+describe('validateDatabaseConfig integration', () => {
+  test('should reject databases with embedded credentials in host', async () => {
+    const ctx = createMockContext({});
+    await expect(
+      handleAddDatabase(ctx, {
+        name: 'testdb',
+        type: 'mysql',
+        host: 'user:pass@localhost',
+        username: 'root',
+        password: 'pass',
+      })
+    ).rejects.toThrow(/embedded credentials/i);
+  });
+});
+
 describe('handleUpdateDatabase', () => {
   test('should reject select_only changes via MCP', async () => {
     const ctx = createMockContext({
