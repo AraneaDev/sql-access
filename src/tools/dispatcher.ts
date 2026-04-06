@@ -28,6 +28,7 @@ import {
   handleGetConfig,
   handleSetMcpConfigurable,
 } from './handlers/config-handlers.js';
+import { handleGetMetrics } from './handlers/metrics-handlers.js';
 import type { ToolHandlerContext } from './handlers/types.js';
 import { ValidationError } from '../utils/error-handler.js';
 
@@ -121,6 +122,9 @@ export function createToolDispatcher(ctx: ToolHandlerContext): ToolDispatchFn {
           );
         }
         return handleSetMcpConfigurable(ctx, args.database as string, args.enabled as boolean);
+
+      case 'sql_get_metrics':
+        return handleGetMetrics(args as { database?: string }, ctx);
 
       default:
         throw new ValidationError(`Unknown tool: ${name}`);

@@ -255,6 +255,21 @@ export function getToolDefinitions() {
       },
     },
     {
+      name: 'sql_get_metrics',
+      description:
+        'Get in-memory performance metrics for configured databases. Returns query latency (min/max/avg/p95), error counts by category, circuit breaker state, cache hit rate, and pool utilization.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          database: {
+            type: 'string',
+            description: 'Optional database name. Omit to get metrics for all databases.',
+          },
+        },
+        required: [],
+      },
+    },
+    {
       name: 'sql_set_mcp_configurable',
       description:
         'Lock a database from MCP configuration changes by setting mcp_configurable to false. Once locked, only manual config.ini editing can re-enable MCP configuration access.',
