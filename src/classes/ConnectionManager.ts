@@ -478,6 +478,14 @@ export class ConnectionManager extends EventEmitter {
     }
 
     this.logger.info('All database connections closed');
+
+    // Destroy connection pools on shutdown
+    for (const adapter of this.adapters.values()) {
+      const poolable = adapter as unknown as { destroyPool?: () => Promise<void> };
+      if (typeof poolable.destroyPool === 'function') {
+        await poolable.destroyPool();
+      }
+    }
   }
 
   /**

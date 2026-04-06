@@ -3,7 +3,7 @@
  */
 
 import * as mysql from 'mysql2/promise';
-import type { Connection as MySQLConnection } from 'mysql2/promise';
+import type { Connection as MySQLConnection, Pool as MySQLPool, PoolConnection } from 'mysql2/promise';
 import { DatabaseAdapter } from './base.js';
 import type {
   DatabaseConnection,
@@ -18,68 +18,79 @@ import type {
 // ============================================================================
 
 export class MySQLAdapter extends DatabaseAdapter {
+  private _pool?: MySQLPool;
+
   // ============================================================================
   // Connection Management
   // ============================================================================
 
+  private getPool(): MySQLPool {
+    if (!this._pool) {
+      const host = this.config.host as string;
+      const database = this.config.database as string;
+      const username = this.config.username as string;
+      const password = this.config.password as string;
+
+      const poolConfig: mysql.PoolOptions = {
+        host,
+        port: this.parseConfigValue(this.config.port, 'number', 3306),
+        database,
+        user: username,
+        password,
+        waitForConnections: true,
+        connectionLimit: 10,
+        connectTimeout: this.connectionTimeout,
+      };
+
+      // Handle SSL configuration
+      if (this.config.ssl !== undefined) {
+        const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
+        if (sslEnabled) {
+          const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+          poolConfig.ssl = { rejectUnauthorized: sslVerify };
+        }
+      }
+
+      // Azure MariaDB/MySQL: force SSL and rewrite username to user@server
+      if (
+        host.includes('.mariadb.database.azure.com') ||
+        host.includes('.mysql.database.azure.com')
+      ) {
+        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+        poolConfig.ssl = { rejectUnauthorized: sslVerify };
+        if (!username.includes('@')) {
+          const serverName = host.split('.')[0];
+          poolConfig.user = `${username}@${serverName}`;
+        }
+      }
+
+      this._pool = mysql.createPool(poolConfig);
+    }
+    return this._pool;
+  }
+
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
-
-    const host = this.config.host as string;
-    const database = this.config.database as string;
-    const username = this.config.username as string;
-    const password = this.config.password as string;
-
-    const connectionConfig: mysql.ConnectionOptions = {
-      host,
-      port: this.parseConfigValue(this.config.port, 'number', 3306),
-      database,
-      user: username,
-      password,
-      connectTimeout: this.connectionTimeout,
-    };
-
-    // Handle SSL configuration
-    if (this.config.ssl !== undefined) {
-      const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
-      if (sslEnabled) {
-        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
-        connectionConfig.ssl = { rejectUnauthorized: sslVerify };
-      }
-    }
-
-    // Special handling for Azure MariaDB/MySQL
-    if (
-      this.config.host?.includes('.mariadb.database.azure.com') ||
-      this.config.host?.includes('.mysql.database.azure.com')
-    ) {
-      // Azure requires SSL
-      const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
-      connectionConfig.ssl = { rejectUnauthorized: sslVerify };
-
-      // Format username for Azure if needed
-      let azureUser = username;
-      if (!azureUser.includes('@') && this.config.host) {
-        const serverName = this.config.host.split('.')[0];
-        azureUser = `${azureUser}@${serverName}`;
-      }
-      connectionConfig.user = azureUser;
-    }
-
     try {
-      const connection = await mysql.createConnection(connectionConfig);
-      return connection as DatabaseConnection;
+      const conn = await this.getPool().getConnection();
+      return conn as unknown as DatabaseConnection;
     } catch (error) {
-      throw this.createError('Failed to connect to MySQL database', error as Error);
+      throw this.createError('Failed to acquire MySQL connection from pool', error as Error);
     }
   }
 
   async disconnect(connection: DatabaseConnection): Promise<void> {
     try {
-      const mysqlConn = connection as MySQLConnection;
-      await mysqlConn.end();
+      (connection as unknown as PoolConnection).release();
     } catch (error) {
-      throw this.createError('Failed to disconnect from MySQL database', error as Error);
+      throw this.createError('Failed to release MySQL connection to pool', error as Error);
+    }
+  }
+
+  async destroyPool(): Promise<void> {
+    if (this._pool) {
+      await this._pool.end();
+      this._pool = undefined;
     }
   }
 

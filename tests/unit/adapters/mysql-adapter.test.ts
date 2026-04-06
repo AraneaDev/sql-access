@@ -18,17 +18,22 @@ const mockCommit = jest.fn();
 const mockRollback = jest.fn();
 const mockEnd = jest.fn();
 
+const mockRelease = jest.fn();
 const mockConnection = {
   execute: mockExecute,
   beginTransaction: mockBeginTransaction,
   commit: mockCommit,
   rollback: mockRollback,
   end: mockEnd,
+  release: mockRelease,
 };
 
 // Mock the 'mysql2/promise' module
+const mockGetConnection = jest.fn();
+const mockPoolEnd = jest.fn();
+
 jest.mock('mysql2/promise', () => ({
-  createConnection: jest.fn(),
+  createPool: jest.fn(),
 }));
 
 import mysql from 'mysql2/promise';
@@ -57,12 +62,18 @@ describe('MySQLAdapter', () => {
 
     // Reset mocks
     jest.clearAllMocks();
-    (mysql.createConnection as jest.Mock).mockResolvedValue(mockConnection);
+    mockGetConnection.mockResolvedValue(mockConnection);
+    mockPoolEnd.mockResolvedValue(undefined);
+    (mysql.createPool as jest.Mock).mockReturnValue({
+      getConnection: mockGetConnection,
+      end: mockPoolEnd,
+    });
     mockExecute.mockResolvedValue([[{ id: 1, name: 'test' }], [{ name: 'id' }, { name: 'name' }]]);
     mockBeginTransaction.mockResolvedValue(undefined);
     mockCommit.mockResolvedValue(undefined);
     mockRollback.mockResolvedValue(undefined);
     mockEnd.mockResolvedValue(undefined);
+    mockRelease.mockReturnValue(undefined);
   });
 
   // ============================================================================
@@ -91,14 +102,17 @@ describe('MySQLAdapter', () => {
     it('should connect to MySQL database successfully', async () => {
       const connection = await adapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith({
-        host: 'localhost',
-        port: 3306,
-        database: 'testdb',
-        user: 'testuser',
-        password: 'testpass',
-        connectTimeout: 30000,
-      });
+      expect(mysql.createPool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          host: 'localhost',
+          port: 3306,
+          database: 'testdb',
+          user: 'testuser',
+          password: 'testpass',
+          connectTimeout: 30000,
+        })
+      );
+      expect(mockGetConnection).toHaveBeenCalled();
       expect(connection).toBe(mockConnection);
     });
 
@@ -108,7 +122,7 @@ describe('MySQLAdapter', () => {
 
       await sslAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           ssl: { rejectUnauthorized: false },
         })
@@ -121,7 +135,7 @@ describe('MySQLAdapter', () => {
 
       await sslAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.not.objectContaining({
           ssl: expect.anything(),
         })
@@ -138,7 +152,7 @@ describe('MySQLAdapter', () => {
 
       await azureAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           ssl: { rejectUnauthorized: false },
           user: 'testuser@myserver',
@@ -156,7 +170,7 @@ describe('MySQLAdapter', () => {
 
       await azureAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           ssl: { rejectUnauthorized: false },
           user: 'testuser@myserver',
@@ -174,7 +188,7 @@ describe('MySQLAdapter', () => {
 
       await azureAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           user: 'testuser@myserver',
         })
@@ -192,10 +206,10 @@ describe('MySQLAdapter', () => {
 
     it('should handle connection errors', async () => {
       const connectionError = new Error('Connection failed');
-      (mysql.createConnection as jest.Mock).mockRejectedValueOnce(connectionError);
+      mockGetConnection.mockRejectedValueOnce(connectionError);
 
       await expect(adapter.connect()).rejects.toThrow(
-        'mysql adapter error: Failed to connect to MySQL database - Connection failed'
+        'mysql adapter error: Failed to acquire MySQL connection from pool - Connection failed'
       );
     });
 
@@ -206,7 +220,7 @@ describe('MySQLAdapter', () => {
 
       await noPortAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           port: 3306,
         })
@@ -215,20 +229,25 @@ describe('MySQLAdapter', () => {
   });
 
   describe('disconnect', () => {
-    it('should disconnect from MySQL database successfully', async () => {
+    it('should release pool connection (not call end) on disconnect', async () => {
+      const mockRelease = jest.fn();
+      mockGetConnection.mockResolvedValueOnce({ ...mockConnection, release: mockRelease });
+
       const connection = await adapter.connect();
       await adapter.disconnect(connection);
 
-      expect(mockEnd).toHaveBeenCalled();
+      expect(mockRelease).toHaveBeenCalled();
+      expect(mockEnd).not.toHaveBeenCalled();
     });
 
     it('should handle disconnect errors', async () => {
       const disconnectError = new Error('Disconnect failed');
-      mockEnd.mockRejectedValueOnce(disconnectError);
+      const mockRelease = jest.fn().mockImplementation(() => { throw disconnectError; });
+      mockGetConnection.mockResolvedValueOnce({ ...mockConnection, release: mockRelease });
 
       const connection = await adapter.connect();
       await expect(adapter.disconnect(connection)).rejects.toThrow(
-        'mysql adapter error: Failed to disconnect from MySQL database - Disconnect failed'
+        'mysql adapter error: Failed to release MySQL connection to pool - Disconnect failed'
       );
     });
   });
@@ -636,9 +655,8 @@ describe('MySQLAdapter', () => {
       await adapter.executeQuery(connection, 'INSERT INTO users (name) VALUES (?)', ['John']);
       await adapter.commitTransaction(connection);
 
-      // Disconnect
+      // Disconnect (pool connection uses release, not end)
       await adapter.disconnect(connection);
-      expect(mockEnd).toHaveBeenCalled();
     });
 
     it('should handle transaction rollback scenario', async () => {
@@ -670,7 +688,7 @@ describe('MySQLAdapter', () => {
       ]);
 
       expect(connections).toHaveLength(3);
-      expect(mysql.createConnection).toHaveBeenCalledTimes(3);
+      expect(mockGetConnection).toHaveBeenCalledTimes(3);
 
       // Clean up connections
       await Promise.all(connections.map((conn) => adapter.disconnect(conn)));
@@ -687,7 +705,7 @@ describe('MySQLAdapter', () => {
 
       await complexAzureAdapter.connect();
 
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           user: 'user_name_with_underscores@my-very-long-server-name',
         })
@@ -722,7 +740,7 @@ describe('MySQLAdapter', () => {
       await sslStringAdapter.connect();
 
       // Should parse 'false' string as boolean false
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.not.objectContaining({
           ssl: expect.anything(),
         })
@@ -749,7 +767,7 @@ describe('MySQLAdapter', () => {
       await malformedAdapter.connect();
 
       // Should not modify username for non-Azure hostnames
-      expect(mysql.createConnection).toHaveBeenCalledWith(
+      expect(mysql.createPool).toHaveBeenCalledWith(
         expect.objectContaining({
           user: 'testuser',
         })
@@ -770,5 +788,30 @@ describe('MySQLAdapter', () => {
       const result = await adapter.executeQuery(connection, 'SELECT * FROM test');
       expect(result.rows).toEqual([]);
     });
+  });
+});
+
+describe('MySQLAdapter - connection pooling', () => {
+  it('returns pool connections (has release method)', async () => {
+    const adapter = new MySQLAdapter({
+      type: 'mysql',
+      host: 'localhost',
+      port: 3306,
+      database: 'test',
+      username: 'root',
+      password: 'test',
+      select_only: true,
+      mcp_configurable: false,
+    });
+    // Inject a mock pool directly
+    const mockRelease = jest.fn();
+    const mockConn = { release: mockRelease, execute: jest.fn(), end: jest.fn() };
+    const mockPool = { getConnection: jest.fn().mockResolvedValue(mockConn), end: jest.fn() };
+    (adapter as unknown as Record<string, unknown>)._pool = mockPool;
+    const conn = await adapter.connect();
+    expect(conn).toBe(mockConn);
+    await adapter.disconnect(conn);
+    expect(mockRelease).toHaveBeenCalled();
+    expect(mockConn.end).not.toHaveBeenCalled();
   });
 });
