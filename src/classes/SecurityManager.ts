@@ -247,7 +247,16 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     }
 
     // Clean and normalize query
-    const normalizedQuery = this.normalizeQuery(query);
+    let normalizedQuery: string;
+    try {
+      normalizedQuery = this.normalizeQuery(query);
+    } catch (e) {
+      return {
+        allowed: false,
+        reason: (e as Error).message,
+        confidence: 1.0,
+      };
+    }
 
     // Extract SQL tokens
     const tokens = this.tokenizeQuery(normalizedQuery);
@@ -458,7 +467,16 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
     }
 
     // Clean and normalize query
-    const normalizedQuery = this.normalizeQuery(query);
+    let normalizedQuery: string;
+    try {
+      normalizedQuery = this.normalizeQuery(query);
+    } catch (e) {
+      return {
+        allowed: false,
+        reason: (e as Error).message,
+        confidence: 1.0,
+      };
+    }
 
     // Extract SQL tokens
     const tokens = this.tokenizeQuery(normalizedQuery);
@@ -912,6 +930,13 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
   }
 
   private normalizeQuery(query: string): string {
+    // Block MySQL version-conditional comments that execute as SQL
+    if (/\/\*!/.test(query)) {
+      throw new Error(
+        'Query contains MySQL version-conditional comments (/*!) which are not allowed'
+      );
+    }
+
     return query
       .replace(/\/\*[\s\S]*?\*\//g, '') // Remove /* */ comments
       .replace(/--[^\r\n]*/g, '') // Remove -- comments
