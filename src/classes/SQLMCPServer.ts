@@ -28,6 +28,8 @@ import type {
 
 import { SERVER_VERSION, SERVER_NAME, DEFAULT_DATABASE_PORTS } from '../types/index.js';
 
+import { MetricsManager } from './MetricsManager.js';
+import { QueryCache } from './QueryCache.js';
 import { ConnectionManager } from './ConnectionManager.js';
 import { SecurityManager } from './SecurityManager.js';
 import { SchemaManager } from './SchemaManager.js';
@@ -42,6 +44,8 @@ import type { ToolHandlerContext } from '../tools/handlers/types.js';
  * Main SQL MCP Server class that coordinates all operations
  */
 export class SQLMCPServer extends EventEmitter {
+  private metricsManager!: MetricsManager;
+  private queryCache!: QueryCache;
   private readonly connectionManager: ConnectionManager;
   private readonly securityManager: SecurityManager;
   private readonly schemaManager: SchemaManager;
@@ -71,7 +75,13 @@ export class SQLMCPServer extends EventEmitter {
 
     this.sshTunnelManager = new EnhancedSSHTunnelManager();
     this.securityManager = new SecurityManager();
-    this.connectionManager = new ConnectionManager(this.sshTunnelManager);
+    this.metricsManager = new MetricsManager();
+    this.queryCache = new QueryCache();
+    this.connectionManager = new ConnectionManager(
+      this.sshTunnelManager,
+      this.metricsManager,
+      this.queryCache
+    );
     this.schemaManager = new SchemaManager(this.connectionManager, join(PROJECT_ROOT, 'schemas'));
 
     this.setupEventListeners();
@@ -104,6 +114,9 @@ export class SQLMCPServer extends EventEmitter {
         },
         get sshTunnelManager() {
           return server.sshTunnelManager;
+        },
+        get metricsManager() {
+          return server.metricsManager;
         },
         get config() {
           return server.config!;
