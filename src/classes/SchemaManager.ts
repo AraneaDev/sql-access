@@ -11,7 +11,7 @@ import {
   unlinkSync,
   statSync,
 } from 'fs';
-import { join } from 'path';
+import { join, basename } from 'path';
 import { EventEmitter } from 'events';
 import type {
   DatabaseSchema,
@@ -40,6 +40,11 @@ export class SchemaManager extends EventEmitter {
     super();
     this.connectionManager = connectionManager;
     this.schemaPath = schemaPath;
+  }
+
+  /** Sanitize database name for use in file paths */
+  private safeFileName(dbName: string): string {
+    return basename(dbName).replace(/[^a-zA-Z0-9_-]/g, '_');
   }
 
   // ============================================================================
@@ -149,7 +154,7 @@ export class SchemaManager extends EventEmitter {
       this.schemas.delete(dbName);
 
       // Delete cached schema file
-      const schemaFile = join(this.schemaPath, `${dbName}.json`);
+      const schemaFile = join(this.schemaPath, `${this.safeFileName(dbName)}.json`);
       if (existsSync(schemaFile)) {
         unlinkSync(schemaFile);
       }
@@ -446,7 +451,7 @@ export class SchemaManager extends EventEmitter {
 
   private async saveSchema(dbName: string, schema: DatabaseSchema): Promise<void> {
     try {
-      const filePath = join(this.schemaPath, `${dbName}.json`);
+      const filePath = join(this.schemaPath, `${this.safeFileName(dbName)}.json`);
       const schemaJson = JSON.stringify(schema, null, 2);
 
       writeFileSync(filePath, schemaJson, { encoding: 'utf-8', mode: 0o600 });

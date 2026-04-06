@@ -22,6 +22,10 @@ jest.mock('fs', () => ({
 
 jest.mock('path', () => ({
   join: jest.fn((...args: string[]) => args.join('/')),
+  basename: jest.fn((p: string) => {
+    const parts = p.replace(/\\/g, '/').split('/');
+    return parts[parts.length - 1] || '';
+  }),
 }));
 
 // Mock the logger
@@ -1077,6 +1081,89 @@ describe('SchemaManager', () => {
         JSON.stringify(mockSchema, null, 2),
         { encoding: 'utf-8', mode: 0o600 }
       );
+    });
+  });
+
+  // ============================================================================
+  // Path Sanitization Tests
+  // ============================================================================
+
+  describe('path sanitization', () => {
+    beforeEach(async () => {
+      mockFs.existsSync.mockReturnValue(false);
+      mockFs.mkdirSync.mockReturnValue(undefined);
+      mockFs.writeFileSync.mockImplementation(() => {});
+
+      await schemaManager.initialize();
+    });
+
+    it('should strip directory traversal from database names in file paths', async () => {
+      // Directly invoke the private saveSchema via captureSchema with a malicious name
+      const maliciousName = '../../etc/evil';
+
+      // Set up mocks for this specific database name
+      (mockConnectionManager.getConnection as jest.Mock).mockResolvedValue({
+        connection: { id: 'test-connection' },
+        config: { type: 'postgresql', host: 'localhost', database: 'evil' },
+      });
+      (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(mockAdapter);
+      mockAdapter.captureSchema.mockResolvedValue(mockSchema);
+
+      await schemaManager.captureSchema(maliciousName, {
+        type: 'postgresql',
+        host: 'localhost',
+        database: 'evil',
+      } as any);
+
+      // The file should be written to schemaPath/evil.json, NOT ../../etc/evil.json
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        './test-schemas/evil.json',
+        JSON.stringify(mockSchema, null, 2),
+        { encoding: 'utf-8', mode: 0o600 }
+      );
+    });
+
+    it('should sanitize special characters in database names for file paths', async () => {
+      const unsafeName = 'my.db@host';
+
+      (mockConnectionManager.getConnection as jest.Mock).mockResolvedValue({
+        connection: { id: 'test-connection' },
+        config: { type: 'postgresql', host: 'localhost', database: 'test' },
+      });
+      (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(mockAdapter);
+      mockAdapter.captureSchema.mockResolvedValue(mockSchema);
+
+      await schemaManager.captureSchema(unsafeName, {
+        type: 'postgresql',
+        host: 'localhost',
+        database: 'test',
+      } as any);
+
+      // Special characters should be replaced with underscores
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        './test-schemas/my_db_host.json',
+        JSON.stringify(mockSchema, null, 2),
+        { encoding: 'utf-8', mode: 0o600 }
+      );
+    });
+
+    it('should sanitize database names in refreshSchema file paths', async () => {
+      const maliciousName = '../etc/passwd';
+
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.unlinkSync.mockImplementation(() => {});
+
+      (mockConnectionManager.getConnection as jest.Mock).mockResolvedValue({
+        connection: { id: 'test-connection' },
+        config: { type: 'postgresql', host: 'localhost', database: 'passwd' },
+      });
+      (mockConnectionManager.getAdapter as jest.Mock).mockReturnValue(mockAdapter);
+      mockAdapter.captureSchema.mockResolvedValue(mockSchema);
+
+      await schemaManager.refreshSchema(maliciousName);
+
+      // The unlink should target the sanitized path
+      expect(mockFs.unlinkSync).toHaveBeenCalledWith('./test-schemas/passwd.json');
     });
   });
 
