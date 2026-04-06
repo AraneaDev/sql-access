@@ -15,10 +15,14 @@ import type { ToolHandlerContext } from '../../../src/tools/handlers/types.js';
 import type { ParsedServerConfig, DatabaseConfig } from '../../../src/types/index.js';
 import { ConfigurationError, ValidationError } from '../../../src/utils/error-handler.js';
 
-// Mock saveConfigFile
-jest.mock('../../../src/utils/config.js', () => ({
-  saveConfigFile: jest.fn(),
-}));
+// Mock saveConfigFile but pass through validateDatabaseConfig
+jest.mock('../../../src/utils/config.js', () => {
+  const actual = jest.requireActual('../../../src/utils/config.js');
+  return {
+    ...actual,
+    saveConfigFile: jest.fn(),
+  };
+});
 
 // Mock response-formatter to pass through
 jest.mock('../../../src/utils/response-formatter.js', () => ({
@@ -159,6 +163,8 @@ describe('config-handlers', () => {
         type: 'mysql',
         host: 'localhost',
         username: 'root',
+        password: 'pass',
+        database: 'mydb',
       };
 
       await handleAddDatabase(ctx, args);
@@ -173,6 +179,8 @@ describe('config-handlers', () => {
         type: 'mysql',
         host: 'localhost',
         username: 'root',
+        password: 'pass',
+        database: 'mydb',
         ssh_host: 'bastion.example.com',
         ssh_port: 2222,
         ssh_username: 'sshuser',
@@ -193,6 +201,8 @@ describe('config-handlers', () => {
         type: 'mysql',
         host: 'localhost',
         username: 'root',
+        password: 'pass',
+        database: 'mydb',
       };
 
       await handleAddDatabase(ctx, args);
@@ -283,7 +293,7 @@ describe('config-handlers', () => {
         file: 'f',
         ssl: true,
         ssl_verify: true,
-        select_only: false,
+        // select_only is no longer changeable via MCP (security hardening)
         ssh_host: 'sh',
         ssh_port: 22,
         ssh_username: 'su',
@@ -300,7 +310,7 @@ describe('config-handlers', () => {
       expect(dbConfig.file).toBe('f');
       expect(dbConfig.ssl).toBe(true);
       expect(dbConfig.ssl_verify).toBe(true);
-      expect(dbConfig.select_only).toBe(false);
+      expect(dbConfig.select_only).toBe(true); // unchanged — locked from MCP
       expect(dbConfig.ssh_host).toBe('sh');
       expect(dbConfig.ssh_port).toBe(22);
       expect(dbConfig.ssh_username).toBe('su');

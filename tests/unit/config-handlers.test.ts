@@ -1,4 +1,3 @@
-import { describe, test, expect, vi } from 'vitest';
 import {
   handleUpdateDatabase,
   handleAddDatabase,
@@ -7,10 +6,18 @@ import { writeAuditLog } from '../../src/utils/audit-logger.js';
 import type { ToolHandlerContext } from '../../src/tools/handlers/types.js';
 import type { ParsedServerConfig } from '../../src/types/index.js';
 
-vi.mock('../../src/utils/audit-logger.js', () => ({
-  writeAuditLog: vi.fn().mockResolvedValue(undefined),
-  hashQuery: vi.fn(() => 'abc123'),
+jest.mock('../../src/utils/audit-logger.js', () => ({
+  writeAuditLog: jest.fn().mockResolvedValue(undefined),
+  hashQuery: jest.fn(() => 'abc123'),
 }));
+
+jest.mock('../../src/utils/config.js', () => {
+  const actual = jest.requireActual('../../src/utils/config.js');
+  return {
+    ...actual,
+    saveConfigFile: jest.fn(),
+  };
+});
 
 function createMockContext(configOverrides: Partial<ParsedServerConfig>): ToolHandlerContext {
   const config: ParsedServerConfig = {
@@ -22,18 +29,18 @@ function createMockContext(configOverrides: Partial<ParsedServerConfig>): ToolHa
     config,
     configPath: '/tmp/test-config.ini',
     connectionManager: {
-      registerDatabase: vi.fn(),
-      unregisterDatabase: vi.fn(),
+      registerDatabase: jest.fn(),
+      unregisterDatabase: jest.fn(),
     } as never,
     securityManager: {} as never,
     schemaManager: {} as never,
     sshTunnelManager: {} as never,
     metricsManager: {} as never,
     logger: {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
     } as never,
   };
 }
@@ -107,7 +114,7 @@ describe('SQLite path validation', () => {
 
 describe('audit logging for config changes', () => {
   test('should audit log when adding a database', async () => {
-    (writeAuditLog as ReturnType<typeof vi.fn>).mockClear();
+    (writeAuditLog as jest.Mock).mockClear();
     const ctx = createMockContext({});
     await handleAddDatabase(ctx, {
       name: 'newdb',
