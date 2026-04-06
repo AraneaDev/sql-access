@@ -1120,4 +1120,47 @@ describe('SecurityManager', () => {
       expect(result.allowed).toBe(true);
     });
   });
+
+  describe('validateAnyQuery regression', () => {
+    let writeManager: SecurityManager;
+
+    beforeEach(() => {
+      writeManager = new SecurityManager({ security: defaultConfig }, false);
+    });
+
+    test('should block EXEC even in write mode', async () => {
+      const result = await writeManager.validateQuery('EXEC xp_cmdshell "dir"');
+      expect(result.allowed).toBe(false);
+    });
+
+    test('should block LOAD even in write mode', async () => {
+      const result = await writeManager.validateQuery(
+        "LOAD DATA INFILE '/etc/passwd' INTO TABLE t"
+      );
+      expect(result.allowed).toBe(false);
+    });
+
+    test('should allow INSERT in write mode', async () => {
+      const result = await writeManager.validateQuery("INSERT INTO t VALUES (1, 'a')");
+      expect(result.allowed).toBe(true);
+    });
+  });
+
+  describe('MySQL version-conditional comment bypass', () => {
+    test('should block queries with /*! version-conditional comments', async () => {
+      const result = await securityManager.validateQuery('SELECT 1 /*!50000 ; DROP TABLE users */');
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('version-conditional');
+    });
+
+    test('should block queries with /*! without version number', async () => {
+      const result = await securityManager.validateQuery('SELECT 1 /*! DROP TABLE users */');
+      expect(result.allowed).toBe(false);
+    });
+
+    test('should still allow normal comments', async () => {
+      const result = await securityManager.validateQuery('SELECT /* this is fine */ 1 FROM users');
+      expect(result.allowed).toBe(true);
+    });
+  });
 });

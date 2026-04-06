@@ -37,6 +37,16 @@ export async function handleSqlQuery(
           { database, query: query.substring(0, 100), reason: validation.reason }
         );
       }
+    } else {
+      // Even in write mode, block always-dangerous commands (EXEC, LOAD, etc.)
+      const validation = ctx.securityManager.validateAnyQuery(query, dbConfig.type);
+      if (!validation.allowed) {
+        throw new SecurityViolationError(`Query blocked: ${validation.reason}`, {
+          database,
+          query: query.substring(0, 100),
+          reason: validation.reason,
+        });
+      }
     }
 
     if (dbConfig.ssh_host) {
@@ -107,6 +117,18 @@ export async function handleBatchQuery(
     if (dbConfig.select_only) {
       for (const query of queries) {
         const validation = ctx.securityManager.validateSelectOnlyQuery(query.query, dbConfig.type);
+        if (!validation.allowed) {
+          throw new SecurityViolationError(`Batch contains blocked query: ${validation.reason}`, {
+            database,
+            query: query.query.substring(0, 100),
+            reason: validation.reason,
+          });
+        }
+      }
+    } else {
+      // Even in write mode, validate each query for always-blocked commands
+      for (const query of queries) {
+        const validation = ctx.securityManager.validateAnyQuery(query.query, dbConfig.type);
         if (!validation.allowed) {
           throw new SecurityViolationError(`Batch contains blocked query: ${validation.reason}`, {
             database,

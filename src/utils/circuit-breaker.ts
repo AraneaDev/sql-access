@@ -11,6 +11,9 @@ export interface CircuitBreakerState {
   openedAt: number | null;
 }
 
+/**
+ *
+ */
 export function initialCircuitState(): CircuitBreakerState {
   return { status: 'CLOSED', failures: 0, windowStart: Date.now(), openedAt: null };
 }
@@ -24,6 +27,9 @@ export interface AllowResult {
   transitionTo?: 'HALF_OPEN';
 }
 
+/**
+ *
+ */
 export function shouldReject(state: CircuitBreakerState, now: number): RejectResult | AllowResult {
   if (state.status === 'CLOSED') return { reject: false };
   if (state.status === 'HALF_OPEN') return { reject: false };
@@ -32,6 +38,9 @@ export function shouldReject(state: CircuitBreakerState, now: number): RejectRes
   return { reject: true, retryInMs: CIRCUIT_COOLDOWN_MS - elapsed };
 }
 
+/**
+ *
+ */
 export function recordFailure(state: CircuitBreakerState, now: number): CircuitBreakerState {
   // Anchor windowStart to first recorded failure if it hasn't been set by a prior failure
   const effectiveWindowStart = state.failures === 0 ? now : state.windowStart;
@@ -47,6 +56,9 @@ export function recordFailure(state: CircuitBreakerState, now: number): CircuitB
   return { ...base, failures };
 }
 
+/**
+ *
+ */
 export function recordSuccess(state: CircuitBreakerState): CircuitBreakerState {
   if (state.status === 'HALF_OPEN' || state.status === 'OPEN')
     return { status: 'CLOSED', failures: 0, windowStart: Date.now(), openedAt: null };

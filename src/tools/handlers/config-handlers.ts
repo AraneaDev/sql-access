@@ -4,19 +4,31 @@
  * sql_get_config, sql_set_mcp_configurable
  */
 
+import { resolve } from 'node:path';
 import type { DatabaseConfig, DatabaseTypeString, MCPToolResponse } from '../../types/index.js';
 import { DEFAULT_DATABASE_PORTS } from '../../types/index.js';
-import { saveConfigFile } from '../../utils/config.js';
+import { saveConfigFile, validateDatabaseConfig } from '../../utils/config.js';
 import { createToolResponse } from '../../utils/response-formatter.js';
 import type { ToolHandlerContext } from './types.js';
 import { requireDbConfig } from './types.js';
 import { ValidationError, ConfigurationError } from '../../utils/error-handler.js';
+import { writeAuditLog } from '../../utils/audit-logger.js';
 
 export async function handleAddDatabase(
   ctx: ToolHandlerContext,
   args: Record<string, unknown>
 ): Promise<MCPToolResponse> {
   const name = args.name as string;
+
+  // Validate database name to prevent INI injection and shell metacharacter attacks
+  const DB_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+  if (!name || name.length > 64 || !DB_NAME_RE.test(name)) {
+    throw new ValidationError(
+      `Database name '${name.substring(0, 20)}' contains invalid characters. ` +
+        `Names must be alphanumeric with hyphens/underscores, 1-64 characters.`,
+      'name'
+    );
+  }
 
   if (ctx.config.databases[name]) {
     throw new ConfigurationError(
@@ -39,8 +51,26 @@ export async function handleAddDatabase(
   };
 
   if (dbType === 'sqlite') {
-    if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter");
-    dbConfig.file = args.file as string;
+    if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter", 'file');
+    const filePath = args.file as string;
+
+    // Validate SQLite file path - block path traversal and dangerous paths
+    const resolved = resolve(filePath);
+    if (filePath.includes('..')) {
+      throw new ValidationError('SQLite file path traversal (..) is not allowed', 'file');
+    }
+    if (
+      resolved.startsWith('/dev/') ||
+      resolved.startsWith('/proc/') ||
+      resolved.startsWith('/sys/')
+    ) {
+      throw new ValidationError(
+        `SQLite file path '${resolved}' is not allowed — must be a regular file path`,
+        'file'
+      );
+    }
+
+    dbConfig.file = filePath;
   } else {
     if (!args.host)
       throw new ValidationError(`Database type '${dbType}' requires 'host' parameter`);
@@ -65,11 +95,23 @@ export async function handleAddDatabase(
     dbConfig.ssh_private_key = args.ssh_private_key as string;
   }
 
+  // Validate the complete config (shell metacharacters, embedded credentials, port range)
+  const validationResult = validateDatabaseConfig(dbConfig);
+  if (!validationResult.valid) {
+    const messages = validationResult.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+    throw new ValidationError(
+      `Invalid database configuration: ${messages}`,
+      validationResult.errors[0]?.field ?? 'config'
+    );
+  }
+
   ctx.config.databases[name] = dbConfig;
   ctx.connectionManager.registerDatabase(name, dbConfig);
 
   saveConfigFile(ctx.config, ctx.configPath);
   ctx.logger.info(`Database '${name}' added via MCP`, { type: dbType });
+
+  writeAuditLog(name, 'CONFIG_ADD', 0, 'success').catch(() => {});
 
   return createToolResponse(
     ` Database '${name}' added successfully (type: ${dbType})\n` +
@@ -129,8 +171,11 @@ export async function handleUpdateDatabase(
     updated.push('ssl_verify');
   }
   if (args.select_only !== undefined) {
-    dbConfig.select_only = args.select_only as boolean;
-    updated.push('select_only');
+    throw new ConfigurationError(
+      `Security setting 'select_only' cannot be changed via MCP tools.\n` +
+        `To change SELECT-only mode, manually edit config.ini under [database.${database}].\n` +
+        `This prevents an AI from escalating its own database privileges.`
+    );
   }
 
   if (args.ssh_host !== undefined) {
@@ -164,6 +209,8 @@ export async function handleUpdateDatabase(
   saveConfigFile(ctx.config, ctx.configPath);
   ctx.logger.info(`Database '${database}' updated via MCP`, { fields: updated });
 
+  writeAuditLog(database, `CONFIG_UPDATE: ${updated.join(', ')}`, 0, 'success').catch(() => {});
+
   return createToolResponse(
     ` Database '${database}' updated successfully\n` +
       ` Changed fields: ${updated.join(', ')}\n` +
@@ -193,6 +240,8 @@ export async function handleRemoveDatabase(
 
   saveConfigFile(ctx.config, ctx.configPath);
   ctx.logger.info(`Database '${database}' removed via MCP`);
+
+  writeAuditLog(database, 'CONFIG_REMOVE', 0, 'success').catch(() => {});
 
   return createToolResponse(
     ` Database '${database}' removed successfully\nConnection closed and configuration saved.`
