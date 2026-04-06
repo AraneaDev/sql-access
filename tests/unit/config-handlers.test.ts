@@ -1,5 +1,8 @@
 import { describe, test, expect, vi } from 'vitest';
-import { handleUpdateDatabase } from '../../src/tools/handlers/config-handlers.js';
+import {
+  handleUpdateDatabase,
+  handleAddDatabase,
+} from '../../src/tools/handlers/config-handlers.js';
 import type { ToolHandlerContext } from '../../src/tools/handlers/types.js';
 import type { ParsedServerConfig } from '../../src/types/index.js';
 
@@ -25,6 +28,34 @@ function createMockContext(configOverrides: Partial<ParsedServerConfig>): ToolHa
     } as never,
   };
 }
+
+describe('database name validation', () => {
+  test('should reject database names with INI injection characters', async () => {
+    const ctx = createMockContext({});
+    await expect(
+      handleAddDatabase(ctx, {
+        name: 'evil]\n[security',
+        type: 'mysql',
+        host: 'localhost',
+        username: 'root',
+        password: 'pass',
+      })
+    ).rejects.toThrow(/invalid.*characters/i);
+  });
+
+  test('should reject database names with shell metacharacters', async () => {
+    const ctx = createMockContext({});
+    await expect(
+      handleAddDatabase(ctx, {
+        name: 'db;rm -rf',
+        type: 'mysql',
+        host: 'localhost',
+        username: 'root',
+        password: 'pass',
+      })
+    ).rejects.toThrow(/invalid.*characters/i);
+  });
+});
 
 describe('handleUpdateDatabase', () => {
   test('should reject select_only changes via MCP', async () => {

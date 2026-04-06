@@ -18,6 +18,16 @@ export async function handleAddDatabase(
 ): Promise<MCPToolResponse> {
   const name = args.name as string;
 
+  // Validate database name to prevent INI injection and shell metacharacter attacks
+  const DB_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+  if (!name || name.length > 64 || !DB_NAME_RE.test(name)) {
+    throw new ValidationError(
+      `Database name '${name.substring(0, 20)}' contains invalid characters. ` +
+        `Names must be alphanumeric with hyphens/underscores, 1-64 characters.`,
+      'name'
+    );
+  }
+
   if (ctx.config.databases[name]) {
     throw new ConfigurationError(
       `Database '${name}' already exists. Use sql_update_database to modify it.`
