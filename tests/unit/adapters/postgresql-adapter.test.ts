@@ -121,6 +121,33 @@ describe('PostgreSQLAdapter', () => {
 
       expect(pg.Pool).toHaveBeenCalledWith(
         expect.objectContaining({
+          ssl: { rejectUnauthorized: true },
+        })
+      );
+    });
+
+    it('should default ssl_verify to true when SSL is enabled but ssl_verify is not set', async () => {
+      const sslConfig = { ...config, ssl: true };
+      // ssl_verify is intentionally NOT set
+      const sslAdapter = new PostgreSQLAdapter(sslConfig);
+
+      await sslAdapter.connect();
+
+      expect(pg.Pool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ssl: { rejectUnauthorized: true },
+        })
+      );
+    });
+
+    it('should allow ssl_verify=false to explicitly disable certificate verification', async () => {
+      const sslConfig = { ...config, ssl: true, ssl_verify: false };
+      const sslAdapter = new PostgreSQLAdapter(sslConfig);
+
+      await sslAdapter.connect();
+
+      expect(pg.Pool).toHaveBeenCalledWith(
+        expect.objectContaining({
           ssl: { rejectUnauthorized: false },
         })
       );
@@ -685,7 +712,7 @@ describe('PostgreSQLAdapter', () => {
 
       expect(pg.Pool).toHaveBeenCalledWith(
         expect.objectContaining({
-          ssl: { rejectUnauthorized: false }, // Should be parsed as SSL object since it's truthy
+          ssl: { rejectUnauthorized: true }, // Should be parsed as SSL object since it's truthy
         })
       );
     });

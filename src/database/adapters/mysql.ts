@@ -51,9 +51,9 @@ export class MySQLAdapter extends DatabaseAdapter {
         const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
         if (sslEnabled) {
           const sslVerify = this.parseConfigValue(
-            this.config.ssl_verify ?? false,
+            this.config.ssl_verify ?? true,
             'boolean',
-            false
+            true
           );
           poolConfig.ssl = { rejectUnauthorized: sslVerify };
         }
@@ -64,7 +64,7 @@ export class MySQLAdapter extends DatabaseAdapter {
         host.includes('.mariadb.database.azure.com') ||
         host.includes('.mysql.database.azure.com')
       ) {
-        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? true, 'boolean', true);
         poolConfig.ssl = { rejectUnauthorized: sslVerify };
         if (!username.includes('@')) {
           const serverName = host.split('.')[0];
