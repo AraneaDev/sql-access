@@ -13,19 +13,25 @@ import type {
 
 // Mock the 'pg' module
 const mockQuery = jest.fn();
-const mockConnect = jest.fn();
+const mockRelease = jest.fn();
 const mockEnd = jest.fn();
 
 const mockStream = { destroyed: false };
 const mockClient = {
   query: mockQuery,
-  connect: mockConnect,
+  release: mockRelease,
   end: mockEnd,
   connection: { stream: mockStream },
 };
 
+const mockPoolConnect = jest.fn().mockResolvedValue(mockClient);
+const mockPoolEnd = jest.fn().mockResolvedValue(undefined);
+
 jest.mock('pg', () => ({
-  Client: jest.fn(() => mockClient),
+  Pool: jest.fn(() => ({
+    connect: mockPoolConnect,
+    end: mockPoolEnd,
+  })),
 }));
 
 import * as pg from 'pg';
@@ -59,7 +65,9 @@ describe('PostgreSQLAdapter', () => {
       fields: [{ name: 'id' }, { name: 'name' }],
       rowCount: 1,
     });
-    mockConnect.mockResolvedValue(undefined);
+    mockPoolConnect.mockResolvedValue(mockClient);
+    mockPoolEnd.mockResolvedValue(undefined);
+    mockRelease.mockResolvedValue(undefined);
     mockEnd.mockResolvedValue(undefined);
     mockStream.destroyed = false;
   });
@@ -90,16 +98,18 @@ describe('PostgreSQLAdapter', () => {
     it('should connect to PostgreSQL database successfully', async () => {
       const connection = await adapter.connect();
 
-      expect(pg.Client).toHaveBeenCalledWith({
-        host: 'localhost',
-        port: 5432,
-        database: 'testdb',
-        user: 'testuser',
-        password: 'testpass',
-        connectionTimeoutMillis: 30000,
-        ssl: false,
-      });
-      expect(mockConnect).toHaveBeenCalled();
+      expect(pg.Pool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          host: 'localhost',
+          port: 5432,
+          database: 'testdb',
+          user: 'testuser',
+          password: 'testpass',
+          connectionTimeoutMillis: 30000,
+          ssl: false,
+        })
+      );
+      expect(mockPoolConnect).toHaveBeenCalled();
       expect(connection).toBe(mockClient);
     });
 
@@ -109,7 +119,7 @@ describe('PostgreSQLAdapter', () => {
 
       await sslAdapter.connect();
 
-      expect(pg.Client).toHaveBeenCalledWith(
+      expect(pg.Pool).toHaveBeenCalledWith(
         expect.objectContaining({
           ssl: { rejectUnauthorized: false },
         })
@@ -122,7 +132,7 @@ describe('PostgreSQLAdapter', () => {
 
       await sslAdapter.connect();
 
-      expect(pg.Client).toHaveBeenCalledWith(
+      expect(pg.Pool).toHaveBeenCalledWith(
         expect.objectContaining({
           ssl: false,
         })
@@ -140,10 +150,10 @@ describe('PostgreSQLAdapter', () => {
 
     it('should handle connection errors', async () => {
       const connectionError = new Error('Connection failed');
-      mockConnect.mockRejectedValueOnce(connectionError);
+      mockPoolConnect.mockRejectedValueOnce(connectionError);
 
       await expect(adapter.connect()).rejects.toThrow(
-        'postgresql adapter error: Failed to connect to PostgreSQL database - Connection failed'
+        'postgresql adapter error: Failed to acquire PostgreSQL connection from pool - Connection failed'
       );
     });
 
@@ -154,7 +164,7 @@ describe('PostgreSQLAdapter', () => {
 
       await noPortAdapter.connect();
 
-      expect(pg.Client).toHaveBeenCalledWith(
+      expect(pg.Pool).toHaveBeenCalledWith(
         expect.objectContaining({
           port: 5432,
         })
@@ -163,20 +173,21 @@ describe('PostgreSQLAdapter', () => {
   });
 
   describe('disconnect', () => {
-    it('should disconnect from PostgreSQL database successfully', async () => {
+    it('should release pool client on disconnect', async () => {
       const connection = await adapter.connect();
       await adapter.disconnect(connection);
 
-      expect(mockEnd).toHaveBeenCalled();
+      expect(mockRelease).toHaveBeenCalled();
+      expect(mockEnd).not.toHaveBeenCalled();
     });
 
     it('should handle disconnect errors', async () => {
       const disconnectError = new Error('Disconnect failed');
-      mockEnd.mockRejectedValueOnce(disconnectError);
+      mockRelease.mockImplementationOnce(() => { throw disconnectError; });
 
       const connection = await adapter.connect();
       await expect(adapter.disconnect(connection)).rejects.toThrow(
-        'postgresql adapter error: Failed to disconnect from PostgreSQL database - Disconnect failed'
+        'postgresql adapter error: Failed to release PostgreSQL connection to pool - Disconnect failed'
       );
     });
   });
@@ -670,7 +681,7 @@ describe('PostgreSQLAdapter', () => {
 
       await sslStringAdapter.connect();
 
-      expect(pg.Client).toHaveBeenCalledWith(
+      expect(pg.Pool).toHaveBeenCalledWith(
         expect.objectContaining({
           ssl: { rejectUnauthorized: false }, // Should be parsed as SSL object since it's truthy
         })
@@ -699,7 +710,7 @@ describe('PostgreSQLAdapter', () => {
       ]);
 
       expect(connections).toHaveLength(3);
-      expect(mockConnect).toHaveBeenCalledTimes(3);
+      expect(mockPoolConnect).toHaveBeenCalledTimes(3);
 
       // Clean up connections
       await Promise.all(connections.map((conn) => adapter.disconnect(conn)));
@@ -725,9 +736,9 @@ describe('PostgreSQLAdapter', () => {
       await adapter.executeQuery(connection, 'INSERT INTO users (name) VALUES ($1)', ['John']);
       await adapter.commitTransaction(connection);
 
-      // Disconnect
+      // Disconnect (releases back to pool)
       await adapter.disconnect(connection);
-      expect(mockEnd).toHaveBeenCalled();
+      expect(mockRelease).toHaveBeenCalled();
     });
 
     it('should handle transaction rollback scenario', async () => {
@@ -748,6 +759,34 @@ describe('PostgreSQLAdapter', () => {
 
       expect(mockQuery).toHaveBeenCalledWith('BEGIN');
       expect(mockQuery).toHaveBeenCalledWith('ROLLBACK');
+    });
+  });
+
+  // ============================================================================
+  // Connection Pooling Tests
+  // ============================================================================
+
+  describe('PostgreSQLAdapter - connection pooling', () => {
+    it('returns pool clients (has release method)', async () => {
+      const poolAdapter = new PostgreSQLAdapter({
+        type: 'postgresql',
+        host: 'localhost',
+        port: 5432,
+        database: 'test',
+        username: 'postgres',
+        password: 'test',
+        select_only: true,
+        mcp_configurable: false,
+      });
+      const mockReleaseInner = jest.fn();
+      const mockClientInner = { release: mockReleaseInner, query: jest.fn(), end: jest.fn() };
+      const mockPoolInner = { connect: jest.fn().mockResolvedValue(mockClientInner), end: jest.fn() };
+      (poolAdapter as unknown as Record<string, unknown>)._pool = mockPoolInner;
+      const conn = await poolAdapter.connect();
+      expect(conn).toBe(mockClientInner);
+      await poolAdapter.disconnect(conn);
+      expect(mockReleaseInner).toHaveBeenCalled();
+      expect(mockClientInner.end).not.toHaveBeenCalled();
     });
   });
 });

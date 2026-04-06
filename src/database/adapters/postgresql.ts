@@ -3,7 +3,7 @@
  */
 
 import * as pg from 'pg';
-import type { Client as PgClient } from 'pg';
+import type { Client as PgClient, PoolClient } from 'pg';
 import { DatabaseAdapter } from './base.js';
 import type {
   DatabaseConnection,
@@ -18,53 +18,67 @@ import type {
 // ============================================================================
 
 export class PostgreSQLAdapter extends DatabaseAdapter {
+  private _pool?: pg.Pool;
+
   // ============================================================================
   // Connection Management
   // ============================================================================
 
+  private getPool(): pg.Pool {
+    if (!this._pool) {
+      const host = this.config.host as string;
+      const database = this.config.database as string;
+      const username = this.config.username as string;
+      const password = this.config.password as string;
+
+      const poolConfig: pg.PoolConfig = {
+        host,
+        port: this.parseConfigValue(this.config.port, 'number', 5432),
+        database,
+        user: username,
+        password,
+        max: 10,
+        connectionTimeoutMillis: this.connectionTimeout,
+      };
+
+      // Mirror the same SSL branches as the old connect() to avoid behavior change
+      if (this.config.ssl !== undefined) {
+        const sslEnabled = this.parseConfigValue(this.config.ssl, 'boolean', false);
+        if (sslEnabled) {
+          const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+          poolConfig.ssl = { rejectUnauthorized: sslVerify };
+        } else {
+          poolConfig.ssl = false as unknown as pg.PoolConfig['ssl']; // explicitly disable
+        }
+      }
+
+      this._pool = new pg.Pool(poolConfig);
+    }
+    return this._pool;
+  }
+
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
-
-    const host = this.config.host as string;
-    const database = this.config.database as string;
-    const username = this.config.username as string;
-    const password = this.config.password as string;
-
-    const connectionConfig: pg.ClientConfig = {
-      host,
-      port: this.parseConfigValue(this.config.port, 'number', 5432),
-      database,
-      user: username,
-      password,
-      connectionTimeoutMillis: this.connectionTimeout,
-    };
-
-    // Handle SSL configuration
-    if (this.config.ssl !== undefined) {
-      const sslEnabled = this.parseConfigValue(this.config.ssl, 'boolean', false);
-      if (sslEnabled) {
-        const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
-        connectionConfig.ssl = { rejectUnauthorized: sslVerify };
-      } else {
-        connectionConfig.ssl = false;
-      }
-    }
-
     try {
-      const client = new pg.Client(connectionConfig);
-      await client.connect();
-      return client as DatabaseConnection;
+      const client = await this.getPool().connect();
+      return client as unknown as DatabaseConnection;
     } catch (error) {
-      throw this.createError('Failed to connect to PostgreSQL database', error as Error);
+      throw this.createError('Failed to acquire PostgreSQL connection from pool', error as Error);
     }
   }
 
   async disconnect(connection: DatabaseConnection): Promise<void> {
     try {
-      const pgClient = connection as PgClient;
-      await pgClient.end();
+      (connection as unknown as PoolClient).release();
     } catch (error) {
-      throw this.createError('Failed to disconnect from PostgreSQL database', error as Error);
+      throw this.createError('Failed to release PostgreSQL connection to pool', error as Error);
+    }
+  }
+
+  async destroyPool(): Promise<void> {
+    if (this._pool) {
+      await this._pool.end();
+      this._pool = undefined;
     }
   }
 
