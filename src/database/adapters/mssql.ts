@@ -25,12 +25,17 @@ export class MSSQLAdapter extends DatabaseAdapter {
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
 
+    const host = this.config.host as string;
+    const database = this.config.database as string;
+    const username = this.config.username as string;
+    const password = this.config.password as string;
+
     const connectionConfig: sql.config = {
-      server: this.config.host!,
+      server: host,
       port: this.parseConfigValue(this.config.port, 'number', 1433),
-      database: this.config.database!,
-      user: this.config.username!,
-      password: this.config.password!,
+      database,
+      user: username,
+      password,
       connectionTimeout: this.connectionTimeout,
       requestTimeout: this.connectionTimeout,
       options: {
@@ -170,7 +175,7 @@ export class MSSQLAdapter extends DatabaseAdapter {
 
   async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
     try {
-      const schema = this.createBaseSchema(this.config.database!);
+      const schema = this.createBaseSchema(this.config.database ?? '');
 
       // Get all tables and views
       const tablesQuery = `

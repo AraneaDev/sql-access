@@ -26,8 +26,10 @@ export class SQLiteAdapter extends DatabaseAdapter {
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['file']);
 
+    const file = this.config.file as string;
+
     return new Promise<DatabaseConnection>((resolve, reject) => {
-      const db = new Database(this.config.file!, (err) => {
+      const db = new Database(file, (err) => {
         if (err) {
           reject(this.createError('Failed to connect to SQLite database', err));
         } else {
@@ -159,7 +161,7 @@ export class SQLiteAdapter extends DatabaseAdapter {
 
   async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
     try {
-      const schema = this.createBaseSchema(this.config.file!);
+      const schema = this.createBaseSchema(this.config.file ?? '');
 
       // Get all tables and views
       const tables = await this.getTables(connection);

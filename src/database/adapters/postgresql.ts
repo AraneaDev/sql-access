@@ -25,12 +25,17 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
 
+    const host = this.config.host as string;
+    const database = this.config.database as string;
+    const username = this.config.username as string;
+    const password = this.config.password as string;
+
     const connectionConfig: pg.ClientConfig = {
-      host: this.config.host!,
+      host,
       port: this.parseConfigValue(this.config.port, 'number', 5432),
-      database: this.config.database!,
-      user: this.config.username!,
-      password: this.config.password!,
+      database,
+      user: username,
+      password,
       connectionTimeoutMillis: this.connectionTimeout,
     };
 
@@ -152,7 +157,7 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
 
   async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
     try {
-      const schema = this.createBaseSchema(this.config.database!);
+      const schema = this.createBaseSchema(this.config.database ?? '');
 
       // Get all tables and views from public schema
       const tablesQuery = `

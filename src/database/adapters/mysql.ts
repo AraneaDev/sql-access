@@ -25,12 +25,17 @@ export class MySQLAdapter extends DatabaseAdapter {
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
 
+    const host = this.config.host as string;
+    const database = this.config.database as string;
+    const username = this.config.username as string;
+    const password = this.config.password as string;
+
     const connectionConfig: mysql.ConnectionOptions = {
-      host: this.config.host!,
+      host,
       port: this.parseConfigValue(this.config.port, 'number', 3306),
-      database: this.config.database!,
-      user: this.config.username!,
-      password: this.config.password!,
+      database,
+      user: username,
+      password,
       connectTimeout: this.connectionTimeout,
     };
 
@@ -53,7 +58,7 @@ export class MySQLAdapter extends DatabaseAdapter {
       connectionConfig.ssl = { rejectUnauthorized: sslVerify };
 
       // Format username for Azure if needed
-      let azureUser = this.config.username!;
+      let azureUser = username;
       if (!azureUser.includes('@') && this.config.host) {
         const serverName = this.config.host.split('.')[0];
         azureUser = `${azureUser}@${serverName}`;
@@ -172,7 +177,7 @@ export class MySQLAdapter extends DatabaseAdapter {
 
   async captureSchema(connection: DatabaseConnection): Promise<DatabaseSchema> {
     try {
-      const schema = this.createBaseSchema(this.config.database!);
+      const schema = this.createBaseSchema(this.config.database ?? '');
 
       // Get all tables and views
       const tablesQuery = `
