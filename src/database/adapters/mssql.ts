@@ -41,9 +41,9 @@ export class MSSQLAdapter extends DatabaseAdapter {
       options: {
         encrypt: this.parseConfigValue(this.config.encrypt ?? true, 'boolean', true),
         trustServerCertificate: !this.parseConfigValue(
-          this.config.ssl_verify ?? false,
+          this.config.ssl_verify ?? true,
           'boolean',
-          false
+          true
         ),
         enableArithAbort: true,
       },

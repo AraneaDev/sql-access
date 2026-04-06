@@ -115,7 +115,7 @@ describe('MSSQLAdapter', () => {
         requestTimeout: 30000,
         options: {
           encrypt: true,
-          trustServerCertificate: true,
+          trustServerCertificate: false,
           enableArithAbort: true,
         },
         pool: {
@@ -154,6 +154,37 @@ describe('MSSQLAdapter', () => {
         expect.objectContaining({
           options: expect.objectContaining({
             encrypt: true, // Default value
+          }),
+        })
+      );
+    });
+
+    it('should default ssl_verify to true (trustServerCertificate false)', async () => {
+      const noSslVerifyConfig = { ...config };
+      delete noSslVerifyConfig.ssl_verify;
+      const noSslVerifyAdapter = new MSSQLAdapter(noSslVerifyConfig);
+
+      await noSslVerifyAdapter.connect();
+
+      expect(mockMSSQLConnectionPool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            trustServerCertificate: false, // ssl_verify defaults to true, negated = false
+          }),
+        })
+      );
+    });
+
+    it('should respect explicit ssl_verify=false (trustServerCertificate true)', async () => {
+      const sslVerifyFalseConfig = { ...config, ssl_verify: false };
+      const sslVerifyFalseAdapter = new MSSQLAdapter(sslVerifyFalseConfig);
+
+      await sslVerifyFalseAdapter.connect();
+
+      expect(mockMSSQLConnectionPool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            trustServerCertificate: true, // ssl_verify=false, negated = true
           }),
         })
       );

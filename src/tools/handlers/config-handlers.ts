@@ -83,7 +83,9 @@ export async function handleAddDatabase(
     dbConfig.username = args.username as string;
     dbConfig.password = args.password as string;
     dbConfig.ssl = (args.ssl as boolean) || false;
-    dbConfig.ssl_verify = (args.ssl_verify as boolean) || false;
+    if (args.ssl_verify !== undefined) {
+      dbConfig.ssl_verify = args.ssl_verify as boolean;
+    }
     dbConfig.timeout = 30000;
   }
 

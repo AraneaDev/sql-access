@@ -48,7 +48,7 @@ export interface DatabaseConfig {
   username?: string;
   password?: string;
   ssl?: boolean;
-  ssl_verify?: boolean; // Verify SSL certificates (default: false for self-signed cert compatibility)
+  ssl_verify?: boolean; // Verify SSL certificates (default: true)
   select_only?: boolean;
   timeout?: number;
   file?: string; // For SQLite
