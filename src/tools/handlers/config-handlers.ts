@@ -14,6 +14,21 @@ import { requireDbConfig } from './types.js';
 import { ValidationError, ConfigurationError } from '../../utils/error-handler.js';
 import { writeAuditLog } from '../../utils/audit-logger.js';
 
+const BLOCKED_PATH_PREFIXES = ['/dev/', '/proc/', '/sys/', '/etc/'];
+
+function validatePathNoTraversal(filePath: string, fieldName: string): void {
+  if (filePath.includes('..')) {
+    throw new ValidationError(`${fieldName} path traversal (..) is not allowed`, fieldName);
+  }
+  const resolved = resolve(filePath);
+  if (BLOCKED_PATH_PREFIXES.some((prefix) => resolved.startsWith(prefix))) {
+    throw new ValidationError(
+      `${fieldName} path '${resolved}' is not allowed — must be a regular file path`,
+      fieldName
+    );
+  }
+}
+
 export async function handleAddDatabase(
   ctx: ToolHandlerContext,
   args: Record<string, unknown>
@@ -54,21 +69,7 @@ export async function handleAddDatabase(
     if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter", 'file');
     const filePath = args.file as string;
 
-    // Validate SQLite file path - block path traversal and dangerous paths
-    const resolved = resolve(filePath);
-    if (filePath.includes('..')) {
-      throw new ValidationError('SQLite file path traversal (..) is not allowed', 'file');
-    }
-    if (
-      resolved.startsWith('/dev/') ||
-      resolved.startsWith('/proc/') ||
-      resolved.startsWith('/sys/')
-    ) {
-      throw new ValidationError(
-        `SQLite file path '${resolved}' is not allowed — must be a regular file path`,
-        'file'
-      );
-    }
+    validatePathNoTraversal(filePath, 'file');
 
     dbConfig.file = filePath;
   } else {
@@ -95,6 +96,9 @@ export async function handleAddDatabase(
     dbConfig.ssh_username = args.ssh_username as string;
     dbConfig.ssh_password = args.ssh_password as string;
     dbConfig.ssh_private_key = args.ssh_private_key as string;
+    if (dbConfig.ssh_private_key) {
+      validatePathNoTraversal(dbConfig.ssh_private_key, 'ssh_private_key');
+    }
   }
 
   // Validate the complete config (shell metacharacters, embedded credentials, port range)
@@ -203,30 +207,12 @@ export async function handleUpdateDatabase(
 
   // Validate SQLite file path when updated
   if (args.file !== undefined && dbConfig.type === 'sqlite') {
-    const filePath = args.file as string;
-    const resolved = resolve(filePath);
-    if (filePath.includes('..')) {
-      throw new ValidationError('SQLite file path traversal (..) is not allowed', 'file');
-    }
-    if (
-      resolved.startsWith('/etc') ||
-      resolved.startsWith('/proc') ||
-      resolved.startsWith('/sys') ||
-      resolved.startsWith('/dev')
-    ) {
-      throw new ValidationError(
-        `SQLite file path '${resolved}' is not allowed — must be a regular file path`,
-        'file'
-      );
-    }
+    validatePathNoTraversal(args.file as string, 'file');
   }
 
   // Validate SSH private key path
   if (args.ssh_private_key !== undefined) {
-    const keyPath = args.ssh_private_key as string;
-    if (keyPath.includes('..')) {
-      throw new ValidationError('SSH private key path traversal (..) is not allowed', 'ssh_private_key');
-    }
+    validatePathNoTraversal(args.ssh_private_key as string, 'ssh_private_key');
   }
 
   if (updated.length === 0) {
