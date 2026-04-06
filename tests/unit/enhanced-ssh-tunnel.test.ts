@@ -374,6 +374,10 @@ class MockSSHClient {
     return this;
   }
 
+  listenerCount(event: string): number {
+    return (this.handlers[event] || []).length;
+  }
+
   emit(event: string, ...args: any[]): void {
     const handlers = this.handlers[event] || [];
     handlers.forEach((h) => h(...args));
@@ -840,8 +844,8 @@ describe('EnhancedSSHTunnelManager', () => {
 
     it('should return true for active, healthy tunnel with valid connection', () => {
       const mockConn = new MockSSHClient();
-      mockConn._sock = true;
-      mockConn.destroyed = false;
+      // Register an error listener so listenerCount('error') > 0
+      mockConn.on('error', () => {});
 
       (tunnelManager as any).tunnels.set('test-db', {
         isActive: true,
@@ -856,10 +860,9 @@ describe('EnhancedSSHTunnelManager', () => {
       expect(tunnelManager.isConnected('test-db')).toBe(true);
     });
 
-    it('should return false for destroyed connection', () => {
+    it('should return false for connection with no event listeners', () => {
       const mockConn = new MockSSHClient();
-      mockConn._sock = true;
-      mockConn.destroyed = true;
+      // No listeners registered → listenerCount('error') === 0
 
       (tunnelManager as any).tunnels.set('test-db', {
         isActive: true,
@@ -874,10 +877,10 @@ describe('EnhancedSSHTunnelManager', () => {
       expect(tunnelManager.isConnected('test-db')).toBe(false);
     });
 
-    it('should return false when _sock is falsy', () => {
+    it('should return false when connection has no error listeners', () => {
       const mockConn = new MockSSHClient();
-      (mockConn as any)._sock = null;
-      mockConn.destroyed = false;
+      // Only a non-error listener; error count is 0
+      mockConn.on('close', () => {});
 
       (tunnelManager as any).tunnels.set('test-db', {
         isActive: true,
@@ -905,8 +908,7 @@ describe('EnhancedSSHTunnelManager', () => {
     it('should only return connected tunnels', () => {
       // Active tunnel
       const activeConn = new MockSSHClient();
-      activeConn._sock = true;
-      activeConn.destroyed = false;
+      activeConn.on('error', () => {});
       (tunnelManager as any).tunnels.set('active-db', {
         isActive: true,
         connection: activeConn as any,

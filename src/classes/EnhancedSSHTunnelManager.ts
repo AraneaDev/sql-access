@@ -320,13 +320,12 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
     }
 
     // Additional validation - check if SSH connection is still readable/writable
+    // Check if SSH connection is still active using the public EventEmitter API.
+    // If listenerCount > 0 the client has active event handlers → it's alive.
     try {
-      // SSH Client doesn't have readable/writable properties, so we use a different approach
-      // Check if connection exists and has event listeners (indicates it's active)
       return !!(
         tunnel.connection &&
-        (tunnel.connection as unknown as Record<string, unknown>)._sock &&
-        !(tunnel.connection as unknown as Record<string, unknown>).destroyed
+        tunnel.connection.listenerCount('error') > 0
       );
     } catch (error) {
       this.logger.debug(`Connection health check error for '${dbName}'`, {

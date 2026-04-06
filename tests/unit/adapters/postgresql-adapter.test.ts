@@ -16,11 +16,12 @@ const mockQuery = jest.fn();
 const mockConnect = jest.fn();
 const mockEnd = jest.fn();
 
+const mockStream = { destroyed: false };
 const mockClient = {
   query: mockQuery,
   connect: mockConnect,
   end: mockEnd,
-  _connected: true,
+  connection: { stream: mockStream },
 };
 
 jest.mock('pg', () => ({
@@ -60,7 +61,7 @@ describe('PostgreSQLAdapter', () => {
     });
     mockConnect.mockResolvedValue(undefined);
     mockEnd.mockResolvedValue(undefined);
-    mockClient._connected = true;
+    mockStream.destroyed = false;
   });
 
   // ============================================================================
@@ -183,28 +184,29 @@ describe('PostgreSQLAdapter', () => {
   describe('isConnected', () => {
     it('should return true for connected client', async () => {
       const connection = await adapter.connect();
-      mockClient._connected = true;
+      mockStream.destroyed = false;
 
       expect(adapter.isConnected(connection)).toBe(true);
     });
 
     it('should return false for disconnected client', async () => {
       const connection = await adapter.connect();
-      mockClient._connected = false;
+      mockStream.destroyed = true;
 
       expect(adapter.isConnected(connection)).toBe(false);
     });
 
     it('should return false for invalid connection', () => {
-      // The isConnected method returns null for null input due to short-circuiting
-      expect(adapter.isConnected(null as any)).toBe(null);
+      expect(adapter.isConnected(null as any)).toBe(false);
       expect(adapter.isConnected({} as any)).toBe(false);
     });
 
     it('should handle exceptions gracefully', () => {
       const badConnection = {
-        get _connected() {
-          throw new Error('Property access failed');
+        connection: {
+          get stream() {
+            throw new Error('Property access failed');
+          },
         },
       };
 

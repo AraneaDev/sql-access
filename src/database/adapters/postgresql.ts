@@ -65,13 +65,11 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
 
   isConnected(connection: DatabaseConnection): boolean {
     try {
-      const pgClient = connection as PgClient;
-      // PostgreSQL client has _connected property to check connection status
-      return (
-        pgClient &&
-        '_connected' in pgClient &&
-        (pgClient as Record<string, unknown>)._connected === true
-      );
+      const pgClient = connection as PgClient & {
+        connection?: { stream?: { destroyed?: boolean } };
+      };
+      if (!pgClient?.connection?.stream) return false;
+      return pgClient.connection.stream.destroyed !== true;
     } catch {
       return false;
     }
