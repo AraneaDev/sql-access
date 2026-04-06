@@ -5,6 +5,36 @@ All notable changes to the SQL MCP Server will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-04-06
+
+### Added
+- **Circuit Breaker** - Automatic failure detection with open/half-open/closed state machine and `CircuitOpenError`
+- **Query Cache** - TTL-LRU cache with per-database partitioning and automatic mutation invalidation
+- **MetricsManager** - Per-database latency, error rate, circuit breaker, and cache hit/miss tracking
+- **`sql_get_metrics` Tool** - New MCP tool exposing in-memory performance metrics
+- **Audit Logger** - Structured audit logging with `audit_log` and `cache_ttl_seconds` config fields
+- **Database Config Validation** - `validateDatabaseConfig` with host, port, and database name checks
+- **SSH Key Permission Checks** - Validates private key file permissions before loading
+- **Connection Pooling** - PostgreSQL pooling via `pg.Pool` and MySQL pooling via `mysql2 createPool`
+- **Configurable SSH Bind Address** - New `ssh_local_host` option for SSH tunnel bind address
+
+### Changed
+- Circuit breaker, query cache, and metrics integrated into `ConnectionManager.executeQuery` pipeline
+- `MetricsManager` and `QueryCache` instantiated in `SQLMCPServer` and wired into `ConnectionManager`
+- Replaced non-null assertions and type assertions in adapters with typed local consts
+
+### Fixed
+- Unsafe internal property access in `isConnected` checks replaced with safe alternatives
+- Swallowed errors in SSH port suggestion fallback now logged
+- Flaky timing assertion in connection-manager test converted to fake timers
+
+### Security
+- Block `EXEC`/`CALL`/stored procedure execution in non-SELECT mode
+- Warn when `config.ini` is group- or world-readable
+
+### Testing
+- New test coverage for circuit breaker, query cache, schema race conditions, and SSH tunnels
+
 ## [2.4.3] - 2026-04-05
 
 ### Added
@@ -269,6 +299,6 @@ This project uses [Semantic Versioning](https://semver.org/):
 
 ## Support Policy
 
-- **Current Release (2.4.x)**: Full support including new features and bug fixes
-- **Previous Release (2.3.x)**: Security fixes and critical bug fixes only
-- **Previous Release (2.2.x)**: No longer supported, upgrade recommended
+- **Current Release (2.5.x)**: Full support including new features and bug fixes
+- **Previous Release (2.4.x)**: Security fixes and critical bug fixes only
+- **Previous Release (2.3.x)**: No longer supported, upgrade recommended
