@@ -3,7 +3,7 @@
  * Handles loading and validating database configuration from config.ini
  */
 
-import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { parse as parseIni } from 'ini';
 
@@ -46,6 +46,21 @@ export function loadConfiguration(configPath?: string): ParsedServerConfig {
   }
 
   try {
+    // Warn if config file is group- or world-readable (mask 0o044 covers both)
+    try {
+      const stat = statSync(path);
+      const mode = stat.mode & 0o777;
+      if (mode & 0o044) {
+        process.stderr.write(
+          `WARNING: Config file ${path} is group- or world-readable ` +
+          `(mode ${mode.toString(8).padStart(3, '0')}). ` +
+          `It contains credentials. Run: chmod 600 ${path}\n`
+        );
+      }
+    } catch {
+      // statSync failure is non-fatal — proceed with load
+    }
+
     const configContent = readFileSync(path, 'utf-8');
     const rawConfig = parseIni(configContent);
 

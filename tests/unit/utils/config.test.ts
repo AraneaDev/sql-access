@@ -20,6 +20,7 @@ jest.mock('fs', () => ({
   readFileSync: jest.fn(),
   writeFileSync: jest.fn(),
   existsSync: jest.fn(),
+  statSync: jest.fn(),
 }));
 
 jest.mock('path', () => ({
@@ -34,7 +35,7 @@ jest.mock('../../../src/utils/error-handler.js', () => ({
   getErrorMessage: (err: unknown) => (err instanceof Error ? err.message : 'Unknown error'),
 }));
 
-import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, writeFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { parse as parseIni } from 'ini';
 
@@ -42,6 +43,7 @@ const mockFs = {
   readFileSync: readFileSync as jest.MockedFunction<typeof readFileSync>,
   existsSync: existsSync as jest.MockedFunction<typeof existsSync>,
   writeFileSync: writeFileSync as jest.MockedFunction<typeof writeFileSync>,
+  statSync: statSync as jest.MockedFunction<typeof statSync>,
 };
 const mockParseIni = parseIni as jest.MockedFunction<typeof parseIni>;
 const mockJoin = join as jest.MockedFunction<typeof join>;
@@ -810,6 +812,32 @@ describe('config', () => {
   // ============================================================================
   // saveConfigFile
   // ============================================================================
+
+  describe('loadConfiguration - permission warning', () => {
+    it('logs a warning when config file is group- or world-readable (mode 0o644)', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ mode: 0o100644 } as ReturnType<typeof statSync>);
+      mockFs.readFileSync.mockReturnValue('[database.test]\ntype=sqlite\nfile=test.db\n');
+      mockParseIni.mockReturnValue({ 'database.test': { type: 'sqlite', file: 'test.db' } });
+      const warnSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      loadConfiguration('/tmp/test-config-perms.ini');
+      const warned = warnSpy.mock.calls.some(c => String(c[0]).includes('group- or world-readable'));
+      warnSpy.mockRestore();
+      expect(warned).toBe(true);
+    });
+
+    it('does not warn when config file is owner-only (mode 0o600)', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ mode: 0o100600 } as ReturnType<typeof statSync>);
+      mockFs.readFileSync.mockReturnValue('[database.test]\ntype=sqlite\nfile=test.db\n');
+      mockParseIni.mockReturnValue({ 'database.test': { type: 'sqlite', file: 'test.db' } });
+      const warnSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      loadConfiguration('/tmp/test-config-perms-ok.ini');
+      const warned = warnSpy.mock.calls.some(c => String(c[0]).includes('group- or world-readable'));
+      warnSpy.mockRestore();
+      expect(warned).toBe(false);
+    });
+  });
 
   describe('saveConfigFile', () => {
     it('should write config to file', () => {
