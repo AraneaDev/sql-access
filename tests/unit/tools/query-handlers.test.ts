@@ -39,6 +39,7 @@ function createMockContext(
     } as any,
     securityManager: {
       validateSelectOnlyQuery: jest.fn().mockReturnValue({ allowed: true }),
+      validateAnyQuery: jest.fn().mockReturnValue({ allowed: true }),
     } as any,
     schemaManager: {
       getSchema: jest.fn(),
@@ -307,6 +308,67 @@ describe('query-handlers', () => {
 
       expect(ctx.logger.info).toHaveBeenCalledWith(expect.stringContaining('SSH tunnel'));
     });
+
+    it('should block EXEC even on full-access (select_only=false) database', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mssql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.securityManager.validateAnyQuery as jest.Mock).mockReturnValue({
+        allowed: false,
+        reason: 'EXEC is not allowed',
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: 'EXEC xp_cmdshell "dir"',
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Query blocked');
+      expect(ctx.securityManager.validateAnyQuery).toHaveBeenCalled();
+      expect(ctx.connectionManager.executeQuery).not.toHaveBeenCalled();
+    });
+
+    it('should block LOAD DATA even on full-access database', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.securityManager.validateAnyQuery as jest.Mock).mockReturnValue({
+        allowed: false,
+        reason: 'LOAD is not allowed',
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: "LOAD DATA INFILE '/etc/passwd' INTO TABLE t",
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Query blocked');
+      expect(ctx.connectionManager.executeQuery).not.toHaveBeenCalled();
+    });
+
+    it('should NOT block INSERT on full-access database', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      // validateAnyQuery returns allowed: true (default mock)
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({
+        rows: [],
+        fields: [],
+        rowCount: 1,
+        truncated: false,
+      });
+
+      const result = await handleSqlQuery(ctx, {
+        database: 'testdb',
+        query: "INSERT INTO t VALUES (1, 'a')",
+      });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.content[0].text).toContain('Query executed successfully');
+      expect(ctx.connectionManager.executeQuery).toHaveBeenCalled();
+    });
   });
 
   describe('handleBatchQuery', () => {
@@ -398,6 +460,27 @@ describe('query-handlers', () => {
 
       expect(result.isError).toBe(true);
       expect(result.content[0].text).toContain('Security Information');
+    });
+
+    it('should block EXEC in batch on full-access database', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mssql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.securityManager.validateAnyQuery as jest.Mock).mockReturnValueOnce({
+        allowed: true,
+      }).mockReturnValueOnce({
+        allowed: false,
+        reason: 'EXEC is not allowed',
+      });
+
+      const result = await handleBatchQuery(ctx, {
+        database: 'testdb',
+        queries: [{ query: 'SELECT 1' }, { query: 'EXEC xp_cmdshell "dir"' }],
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Batch contains blocked query');
+      expect(ctx.connectionManager.executeBatch).not.toHaveBeenCalled();
     });
 
     it('should pass transaction flag correctly', async () => {
