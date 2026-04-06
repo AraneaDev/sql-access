@@ -1,0 +1,44 @@
+import { describe, test, expect, vi } from 'vitest';
+import { handleUpdateDatabase } from '../../src/tools/handlers/config-handlers.js';
+import type { ToolHandlerContext } from '../../src/tools/handlers/types.js';
+import type { ParsedServerConfig } from '../../src/types/index.js';
+
+function createMockContext(configOverrides: Partial<ParsedServerConfig>): ToolHandlerContext {
+  const config: ParsedServerConfig = {
+    databases: {},
+    ...configOverrides,
+  };
+
+  return {
+    config,
+    configPath: '/tmp/test-config.ini',
+    connectionManager: {} as never,
+    securityManager: {} as never,
+    schemaManager: {} as never,
+    sshTunnelManager: {} as never,
+    metricsManager: {} as never,
+    logger: {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    } as never,
+  };
+}
+
+describe('handleUpdateDatabase', () => {
+  test('should reject select_only changes via MCP', async () => {
+    const ctx = createMockContext({
+      databases: {
+        testdb: { type: 'mysql', select_only: true, mcp_configurable: true } as never,
+      },
+    });
+
+    await expect(
+      handleUpdateDatabase(ctx, { database: 'testdb', select_only: false })
+    ).rejects.toThrow(/select_only.*cannot be changed via MCP/i);
+
+    // Verify it wasn't changed
+    expect(ctx.config.databases.testdb.select_only).toBe(true);
+  });
+});

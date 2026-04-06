@@ -129,8 +129,11 @@ export async function handleUpdateDatabase(
     updated.push('ssl_verify');
   }
   if (args.select_only !== undefined) {
-    dbConfig.select_only = args.select_only as boolean;
-    updated.push('select_only');
+    throw new ConfigurationError(
+      `Security setting 'select_only' cannot be changed via MCP tools.\n` +
+        `To change SELECT-only mode, manually edit config.ini under [database.${database}].\n` +
+        `This prevents an AI from escalating its own database privileges.`
+    );
   }
 
   if (args.ssh_host !== undefined) {
