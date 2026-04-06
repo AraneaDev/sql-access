@@ -2,9 +2,9 @@
  * Core type definitions for SQL MCP Server
  */
 
-import type { Client as PgClient } from 'pg';
+import type { Client as PgClient, PoolClient as PgPoolClient } from 'pg';
 import { SecurityViolationError } from '../utils/error-handler.js';
-import type { Connection as MySQLConnection } from 'mysql2/promise';
+import type { Connection as MySQLConnection, PoolConnection as MySQLPoolConnection } from 'mysql2/promise';
 import type { Database as SQLiteConnection } from 'sqlite3';
 import type { ConnectionPool as MSSQLConnection } from 'mssql';
 import type { Client as SSHClient } from 'ssh2';
@@ -72,7 +72,7 @@ export interface DatabaseConfig {
   audit_log?: boolean;
 }
 
-export type DatabaseConnection = PgClient | MySQLConnection | SQLiteConnection | MSSQLConnection;
+export type DatabaseConnection = PgClient | PgPoolClient | MySQLConnection | MySQLPoolConnection | SQLiteConnection | MSSQLConnection;
 
 export interface ConnectionInfo {
   connection: DatabaseConnection;

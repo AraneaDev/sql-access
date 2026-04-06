@@ -3,7 +3,7 @@
  */
 
 import * as mysql from 'mysql2/promise';
-import type { Connection as MySQLConnection, Pool as MySQLPool, PoolConnection } from 'mysql2/promise';
+import type { Connection as MySQLConnection, Pool as MySQLPool, PoolConnection as MySQLPoolConnection } from 'mysql2/promise';
 import { DatabaseAdapter } from './base.js';
 import type {
   DatabaseConnection,
@@ -72,8 +72,8 @@ export class MySQLAdapter extends DatabaseAdapter {
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
     try {
-      const conn = await this.getPool().getConnection();
-      return conn as unknown as DatabaseConnection;
+      const conn: MySQLPoolConnection = await this.getPool().getConnection();
+      return conn as DatabaseConnection;
     } catch (error) {
       throw this.createError('Failed to acquire MySQL connection from pool', error as Error);
     }
@@ -81,7 +81,8 @@ export class MySQLAdapter extends DatabaseAdapter {
 
   async disconnect(connection: DatabaseConnection): Promise<void> {
     try {
-      (connection as unknown as PoolConnection).release();
+      const poolConn = connection as MySQLPoolConnection;
+      poolConn.release();
     } catch (error) {
       throw this.createError('Failed to release MySQL connection to pool', error as Error);
     }

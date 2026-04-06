@@ -48,7 +48,7 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
           const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
           poolConfig.ssl = { rejectUnauthorized: sslVerify };
         } else {
-          poolConfig.ssl = false as unknown as pg.PoolConfig['ssl']; // explicitly disable
+          poolConfig.ssl = false; // explicitly disable
         }
       }
 
@@ -60,8 +60,8 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
   async connect(): Promise<DatabaseConnection> {
     this.validateConfig(['host', 'database', 'username', 'password']);
     try {
-      const client = await this.getPool().connect();
-      return client as unknown as DatabaseConnection;
+      const client: PoolClient = await this.getPool().connect();
+      return client as DatabaseConnection;
     } catch (error) {
       throw this.createError('Failed to acquire PostgreSQL connection from pool', error as Error);
     }
@@ -69,7 +69,8 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
 
   async disconnect(connection: DatabaseConnection): Promise<void> {
     try {
-      (connection as unknown as PoolClient).release();
+      const poolClient = connection as PoolClient;
+      poolClient.release();
     } catch (error) {
       throw this.createError('Failed to release PostgreSQL connection to pool', error as Error);
     }
