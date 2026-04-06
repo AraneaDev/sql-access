@@ -1363,7 +1363,7 @@ describe('EnhancedSSHTunnelManager', () => {
   // ============================================================================
 
   describe('buildSSHConnectOptions', () => {
-    it('should build options with password auth', () => {
+    it('should build options with password auth', async () => {
       const config = {
         host: 'bastion.example.com',
         port: 22,
@@ -1371,7 +1371,7 @@ describe('EnhancedSSHTunnelManager', () => {
         password: 'secret',
       };
 
-      const result = (tunnelManager as any).buildSSHConnectOptions(config);
+      const result = await (tunnelManager as any).buildSSHConnectOptions(config);
 
       expect(result.host).toBe('bastion.example.com');
       expect(result.port).toBe(22);
@@ -1383,7 +1383,7 @@ describe('EnhancedSSHTunnelManager', () => {
       expect(result.algorithms.kex).toContain('curve25519-sha256');
     });
 
-    it('should build options with inline private key', () => {
+    it('should build options with inline private key', async () => {
       const config = {
         host: 'bastion.example.com',
         port: 22,
@@ -1391,13 +1391,13 @@ describe('EnhancedSSHTunnelManager', () => {
         privateKey: '-----BEGIN RSA PRIVATE KEY-----\nfake-key\n-----END RSA PRIVATE KEY-----',
       };
 
-      const result = (tunnelManager as any).buildSSHConnectOptions(config);
+      const result = await (tunnelManager as any).buildSSHConnectOptions(config);
 
       expect(result.privateKey).toBe(config.privateKey);
       expect(result.password).toBeUndefined();
     });
 
-    it('should build options with passphrase', () => {
+    it('should build options with passphrase', async () => {
       const config = {
         host: 'bastion.example.com',
         port: 22,
@@ -1406,12 +1406,12 @@ describe('EnhancedSSHTunnelManager', () => {
         passphrase: 'my-passphrase',
       };
 
-      const result = (tunnelManager as any).buildSSHConnectOptions(config);
+      const result = await (tunnelManager as any).buildSSHConnectOptions(config);
 
       expect(result.passphrase).toBe('my-passphrase');
     });
 
-    it('should include debug function', () => {
+    it('should include debug function', async () => {
       const config = {
         host: 'bastion.example.com',
         port: 22,
@@ -1419,12 +1419,12 @@ describe('EnhancedSSHTunnelManager', () => {
         password: 'secret',
       };
 
-      const result = (tunnelManager as any).buildSSHConnectOptions(config);
+      const result = await (tunnelManager as any).buildSSHConnectOptions(config);
 
       expect(typeof result.debug).toBe('function');
     });
 
-    it('should throw error for unreadable private key file', () => {
+    it('should throw error for unreadable private key file', async () => {
       const config = {
         host: 'bastion.example.com',
         port: 22,
@@ -1434,11 +1434,11 @@ describe('EnhancedSSHTunnelManager', () => {
 
       // The key path doesn't exist and doesn't contain -----BEGIN, so it tries to read it
       // Since the file doesn't exist, fs.existsSync returns false, so it treats as key content
-      const result = (tunnelManager as any).buildSSHConnectOptions(config);
+      const result = await (tunnelManager as any).buildSSHConnectOptions(config);
       expect(result.privateKey).toBe('/nonexistent/path/to/key');
     });
 
-    it('should handle Buffer private key', () => {
+    it('should handle Buffer private key', async () => {
       const config = {
         host: 'bastion.example.com',
         port: 22,
@@ -1446,7 +1446,7 @@ describe('EnhancedSSHTunnelManager', () => {
         privateKey: Buffer.from('fake-key'),
       };
 
-      const result = (tunnelManager as any).buildSSHConnectOptions(config);
+      const result = await (tunnelManager as any).buildSSHConnectOptions(config);
       expect(Buffer.isBuffer(result.privateKey)).toBe(true);
     });
   });

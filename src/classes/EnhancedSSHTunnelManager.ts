@@ -5,6 +5,7 @@
 import { Client as SSHClient, type ConnectConfig } from 'ssh2';
 import * as net from 'net';
 import * as fs from 'fs';
+import { stat } from 'node:fs/promises';
 import { EventEmitter } from 'events';
 import type {
   SSHTunnelInfo,
@@ -18,7 +19,27 @@ import type {
 import { ConnectionError } from '../types/index.js';
 import { validateSSHConfig } from '../types/index.js';
 import { getLogger } from '../utils/logger.js';
+import { ConfigurationError } from '../utils/error-handler.js';
 import { PortManager, type PortAssignmentResult } from '../utils/port-manager.js';
+
+// ============================================================================
+// SSH Key Permission Check
+// ============================================================================
+
+async function checkKeyFilePermissions(keyPath: string): Promise<void> {
+  const s = await stat(keyPath);
+  const mode = s.mode & 0o777;
+  if (mode & 0o004) {
+    throw new ConfigurationError(
+      `SSH private key '${keyPath}' is world-readable (mode ${mode.toString(8)}). Fix with: chmod 600 <keyfile>`
+    );
+  }
+  if (mode & 0o044) {
+    getLogger().warning(
+      `SSH private key '${keyPath}' has loose permissions (recommend chmod 600)`
+    );
+  }
+}
 
 // ============================================================================
 // Enhanced SSH Tunnel Types
@@ -516,6 +537,9 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
   ): Promise<EnhancedTunnelInfo> {
     const TUNNEL_TIMEOUT = 45000; // 45 second overall timeout
 
+    // Build (and permission-check) SSH connect options before entering the Promise executor
+    const connectOptions = await this.buildSSHConnectOptions(options.sshConfig);
+
     return new Promise<EnhancedTunnelInfo>((resolve, reject) => {
       const sshClient = new SSHClient();
       let server: net.Server;
@@ -666,8 +690,6 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
       });
 
       // Connect to SSH server
-      const connectOptions = this.buildSSHConnectOptions(options.sshConfig);
-
       this.logger.debug(`Connecting to SSH server for '${dbName}'`, {
         host: connectOptions.host,
         port: connectOptions.port,
@@ -679,7 +701,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
     });
   }
 
-  private buildSSHConnectOptions(config: SSHConnectionConfig): ConnectConfig {
+  private async buildSSHConnectOptions(config: SSHConnectionConfig): Promise<ConnectConfig> {
     const connectOptions: ConnectConfig = {
       host: config.host,
       port: config.port,
@@ -727,6 +749,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
             connectOptions.privateKey = config.privateKey;
           } else {
             // It's a file path
+            await checkKeyFilePermissions(config.privateKey as string);
             connectOptions.privateKey = fs.readFileSync(config.privateKey);
           }
         } else {
