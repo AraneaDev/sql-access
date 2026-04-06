@@ -28,6 +28,18 @@ import { getLogger } from '../utils/logger.js';
  *
  */
 export class SecurityManager extends EventEmitter implements ISecurityManager {
+  // Commands that are dangerous regardless of select_only mode
+  private readonly alwaysBlockedCommands = new Set<string>([
+    'EXEC',
+    'EXECUTE',
+    'CALL',
+    'LOAD',
+    'IMPORT',
+    'EXPORT',
+    'BACKUP',
+    'RESTORE',
+  ]);
+
   private readonly blockedKeywords = new Set<string>([
     'INSERT',
     'UPDATE',
@@ -244,6 +256,17 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
       return {
         allowed: false,
         reason: 'Query is empty or contains no valid SQL tokens',
+        confidence: 1.0,
+      };
+    }
+
+    // Block certain commands even in non-SELECT mode
+    const firstToken = tokens.find((t) => t.type === 'KEYWORD');
+    if (firstToken && this.alwaysBlockedCommands.has(firstToken.value.toUpperCase())) {
+      return {
+        allowed: false,
+        reason: `Command '${firstToken.value.toUpperCase()}' is not allowed even in write mode`,
+        blockedCommand: firstToken.value.toUpperCase(),
         confidence: 1.0,
       };
     }
