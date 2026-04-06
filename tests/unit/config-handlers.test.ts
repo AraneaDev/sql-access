@@ -72,6 +72,30 @@ describe('validateDatabaseConfig integration', () => {
   });
 });
 
+describe('SQLite path validation', () => {
+  test('should reject path traversal in SQLite file', async () => {
+    const ctx = createMockContext({});
+    await expect(
+      handleAddDatabase(ctx, {
+        name: 'testdb',
+        type: 'sqlite',
+        file: '../../../etc/passwd',
+      })
+    ).rejects.toThrow(/path traversal/i);
+  });
+
+  test('should reject /dev/ paths', async () => {
+    const ctx = createMockContext({});
+    await expect(
+      handleAddDatabase(ctx, {
+        name: 'testdb',
+        type: 'sqlite',
+        file: '/dev/zero',
+      })
+    ).rejects.toThrow(/not allowed/i);
+  });
+});
+
 describe('handleUpdateDatabase', () => {
   test('should reject select_only changes via MCP', async () => {
     const ctx = createMockContext({

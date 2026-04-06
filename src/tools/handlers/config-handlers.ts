@@ -4,6 +4,7 @@
  * sql_get_config, sql_set_mcp_configurable
  */
 
+import { resolve } from 'node:path';
 import type { DatabaseConfig, DatabaseTypeString, MCPToolResponse } from '../../types/index.js';
 import { DEFAULT_DATABASE_PORTS } from '../../types/index.js';
 import { saveConfigFile, validateDatabaseConfig } from '../../utils/config.js';
@@ -49,8 +50,19 @@ export async function handleAddDatabase(
   };
 
   if (dbType === 'sqlite') {
-    if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter");
-    dbConfig.file = args.file as string;
+    if (!args.file) throw new ValidationError("SQLite databases require 'file' parameter", 'file');
+    const filePath = args.file as string;
+
+    // Validate SQLite file path - block path traversal and dangerous paths
+    const resolved = resolve(filePath);
+    if (filePath.includes('..')) {
+      throw new ValidationError('SQLite file path traversal (..) is not allowed', 'file');
+    }
+    if (resolved.startsWith('/dev/') || resolved.startsWith('/proc/') || resolved.startsWith('/sys/')) {
+      throw new ValidationError(`SQLite file path '${resolved}' is not allowed — must be a regular file path`, 'file');
+    }
+
+    dbConfig.file = filePath;
   } else {
     if (!args.host)
       throw new ValidationError(`Database type '${dbType}' requires 'host' parameter`);
