@@ -189,6 +189,7 @@ export {
   ConfigurationError,
   SchemaError,
   SSHTunnelError,
+  CircuitOpenError,
   ValidationError,
   TimeoutError,
 } from '../utils/error-handler.js';

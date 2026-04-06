@@ -94,6 +94,16 @@ export class SSHTunnelError extends SQLMCPError {
 }
 
 /**
+ * Circuit breaker open error
+ */
+export class CircuitOpenError extends ConnectionError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super(message, details);
+    this.name = 'CircuitOpenError';
+  }
+}
+
+/**
  * Validation error
  */
 export class ValidationError extends SQLMCPError {
