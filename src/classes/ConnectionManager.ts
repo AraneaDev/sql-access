@@ -18,6 +18,13 @@ import type { DatabaseAdapter } from '../database/adapters/index.js';
 import { AdapterFactory } from '../database/adapters/index.js';
 import type { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { getLogger } from '../utils/logger.js';
+import { MetricsManager } from './MetricsManager.js';
+import { QueryCache } from './QueryCache.js';
+import {
+  CircuitBreakerState, initialCircuitState, shouldReject, recordFailure, recordSuccess,
+} from '../utils/circuit-breaker.js';
+import { CircuitOpenError } from '../utils/error-handler.js';
+import { writeAuditLog } from '../utils/audit-logger.js';
 
 // ============================================================================
 // Connection Manager Class
@@ -83,10 +90,25 @@ export class ConnectionManager extends EventEmitter {
   private databases: Record<string, DatabaseConfig> = {};
   private sshTunnelManager: EnhancedSSHTunnelManager;
   private logger = getLogger();
+  private circuits = new Map<string, CircuitBreakerState>();
+  private metrics?: MetricsManager;
+  private queryCache?: QueryCache;
 
-  constructor(sshTunnelManager: EnhancedSSHTunnelManager) {
+  constructor(
+    sshTunnelManager: EnhancedSSHTunnelManager,
+    metrics?: MetricsManager,
+    queryCache?: QueryCache
+  ) {
     super();
     this.sshTunnelManager = sshTunnelManager;
+    this.metrics = metrics;
+    this.queryCache = queryCache;
+  }
+
+  private getCircuit(dbName: string): CircuitBreakerState {
+    let s = this.circuits.get(dbName);
+    if (!s) { s = initialCircuitState(); this.circuits.set(dbName, s); }
+    return s;
   }
 
   /**
@@ -699,9 +721,9 @@ export class ConnectionManager extends EventEmitter {
   // ============================================================================
 
   /**
-   * Execute a single query on a database
+   * Internal query execution — preserves original connection-lookup and error handling.
    */
-  async executeQuery(dbName: string, query: string, params: unknown[] = []): Promise<QueryResult> {
+  private async _executeQueryInternal(dbName: string, query: string, params: unknown[] = []): Promise<QueryResult> {
     // Get connection (will create if doesn't exist)
     const connectionInfo = await this.getConnection(dbName);
     const adapter = this.adapters.get(dbName);
@@ -715,6 +737,109 @@ export class ConnectionManager extends EventEmitter {
       return result;
     } catch (error) {
       this.emit('error', error, dbName);
+      throw error;
+    }
+  }
+
+  /**
+   * Classify an error into a category for metrics and circuit breaker decisions.
+   */
+  private classifyErrorCategory(err: unknown): string {
+    if (err instanceof CircuitOpenError) return 'CONNECTION';
+    const name = (err as Error)?.name ?? '';
+    if (name.includes('SSH') || name === 'SSHTunnelError') return 'SSH';
+    if (name === 'ConnectionError') return 'CONNECTION';
+    if (name === 'SecurityViolationError') return 'SECURITY';
+    if (name === 'QueryExecutionError') return 'QUERY';
+    if (name === 'TimeoutError') return 'TIMEOUT';
+    return 'QUERY';
+  }
+
+  /**
+   * Execute a single query on a database with circuit breaker, caching, metrics,
+   * and optional audit logging.
+   */
+  async executeQuery(dbName: string, query: string, params: unknown[] = []): Promise<QueryResult> {
+    // 1. Circuit breaker — fast-reject if OPEN
+    const circuit = this.getCircuit(dbName);
+    const decision = shouldReject(circuit, Date.now());
+    if (decision.reject) {
+      const retryIn = Math.ceil((decision as { reject: true; retryInMs: number }).retryInMs / 1000);
+      throw new CircuitOpenError(`Database '${dbName}' is currently unavailable — retry in ${retryIn}s`);
+    }
+    if (!decision.reject && (decision as { reject: false; transitionTo?: 'HALF_OPEN' }).transitionTo === 'HALF_OPEN') {
+      this.circuits.set(dbName, { ...circuit, status: 'HALF_OPEN' });
+    }
+
+    // 2. Cache check — for SELECT queries
+    if (this.queryCache) {
+      const cached = this.queryCache.get(dbName, query, params);
+      if (cached !== undefined) {
+        this.metrics?.recordCacheHit(dbName);
+        return cached;
+      }
+      if (this.queryCache.shouldCache(query)) {
+        this.metrics?.recordCacheMiss(dbName);
+      }
+    }
+
+    // 3. Execute the query
+    const startTime = Date.now();
+    try {
+      const result = await this._executeQueryInternal(dbName, query, params);
+      const durationMs = Date.now() - startTime;
+
+      // 4. On success
+      const currentCircuit = this.getCircuit(dbName);
+      const prevStatus = currentCircuit.status;
+      const newCircuit = recordSuccess(currentCircuit);
+      this.circuits.set(dbName, newCircuit);
+      if (prevStatus !== newCircuit.status) {
+        this.metrics?.recordCircuitEvent(dbName, newCircuit.status === 'CLOSED' ? 'closed' : 'half_open');
+        this.emit('circuitStateChange', dbName, newCircuit.status);
+      }
+
+      this.metrics?.recordQuery(dbName, durationMs, true);
+
+      // Cache result if cacheable
+      if (this.queryCache?.shouldCache(query)) {
+        const ttl = this.getDatabaseConfig(dbName)?.cache_ttl_seconds ?? 60;
+        this.queryCache.set(dbName, query, params, result, ttl);
+      }
+
+      // Fire-and-forget audit log
+      const dbConfig = this.getDatabaseConfig(dbName);
+      if (dbConfig?.audit_log) {
+        writeAuditLog(dbName, query, durationMs, 'success').catch(() => {});
+      }
+
+      return result;
+    } catch (error) {
+      const durationMs = Date.now() - startTime;
+
+      // 5. On failure
+      const category = this.classifyErrorCategory(error);
+
+      // Only advance circuit breaker for CONNECTION/SSH errors
+      if (category === 'CONNECTION' || category === 'SSH') {
+        const currentCircuit = this.getCircuit(dbName);
+        const prevStatus = currentCircuit.status;
+        const newCircuit = recordFailure(currentCircuit, Date.now());
+        this.circuits.set(dbName, newCircuit);
+        if (prevStatus !== newCircuit.status) {
+          this.metrics?.recordCircuitEvent(dbName, newCircuit.status === 'OPEN' ? 'open' : 'half_open');
+          this.emit('circuitStateChange', dbName, newCircuit.status);
+        }
+      }
+
+      this.metrics?.recordQuery(dbName, durationMs, false, category);
+
+      // Fire-and-forget audit log
+      const dbConfig = this.getDatabaseConfig(dbName);
+      if (dbConfig?.audit_log) {
+        writeAuditLog(dbName, query, durationMs, `error:${category}`).catch(() => {});
+      }
+
       throw error;
     }
   }
@@ -775,6 +900,11 @@ export class ConnectionManager extends EventEmitter {
             query: queryObj.query,
             execution_time_ms: Date.now() - queryStartTime,
           });
+
+          // Invalidate cache for mutation queries
+          if (this.queryCache?.isMutation(queryObj.query)) {
+            this.queryCache.invalidate(dbName);
+          }
         } catch (error) {
           results.push({
             index: i,
