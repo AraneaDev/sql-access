@@ -821,7 +821,9 @@ describe('config', () => {
       mockParseIni.mockReturnValue({ 'database.test': { type: 'sqlite', file: 'test.db' } });
       const warnSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
       loadConfiguration('/tmp/test-config-perms.ini');
-      const warned = warnSpy.mock.calls.some(c => String(c[0]).includes('group- or world-readable'));
+      const warned = warnSpy.mock.calls.some((c) =>
+        String(c[0]).includes('group- or world-readable')
+      );
       warnSpy.mockRestore();
       expect(warned).toBe(true);
     });
@@ -833,7 +835,9 @@ describe('config', () => {
       mockParseIni.mockReturnValue({ 'database.test': { type: 'sqlite', file: 'test.db' } });
       const warnSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
       loadConfiguration('/tmp/test-config-perms-ok.ini');
-      const warned = warnSpy.mock.calls.some(c => String(c[0]).includes('group- or world-readable'));
+      const warned = warnSpy.mock.calls.some((c) =>
+        String(c[0]).includes('group- or world-readable')
+      );
       warnSpy.mockRestore();
       expect(warned).toBe(false);
     });

@@ -35,9 +35,7 @@ async function checkKeyFilePermissions(keyPath: string): Promise<void> {
     );
   }
   if (mode & 0o044) {
-    getLogger().warning(
-      `SSH private key '${keyPath}' has loose permissions (recommend chmod 600)`
-    );
+    getLogger().warning(`SSH private key '${keyPath}' has loose permissions (recommend chmod 600)`);
   }
 }
 
@@ -344,10 +342,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
     // Check if SSH connection is still active using the public EventEmitter API.
     // If listenerCount > 0 the client has active event handlers → it's alive.
     try {
-      return !!(
-        tunnel.connection &&
-        tunnel.connection.listenerCount('error') > 0
-      );
+      return !!(tunnel.connection && tunnel.connection.listenerCount('error') > 0);
     } catch (error) {
       this.logger.debug(`Connection health check error for '${dbName}'`, {
         error: (error as Error).message,

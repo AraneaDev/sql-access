@@ -45,7 +45,11 @@ export class PostgreSQLAdapter extends DatabaseAdapter {
       if (this.config.ssl !== undefined) {
         const sslEnabled = this.parseConfigValue(this.config.ssl, 'boolean', false);
         if (sslEnabled) {
-          const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+          const sslVerify = this.parseConfigValue(
+            this.config.ssl_verify ?? false,
+            'boolean',
+            false
+          );
           poolConfig.ssl = { rejectUnauthorized: sslVerify };
         } else {
           poolConfig.ssl = false; // explicitly disable

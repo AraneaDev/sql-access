@@ -64,9 +64,11 @@ describe('SSH tunnel', () => {
 
     const fs = require('fs');
     const existsSyncSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-    const readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(
-      Buffer.from('-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----')
-    );
+    const readFileSyncSpy = jest
+      .spyOn(fs, 'readFileSync')
+      .mockReturnValue(
+        Buffer.from('-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----')
+      );
 
     const buildOptions = (tunnelManager as any).buildSSHConnectOptions.bind(tunnelManager);
 
@@ -105,7 +107,7 @@ describe('SSH tunnel', () => {
     try {
       await tunnelManager.createEnhancedTunnel('test_db', {
         sshConfig: {
-          host: '',  // empty host
+          host: '', // empty host
           port: 22,
           username: 'user',
           password: 'pass',

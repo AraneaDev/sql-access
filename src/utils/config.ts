@@ -53,16 +53,21 @@ export function validateDatabaseConfig(config: DatabaseConfig): ValidationResult
   if (t === 'mysql' || t === 'postgresql' || t === 'mssql') {
     if (!config.host) errors.push({ field: 'host', message: 'host is required' });
     if (!config.port) errors.push({ field: 'port', message: 'port is required' });
-    if (!(config as any).user && !config.username) errors.push({ field: 'user', message: 'user is required' });
+    if (!(config as any).user && !config.username)
+      errors.push({ field: 'user', message: 'user is required' });
     if (!config.password) errors.push({ field: 'password', message: 'password is required' });
     if (!config.database) errors.push({ field: 'database', message: 'database is required' });
   }
   if (t === 'sqlite') {
-    if (!(config as any).filename && !(config as any).file) errors.push({ field: 'filename', message: 'filename is required for sqlite' });
+    if (!(config as any).filename && !(config as any).file)
+      errors.push({ field: 'filename', message: 'filename is required for sqlite' });
   }
   if (config.host) {
     if (EMBEDDED_CREDENTIALS_RE.test(config.host)) {
-      errors.push({ field: 'host', message: 'host must not contain embedded credentials (user:pass@host)' });
+      errors.push({
+        field: 'host',
+        message: 'host must not contain embedded credentials (user:pass@host)',
+      });
     }
   }
   if (config.port !== undefined) {
@@ -98,8 +103,8 @@ export function loadConfiguration(configPath?: string): ParsedServerConfig {
       if (mode & 0o044) {
         process.stderr.write(
           `WARNING: Config file ${path} is group- or world-readable ` +
-          `(mode ${mode.toString(8).padStart(3, '0')}). ` +
-          `It contains credentials. Run: chmod 600 ${path}\n`
+            `(mode ${mode.toString(8).padStart(3, '0')}). ` +
+            `It contains credentials. Run: chmod 600 ${path}\n`
         );
       }
     } catch {

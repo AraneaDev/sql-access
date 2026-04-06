@@ -9,7 +9,9 @@ export function hashQuery(sql: string): string {
 }
 
 export async function writeAuditLog(
-  dbName: string, sql: string, durationMs: number,
+  dbName: string,
+  sql: string,
+  durationMs: number,
   outcome: 'success' | string
 ): Promise<void> {
   const dir = join(homedir(), '.sql-ts', 'audit');

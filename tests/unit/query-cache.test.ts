@@ -5,7 +5,10 @@ describe('QueryCache', () => {
   let cache: QueryCache;
   const fakeResult = { rows: [{ id: 1 }], rowCount: 1, fields: [] };
 
-  beforeEach(() => { jest.useFakeTimers(); cache = new QueryCache(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+    cache = new QueryCache();
+  });
   afterEach(() => jest.useRealTimers());
 
   describe('get / set', () => {
@@ -62,9 +65,17 @@ describe('QueryCache', () => {
   });
 
   describe('shouldCache', () => {
-    it('returns true for SELECT', () => { expect(cache.shouldCache('SELECT * FROM foo')).toBe(true); });
-    it('returns false for INSERT', () => { expect(cache.shouldCache('INSERT INTO foo VALUES (1)')).toBe(false); });
-    it('returns false for UPDATE', () => { expect(cache.shouldCache('UPDATE foo SET bar = 1')).toBe(false); });
-    it('returns false for non-deterministic SELECT', () => { expect(cache.shouldCache('SELECT RAND()')).toBe(false); });
+    it('returns true for SELECT', () => {
+      expect(cache.shouldCache('SELECT * FROM foo')).toBe(true);
+    });
+    it('returns false for INSERT', () => {
+      expect(cache.shouldCache('INSERT INTO foo VALUES (1)')).toBe(false);
+    });
+    it('returns false for UPDATE', () => {
+      expect(cache.shouldCache('UPDATE foo SET bar = 1')).toBe(false);
+    });
+    it('returns false for non-deterministic SELECT', () => {
+      expect(cache.shouldCache('SELECT RAND()')).toBe(false);
+    });
   });
 });

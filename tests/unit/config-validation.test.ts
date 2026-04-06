@@ -1,7 +1,14 @@
 // tests/unit/config-validation.test.ts
 import { validateDatabaseConfig } from '../../src/utils/config.js';
 
-const base = { type: 'mysql' as const, host: 'localhost', port: 3306, user: 'u', password: 'p', database: 'db' };
+const base = {
+  type: 'mysql' as const,
+  host: 'localhost',
+  port: 3306,
+  user: 'u',
+  password: 'p',
+  database: 'db',
+};
 
 describe('validateDatabaseConfig', () => {
   it('passes valid mysql config', () => {

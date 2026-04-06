@@ -4,7 +4,10 @@
 
 import type { Client as PgClient, PoolClient as PgPoolClient } from 'pg';
 import { SecurityViolationError } from '../utils/error-handler.js';
-import type { Connection as MySQLConnection, PoolConnection as MySQLPoolConnection } from 'mysql2/promise';
+import type {
+  Connection as MySQLConnection,
+  PoolConnection as MySQLPoolConnection,
+} from 'mysql2/promise';
 import type { Database as SQLiteConnection } from 'sqlite3';
 import type { ConnectionPool as MSSQLConnection } from 'mssql';
 import type { Client as SSHClient } from 'ssh2';
@@ -59,7 +62,7 @@ export interface DatabaseConfig {
   ssh_private_key?: string;
   ssh_passphrase?: string;
   local_port?: number;
-  ssh_local_host?: string;  // SSH tunnel bind address (default: '127.0.0.1')
+  ssh_local_host?: string; // SSH tunnel bind address (default: '127.0.0.1')
 
   // Field Redaction Configuration
   redaction?: DatabaseRedactionConfig;
@@ -72,7 +75,13 @@ export interface DatabaseConfig {
   audit_log?: boolean;
 }
 
-export type DatabaseConnection = PgClient | PgPoolClient | MySQLConnection | MySQLPoolConnection | SQLiteConnection | MSSQLConnection;
+export type DatabaseConnection =
+  | PgClient
+  | PgPoolClient
+  | MySQLConnection
+  | MySQLPoolConnection
+  | SQLiteConnection
+  | MSSQLConnection;
 
 export interface ConnectionInfo {
   connection: DatabaseConnection;

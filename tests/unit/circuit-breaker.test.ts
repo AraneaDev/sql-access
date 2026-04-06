@@ -1,6 +1,11 @@
 import {
-  initialCircuitState, shouldReject, recordFailure, recordSuccess,
-  CIRCUIT_FAILURE_THRESHOLD, CIRCUIT_COOLDOWN_MS, CIRCUIT_WINDOW_MS,
+  initialCircuitState,
+  shouldReject,
+  recordFailure,
+  recordSuccess,
+  CIRCUIT_FAILURE_THRESHOLD,
+  CIRCUIT_COOLDOWN_MS,
+  CIRCUIT_WINDOW_MS,
 } from '../../src/utils/circuit-breaker.js';
 
 describe('circuit breaker state machine', () => {

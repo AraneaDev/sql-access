@@ -183,7 +183,9 @@ describe('PostgreSQLAdapter', () => {
 
     it('should handle disconnect errors', async () => {
       const disconnectError = new Error('Disconnect failed');
-      mockRelease.mockImplementationOnce(() => { throw disconnectError; });
+      mockRelease.mockImplementationOnce(() => {
+        throw disconnectError;
+      });
 
       const connection = await adapter.connect();
       await expect(adapter.disconnect(connection)).rejects.toThrow(
@@ -780,7 +782,10 @@ describe('PostgreSQLAdapter', () => {
       });
       const mockReleaseInner = jest.fn();
       const mockClientInner = { release: mockReleaseInner, query: jest.fn(), end: jest.fn() };
-      const mockPoolInner = { connect: jest.fn().mockResolvedValue(mockClientInner), end: jest.fn() };
+      const mockPoolInner = {
+        connect: jest.fn().mockResolvedValue(mockClientInner),
+        end: jest.fn(),
+      };
       (poolAdapter as unknown as Record<string, unknown>)._pool = mockPoolInner;
       const conn = await poolAdapter.connect();
       expect(conn).toBe(mockClientInner);

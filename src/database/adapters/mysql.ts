@@ -3,7 +3,11 @@
  */
 
 import * as mysql from 'mysql2/promise';
-import type { Connection as MySQLConnection, Pool as MySQLPool, PoolConnection as MySQLPoolConnection } from 'mysql2/promise';
+import type {
+  Connection as MySQLConnection,
+  Pool as MySQLPool,
+  PoolConnection as MySQLPoolConnection,
+} from 'mysql2/promise';
 import { DatabaseAdapter } from './base.js';
 import type {
   DatabaseConnection,
@@ -46,7 +50,11 @@ export class MySQLAdapter extends DatabaseAdapter {
       if (this.config.ssl !== undefined) {
         const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
         if (sslEnabled) {
-          const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? false, 'boolean', false);
+          const sslVerify = this.parseConfigValue(
+            this.config.ssl_verify ?? false,
+            'boolean',
+            false
+          );
           poolConfig.ssl = { rejectUnauthorized: sslVerify };
         }
       }

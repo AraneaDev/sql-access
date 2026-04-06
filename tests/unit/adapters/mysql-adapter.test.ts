@@ -242,7 +242,9 @@ describe('MySQLAdapter', () => {
 
     it('should handle disconnect errors', async () => {
       const disconnectError = new Error('Disconnect failed');
-      const mockRelease = jest.fn().mockImplementation(() => { throw disconnectError; });
+      const mockRelease = jest.fn().mockImplementation(() => {
+        throw disconnectError;
+      });
       mockGetConnection.mockResolvedValueOnce({ ...mockConnection, release: mockRelease });
 
       const connection = await adapter.connect();

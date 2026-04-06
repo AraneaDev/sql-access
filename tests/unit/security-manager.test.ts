@@ -1102,7 +1102,9 @@ describe('SecurityManager', () => {
 
   describe('validateAnyQuery - dangerous command blocking', () => {
     let manager: SecurityManager;
-    beforeEach(() => { manager = new SecurityManager({}, false); }); // select_only=false
+    beforeEach(() => {
+      manager = new SecurityManager({}, false);
+    }); // select_only=false
 
     it.each(['EXEC sp_foo', 'EXECUTE sp_foo', 'CALL my_proc()'])(
       'blocks %s even in non-SELECT mode',
@@ -1114,7 +1116,7 @@ describe('SecurityManager', () => {
     );
 
     it('allows INSERT in non-SELECT mode', async () => {
-      const result = await manager.validateQuery("INSERT INTO t(a) VALUES (1)");
+      const result = await manager.validateQuery('INSERT INTO t(a) VALUES (1)');
       expect(result.allowed).toBe(true);
     });
   });

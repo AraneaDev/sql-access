@@ -21,7 +21,11 @@ import { getLogger } from '../utils/logger.js';
 import { MetricsManager } from './MetricsManager.js';
 import { QueryCache } from './QueryCache.js';
 import {
-  CircuitBreakerState, initialCircuitState, shouldReject, recordFailure, recordSuccess,
+  CircuitBreakerState,
+  initialCircuitState,
+  shouldReject,
+  recordFailure,
+  recordSuccess,
 } from '../utils/circuit-breaker.js';
 import { CircuitOpenError } from '../utils/error-handler.js';
 import { writeAuditLog } from '../utils/audit-logger.js';
@@ -107,7 +111,10 @@ export class ConnectionManager extends EventEmitter {
 
   private getCircuit(dbName: string): CircuitBreakerState {
     let s = this.circuits.get(dbName);
-    if (!s) { s = initialCircuitState(); this.circuits.set(dbName, s); }
+    if (!s) {
+      s = initialCircuitState();
+      this.circuits.set(dbName, s);
+    }
     return s;
   }
 
@@ -723,7 +730,11 @@ export class ConnectionManager extends EventEmitter {
   /**
    * Internal query execution — preserves original connection-lookup and error handling.
    */
-  private async _executeQueryInternal(dbName: string, query: string, params: unknown[] = []): Promise<QueryResult> {
+  private async _executeQueryInternal(
+    dbName: string,
+    query: string,
+    params: unknown[] = []
+  ): Promise<QueryResult> {
     // Get connection (will create if doesn't exist)
     const connectionInfo = await this.getConnection(dbName);
     const adapter = this.adapters.get(dbName);
@@ -765,9 +776,14 @@ export class ConnectionManager extends EventEmitter {
     const decision = shouldReject(circuit, Date.now());
     if (decision.reject) {
       const retryIn = Math.ceil((decision as { reject: true; retryInMs: number }).retryInMs / 1000);
-      throw new CircuitOpenError(`Database '${dbName}' is currently unavailable — retry in ${retryIn}s`);
+      throw new CircuitOpenError(
+        `Database '${dbName}' is currently unavailable — retry in ${retryIn}s`
+      );
     }
-    if (!decision.reject && (decision as { reject: false; transitionTo?: 'HALF_OPEN' }).transitionTo === 'HALF_OPEN') {
+    if (
+      !decision.reject &&
+      (decision as { reject: false; transitionTo?: 'HALF_OPEN' }).transitionTo === 'HALF_OPEN'
+    ) {
       this.circuits.set(dbName, { ...circuit, status: 'HALF_OPEN' });
     }
 
@@ -795,7 +811,10 @@ export class ConnectionManager extends EventEmitter {
       const newCircuit = recordSuccess(currentCircuit);
       this.circuits.set(dbName, newCircuit);
       if (prevStatus !== newCircuit.status) {
-        this.metrics?.recordCircuitEvent(dbName, newCircuit.status === 'CLOSED' ? 'closed' : 'half_open');
+        this.metrics?.recordCircuitEvent(
+          dbName,
+          newCircuit.status === 'CLOSED' ? 'closed' : 'half_open'
+        );
         this.emit('circuitStateChange', dbName, newCircuit.status);
       }
 
@@ -827,7 +846,10 @@ export class ConnectionManager extends EventEmitter {
         const newCircuit = recordFailure(currentCircuit, Date.now());
         this.circuits.set(dbName, newCircuit);
         if (prevStatus !== newCircuit.status) {
-          this.metrics?.recordCircuitEvent(dbName, newCircuit.status === 'OPEN' ? 'open' : 'half_open');
+          this.metrics?.recordCircuitEvent(
+            dbName,
+            newCircuit.status === 'OPEN' ? 'open' : 'half_open'
+          );
           this.emit('circuitStateChange', dbName, newCircuit.status);
         }
       }

@@ -25,8 +25,14 @@ describe('writeAuditLog', () => {
   beforeEach(() => jest.clearAllMocks());
   it('calls mkdir and appendFile with correct paths', async () => {
     await writeAuditLog('mydb', 'SELECT 1', 42, 'success');
-    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('.sql-ts/audit'), { recursive: true });
-    expect(appendFile).toHaveBeenCalledWith(expect.stringContaining('mydb.log'), expect.stringContaining('success'), 'utf8');
+    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('.sql-ts/audit'), {
+      recursive: true,
+    });
+    expect(appendFile).toHaveBeenCalledWith(
+      expect.stringContaining('mydb.log'),
+      expect.stringContaining('success'),
+      'utf8'
+    );
   });
   it('log line contains timestamp, dbName, hash, duration, and outcome', async () => {
     await writeAuditLog('mydb', 'SELECT 1', 100, 'error:CONNECTION');

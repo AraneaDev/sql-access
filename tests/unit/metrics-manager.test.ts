@@ -3,7 +3,9 @@ import { MetricsManager } from '../../src/classes/MetricsManager.js';
 
 describe('MetricsManager', () => {
   let m: MetricsManager;
-  beforeEach(() => { m = new MetricsManager(); });
+  beforeEach(() => {
+    m = new MetricsManager();
+  });
 
   describe('recordQuery', () => {
     it('increments total and success counts', () => {

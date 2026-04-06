@@ -1464,9 +1464,9 @@ describe('ConnectionManager', () => {
       const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
         TestConfigFixtures.validPostgresConfig
       );
-      jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
-        new ConnectionError('connect ECONNREFUSED 127.0.0.1:5432')
-      );
+      jest
+        .spyOn(mockAdapter, 'executeQuery')
+        .mockRejectedValue(new ConnectionError('connect ECONNREFUSED 127.0.0.1:5432'));
       jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
       // Suppress unhandled 'error' events from EventEmitter
       connectionManager.on('error', () => {});
@@ -1491,9 +1491,9 @@ describe('ConnectionManager', () => {
       const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
         TestConfigFixtures.validPostgresConfig
       );
-      jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
-        new ConnectionError('connect ECONNREFUSED')
-      );
+      jest
+        .spyOn(mockAdapter, 'executeQuery')
+        .mockRejectedValue(new ConnectionError('connect ECONNREFUSED'));
       jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
       connectionManager.on('error', () => {});
 
@@ -1519,9 +1519,9 @@ describe('ConnectionManager', () => {
       const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
         TestConfigFixtures.validPostgresConfig
       );
-      jest.spyOn(mockAdapter, 'executeQuery').mockRejectedValue(
-        new QueryExecutionError('Syntax error near SELECT')
-      );
+      jest
+        .spyOn(mockAdapter, 'executeQuery')
+        .mockRejectedValue(new QueryExecutionError('Syntax error near SELECT'));
       jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
       connectionManager.on('error', () => {});
 
