@@ -265,6 +265,7 @@ export class ConnectionManager extends EventEmitter {
                 typeof config.local_port === 'number'
                   ? config.local_port
                   : parseInt(String(config.local_port || 0), 10),
+              localHost: config.ssh_local_host ?? '127.0.0.1',
             });
 
             this.logger.info(`New SSH tunnel established for '${dbName}'`, {

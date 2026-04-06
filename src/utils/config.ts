@@ -234,6 +234,7 @@ function parseSSHConfig(
   dbConfig.ssh_password = config.ssh_password;
   dbConfig.ssh_private_key = config.ssh_private_key;
   dbConfig.ssh_passphrase = config.ssh_passphrase;
+  dbConfig.ssh_local_host = config.ssh_local_host || '127.0.0.1';
 
   // Parse local_port for SSH tunnel (new feature)
   if (config.local_port !== undefined && config.local_port !== '') {

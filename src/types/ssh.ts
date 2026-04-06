@@ -39,6 +39,7 @@ export interface SSHTunnelCreateOptions {
   sshConfig: SSHConnectionConfig;
   forwardConfig: SSHForwardConfig;
   localPort?: number; // 0 for auto-assignment
+  localHost?: string; // Bind address for the local tunnel server (default: '127.0.0.1')
 }
 
 // ============================================================================

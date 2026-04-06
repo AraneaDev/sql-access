@@ -59,6 +59,7 @@ export interface DatabaseConfig {
   ssh_private_key?: string;
   ssh_passphrase?: string;
   local_port?: number;
+  ssh_local_host?: string;  // SSH tunnel bind address (default: '127.0.0.1')
 
   // Field Redaction Configuration
   redaction?: DatabaseRedactionConfig;

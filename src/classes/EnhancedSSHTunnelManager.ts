@@ -601,7 +601,8 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
 
         // Listen on the assigned port
         const localPort = options.localPort || 0;
-        server.listen(localPort, '127.0.0.1', () => {
+        const bindAddress = options.localHost ?? '127.0.0.1';
+        server.listen(localPort, bindAddress, () => {
           const address = server.address();
           assignedPort = typeof address === 'object' && address ? address.port : localPort;
 
@@ -613,7 +614,7 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
             server,
             connection: sshClient,
             localPort: assignedPort,
-            localHost: '127.0.0.1',
+            localHost: bindAddress,
             remoteHost: options.forwardConfig.destinationHost,
             remotePort: options.forwardConfig.destinationPort,
             isActive: true,
