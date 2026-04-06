@@ -12,6 +12,7 @@ import { createToolResponse } from '../../utils/response-formatter.js';
 import type { ToolHandlerContext } from './types.js';
 import { requireDbConfig } from './types.js';
 import { ValidationError, ConfigurationError } from '../../utils/error-handler.js';
+import { writeAuditLog } from '../../utils/audit-logger.js';
 
 export async function handleAddDatabase(
   ctx: ToolHandlerContext,
@@ -102,6 +103,8 @@ export async function handleAddDatabase(
 
   saveConfigFile(ctx.config, ctx.configPath);
   ctx.logger.info(`Database '${name}' added via MCP`, { type: dbType });
+
+  writeAuditLog(name, 'CONFIG_ADD', 0, 'success').catch(() => {});
 
   return createToolResponse(
     ` Database '${name}' added successfully (type: ${dbType})\n` +
@@ -199,6 +202,8 @@ export async function handleUpdateDatabase(
   saveConfigFile(ctx.config, ctx.configPath);
   ctx.logger.info(`Database '${database}' updated via MCP`, { fields: updated });
 
+  writeAuditLog(database, `CONFIG_UPDATE: ${updated.join(', ')}`, 0, 'success').catch(() => {});
+
   return createToolResponse(
     ` Database '${database}' updated successfully\n` +
       ` Changed fields: ${updated.join(', ')}\n` +
@@ -228,6 +233,8 @@ export async function handleRemoveDatabase(
 
   saveConfigFile(ctx.config, ctx.configPath);
   ctx.logger.info(`Database '${database}' removed via MCP`);
+
+  writeAuditLog(database, 'CONFIG_REMOVE', 0, 'success').catch(() => {});
 
   return createToolResponse(
     ` Database '${database}' removed successfully\nConnection closed and configuration saved.`

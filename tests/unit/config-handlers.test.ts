@@ -3,8 +3,14 @@ import {
   handleUpdateDatabase,
   handleAddDatabase,
 } from '../../src/tools/handlers/config-handlers.js';
+import { writeAuditLog } from '../../src/utils/audit-logger.js';
 import type { ToolHandlerContext } from '../../src/tools/handlers/types.js';
 import type { ParsedServerConfig } from '../../src/types/index.js';
+
+vi.mock('../../src/utils/audit-logger.js', () => ({
+  writeAuditLog: vi.fn().mockResolvedValue(undefined),
+  hashQuery: vi.fn(() => 'abc123'),
+}));
 
 function createMockContext(configOverrides: Partial<ParsedServerConfig>): ToolHandlerContext {
   const config: ParsedServerConfig = {
@@ -15,7 +21,10 @@ function createMockContext(configOverrides: Partial<ParsedServerConfig>): ToolHa
   return {
     config,
     configPath: '/tmp/test-config.ini',
-    connectionManager: {} as never,
+    connectionManager: {
+      registerDatabase: vi.fn(),
+      unregisterDatabase: vi.fn(),
+    } as never,
     securityManager: {} as never,
     schemaManager: {} as never,
     sshTunnelManager: {} as never,
@@ -93,6 +102,24 @@ describe('SQLite path validation', () => {
         file: '/dev/zero',
       })
     ).rejects.toThrow(/not allowed/i);
+  });
+});
+
+describe('audit logging for config changes', () => {
+  test('should audit log when adding a database', async () => {
+    (writeAuditLog as ReturnType<typeof vi.fn>).mockClear();
+    const ctx = createMockContext({});
+    await handleAddDatabase(ctx, {
+      name: 'newdb',
+      type: 'sqlite',
+      file: '/tmp/test.db',
+    });
+    expect(writeAuditLog).toHaveBeenCalledWith(
+      'newdb',
+      expect.stringContaining('CONFIG_ADD'),
+      expect.any(Number),
+      'success'
+    );
   });
 });
 
