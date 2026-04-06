@@ -33,6 +33,51 @@ export class ConfigValidationError extends Error {
   }
 }
 
+export interface ConfigFieldError {
+  field: string;
+  message: string;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  errors: ConfigFieldError[];
+}
+
+const SHELL_METACHAR_RE = /[;&|$()><]/;
+const EMBEDDED_CREDENTIALS_RE = /[^@]+:[^@]+@/;
+
+export function validateDatabaseConfig(config: DatabaseConfig): ValidationResult {
+  const errors: ConfigFieldError[] = [];
+  const t = config.type;
+
+  if (t === 'mysql' || t === 'postgresql' || t === 'mssql') {
+    if (!config.host) errors.push({ field: 'host', message: 'host is required' });
+    if (!config.port) errors.push({ field: 'port', message: 'port is required' });
+    if (!(config as any).user && !config.username) errors.push({ field: 'user', message: 'user is required' });
+    if (!config.password) errors.push({ field: 'password', message: 'password is required' });
+    if (!config.database) errors.push({ field: 'database', message: 'database is required' });
+  }
+  if (t === 'sqlite') {
+    if (!(config as any).filename && !(config as any).file) errors.push({ field: 'filename', message: 'filename is required for sqlite' });
+  }
+  if (config.host) {
+    if (EMBEDDED_CREDENTIALS_RE.test(config.host)) {
+      errors.push({ field: 'host', message: 'host must not contain embedded credentials (user:pass@host)' });
+    }
+  }
+  if (config.port !== undefined) {
+    const p = Number(config.port);
+    if (isNaN(p) || p < 1 || p > 65535) {
+      errors.push({ field: 'port', message: 'port must be between 1 and 65535' });
+    }
+  }
+  if (config.database && SHELL_METACHAR_RE.test(config.database)) {
+    errors.push({ field: 'database', message: 'database name contains invalid characters' });
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 /**
  * Load configuration from config.ini file
  */
@@ -476,6 +521,14 @@ export function validateConfiguration(config: ParsedServerConfig): void {
  * Validate individual database configuration
  */
 function validateDatabaseConfiguration(name: string, config: DatabaseConfig): void {
+  // Run the exported validator and log any warnings
+  const result = validateDatabaseConfig(config);
+  if (!result.valid) {
+    for (const err of result.errors) {
+      console.warn(`[config] Database '${name}' validation warning: ${err.field}: ${err.message}`);
+    }
+  }
+
   // Type validation is already done during parsing
 
   // Additional runtime validations
