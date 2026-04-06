@@ -10,9 +10,9 @@
     "mcp-sql-install": "./dist/install.js"
   },
   "scripts": {
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && tsc && chmod +x dist/index.js dist/setup.js dist/install.js",
     "build:fast": "npm run clean && npm run build:esbuild",
-    "build:esbuild": "esbuild src/index.ts src/setup.ts src/install.ts --bundle --platform=node --outdir=dist --external:mssql --external:mysql2 --external:pg --external:sqlite3 --external:ssh2 --external:ini --format=esm --sourcemap --minify",
+    "build:esbuild": "esbuild src/index.ts src/setup.ts src/install.ts --bundle --platform=node --outdir=dist --external:mssql --external:mysql2 --external:pg --external:sqlite3 --external:ssh2 --external:ini --format=esm --sourcemap --minify && chmod +x dist/index.js dist/setup.js dist/install.js",
     "build:production": "npm run clean && npm run lint && npm run test && npm run build",
     "build:watch": "tsc --watch",
     "dev": "npm run build:watch",
