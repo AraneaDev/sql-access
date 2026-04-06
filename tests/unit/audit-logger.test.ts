@@ -1,0 +1,39 @@
+import { hashQuery } from '../../src/utils/audit-logger.js';
+
+jest.mock('node:fs/promises', () => ({
+  mkdir: jest.fn().mockResolvedValue(undefined),
+  appendFile: jest.fn().mockResolvedValue(undefined),
+}));
+
+import { mkdir, appendFile } from 'node:fs/promises';
+import { writeAuditLog } from '../../src/utils/audit-logger.js';
+
+describe('hashQuery', () => {
+  it('produces consistent 8-char hex for same SQL', () => {
+    expect(hashQuery('SELECT 1')).toHaveLength(8);
+    expect(hashQuery('SELECT 1')).toBe(hashQuery('SELECT 1'));
+  });
+  it('normalises whitespace and case', () => {
+    expect(hashQuery('SELECT  1')).toBe(hashQuery('select 1'));
+  });
+  it('different SQL produces different hash', () => {
+    expect(hashQuery('SELECT 1')).not.toBe(hashQuery('SELECT 2'));
+  });
+});
+
+describe('writeAuditLog', () => {
+  beforeEach(() => jest.clearAllMocks());
+  it('calls mkdir and appendFile with correct paths', async () => {
+    await writeAuditLog('mydb', 'SELECT 1', 42, 'success');
+    expect(mkdir).toHaveBeenCalledWith(expect.stringContaining('.sql-ts/audit'), { recursive: true });
+    expect(appendFile).toHaveBeenCalledWith(expect.stringContaining('mydb.log'), expect.stringContaining('success'), 'utf8');
+  });
+  it('log line contains timestamp, dbName, hash, duration, and outcome', async () => {
+    await writeAuditLog('mydb', 'SELECT 1', 100, 'error:CONNECTION');
+    const line = (appendFile as jest.Mock).mock.calls[0][1] as string;
+    expect(line).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(line).toContain('mydb');
+    expect(line).toContain('100ms');
+    expect(line).toContain('error:CONNECTION');
+  });
+});

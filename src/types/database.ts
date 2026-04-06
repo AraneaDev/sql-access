@@ -66,6 +66,10 @@ export interface DatabaseConfig {
 
   // MCP Configuration Access Control
   mcp_configurable?: boolean; // Whether this database can be modified via MCP tools
+
+  // Caching and Auditing
+  cache_ttl_seconds?: number;
+  audit_log?: boolean;
 }
 
 export type DatabaseConnection = PgClient | MySQLConnection | SQLiteConnection | MSSQLConnection;
