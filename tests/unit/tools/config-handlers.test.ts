@@ -224,6 +224,10 @@ describe('config-handlers', () => {
         mydb: {
           type: 'mysql',
           host: 'old-host',
+          port: 3306,
+          username: 'root',
+          password: 'pass',
+          database: 'mydb',
           mcp_configurable: true,
           select_only: true,
         } as DatabaseConfig,
@@ -278,6 +282,10 @@ describe('config-handlers', () => {
         mydb: {
           type: 'mysql',
           host: 'old',
+          port: 3306,
+          username: 'existinguser',
+          password: 'existingpass',
+          database: 'existingdb',
           mcp_configurable: true,
           select_only: true,
         } as DatabaseConfig,
@@ -298,7 +306,7 @@ describe('config-handlers', () => {
         ssh_port: 22,
         ssh_username: 'su',
         ssh_password: 'sp',
-        ssh_private_key: 'sk',
+        ssh_private_key: '/home/user/.ssh/id_rsa',
       });
 
       const dbConfig = ctx.config.databases['mydb'];
@@ -315,7 +323,77 @@ describe('config-handlers', () => {
       expect(dbConfig.ssh_port).toBe(22);
       expect(dbConfig.ssh_username).toBe('su');
       expect(dbConfig.ssh_password).toBe('sp');
-      expect(dbConfig.ssh_private_key).toBe('sk');
+      expect(dbConfig.ssh_private_key).toBe('/home/user/.ssh/id_rsa');
+    });
+
+    it('should reject SQLite file path with traversal in update', async () => {
+      const ctx = createMockContext({
+        sqlitedb: {
+          type: 'sqlite',
+          file: '/safe/path/db.sqlite',
+          mcp_configurable: true,
+          select_only: true,
+        } as DatabaseConfig,
+      });
+
+      await expect(
+        handleUpdateDatabase(ctx, {
+          database: 'sqlitedb',
+          file: '../../../etc/shadow',
+        })
+      ).rejects.toThrow(ValidationError);
+
+      await expect(
+        handleUpdateDatabase(ctx, {
+          database: 'sqlitedb',
+          file: '../../../etc/shadow',
+        })
+      ).rejects.toThrow('traversal');
+    });
+
+    it('should reject SSH private key path with traversal in update', async () => {
+      const ctx = createMockContext({
+        mydb: {
+          type: 'mysql',
+          host: 'localhost',
+          mcp_configurable: true,
+          select_only: true,
+        } as DatabaseConfig,
+      });
+
+      await expect(
+        handleUpdateDatabase(ctx, {
+          database: 'mydb',
+          ssh_private_key: '../../../etc/shadow',
+        })
+      ).rejects.toThrow(ValidationError);
+
+      await expect(
+        handleUpdateDatabase(ctx, {
+          database: 'mydb',
+          ssh_private_key: '../../../etc/shadow',
+        })
+      ).rejects.toThrow('traversal');
+    });
+
+    it('should reject invalid port via validateDatabaseConfig after update', async () => {
+      const ctx = createMockContext({
+        mydb: {
+          type: 'mysql',
+          host: 'localhost',
+          port: 3306,
+          username: 'root',
+          mcp_configurable: true,
+          select_only: true,
+        } as DatabaseConfig,
+      });
+
+      await expect(
+        handleUpdateDatabase(ctx, {
+          database: 'mydb',
+          port: 99999,
+        })
+      ).rejects.toThrow(ValidationError);
     });
   });
 

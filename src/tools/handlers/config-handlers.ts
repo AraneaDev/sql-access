@@ -201,8 +201,43 @@ export async function handleUpdateDatabase(
     updated.push('ssh_private_key');
   }
 
+  // Validate SQLite file path when updated
+  if (args.file !== undefined && dbConfig.type === 'sqlite') {
+    const filePath = args.file as string;
+    const resolved = resolve(filePath);
+    if (filePath.includes('..')) {
+      throw new ValidationError('SQLite file path traversal (..) is not allowed', 'file');
+    }
+    if (
+      resolved.startsWith('/etc') ||
+      resolved.startsWith('/proc') ||
+      resolved.startsWith('/sys') ||
+      resolved.startsWith('/dev')
+    ) {
+      throw new ValidationError(
+        `SQLite file path '${resolved}' is not allowed — must be a regular file path`,
+        'file'
+      );
+    }
+  }
+
+  // Validate SSH private key path
+  if (args.ssh_private_key !== undefined) {
+    const keyPath = args.ssh_private_key as string;
+    if (keyPath.includes('..')) {
+      throw new ValidationError('SSH private key path traversal (..) is not allowed', 'ssh_private_key');
+    }
+  }
+
   if (updated.length === 0) {
     return createToolResponse(`No changes provided for database '${database}'.`);
+  }
+
+  // Re-validate the full config after applying updates
+  const validationResult = validateDatabaseConfig(dbConfig);
+  if (!validationResult.valid) {
+    const messages = validationResult.errors.map((e) => `${e.field}: ${e.message}`).join(', ');
+    throw new ValidationError(`Invalid configuration after update: ${messages}`, 'database');
   }
 
   ctx.connectionManager.unregisterDatabase(database);
