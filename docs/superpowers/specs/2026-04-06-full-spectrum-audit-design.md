@@ -62,8 +62,10 @@ catch { metrics.recordQuery(db, elapsed, false, category) }
 
 Three states: `CLOSED` (normal) → `OPEN` (failing, fast-reject) → `HALF_OPEN` (probe).
 
+**Which errors count toward the threshold:** Only `CONNECTION` and `SSH` category errors advance the failure counter. `QUERY` category errors (bad SQL, constraint violations) do NOT — those are application errors, not infrastructure failures.
+
 **Transitions:**
-- `CLOSED → OPEN`: 5 consecutive connection failures within a 60s window
+- `CLOSED → OPEN`: 5 consecutive CONNECTION/SSH failures within a 60s window
 - `OPEN → HALF_OPEN`: 30s cooldown elapsed, one probe attempt allowed through
 - `HALF_OPEN → CLOSED`: probe succeeds — reset failure count and window
 - `HALF_OPEN → OPEN`: probe fails — restart cooldown timer
@@ -99,7 +101,7 @@ const CIRCUIT_COOLDOWN_MS = 30_000;
 
 ### New file: `src/classes/QueryCache.ts`
 
-In-process LRU cache with per-entry TTL. Implemented with a `Map` (insertion-order iteration for LRU eviction). No external dependency.
+In-process LRU cache with per-entry TTL. Implemented as `Map<dbName, Map<cacheKey, CacheEntry>>` — one inner Map per database, each maintaining insertion order for LRU eviction. The per-DB partitioning enforces the per-DB entry cap and makes mutation invalidation (clear one DB's entries) O(1). No external dependency.
 
 **Cache key:** `sha256(dbName + normalizedSQL + JSON.stringify(params))`
 - Normalized SQL: whitespace-collapsed, lowercased
@@ -152,7 +154,8 @@ New function `validateDatabaseConfig(config: DatabaseConfig): ValidationResult` 
 
 ### SSH key file permission validation
 
-Before loading a private key in `EnhancedSSHTunnelManager`:
+Before loading a private key, `EnhancedSSHTunnelManager` performs a permission check (same pattern as the existing `config.ini` check in `src/utils/config.ts:49-62`, but implemented directly in the tunnel manager where the key path is consumed):
+
 ```typescript
 const stat = await fs.stat(keyPath);
 const mode = stat.mode & 0o777;
@@ -160,7 +163,7 @@ if (mode & 0o004) throw new ConfigurationError(`SSH key ${keyPath} is world-read
 if (mode & 0o044) logger.warn(`SSH key ${keyPath} has loose permissions (recommend 0600)`);
 ```
 
-Mirrors the existing `config.ini` permission check in `src/utils/config.ts:49-62`.
+**Affected file:** `src/classes/EnhancedSSHTunnelManager.ts` (not `src/utils/config.ts`).
 
 ### Connection string validation
 
@@ -193,6 +196,13 @@ Fields: timestamp, dbName, query hash (SHA256 of normalized SQL, never params), 
 ## 6. Test Coverage Gaps
 
 ### New test files
+
+**`tests/unit/metrics-manager.test.ts`**
+- Rolling window p95 computation (verify with known latency sequences)
+- recordQuery updates all counters and latency stats correctly
+- getSnapshot returns correct per-DB and all-DB views
+- reset clears state for one DB without affecting others
+- Circuit event and cache hit/miss recording
 
 **`tests/unit/circuit-breaker.test.ts`**
 - All state transitions: CLOSED→OPEN, OPEN→HALF_OPEN, HALF_OPEN→CLOSED, HALF_OPEN→OPEN
@@ -230,6 +240,7 @@ Fields: timestamp, dbName, query hash (SHA256 of normalized SQL, never params), 
 | `src/classes/MetricsManager.ts` | New |
 | `src/classes/QueryCache.ts` | New |
 | `src/utils/audit-logger.ts` | New |
+| `tests/unit/metrics-manager.test.ts` | New |
 | `tests/unit/circuit-breaker.test.ts` | New |
 | `tests/unit/query-cache.test.ts` | New |
 | `src/classes/ConnectionManager.ts` | Extend — circuit breaker, cache, metrics wiring |
@@ -239,7 +250,8 @@ Fields: timestamp, dbName, query hash (SHA256 of normalized SQL, never params), 
 | `src/database/adapters/mysql.ts` | Refine — type assertion cleanup |
 | `src/database/adapters/postgresql.ts` | Refine — type assertion cleanup |
 | `src/database/adapters/mssql.ts` | Refine — type assertion cleanup |
-| `src/utils/config.ts` | Extend — `validateDatabaseConfig()`, SSH key check |
+| `src/utils/config.ts` | Extend — `validateDatabaseConfig()` |
+| `src/classes/EnhancedSSHTunnelManager.ts` | Extend — SSH key permission check |
 | `tests/integration/ssh-tunnel.test.ts` | New/extend |
 | `tests/unit/connection-manager.test.ts` | Extend |
 | `tests/unit/schema-manager.test.ts` | Extend |
