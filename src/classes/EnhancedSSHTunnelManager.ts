@@ -436,8 +436,11 @@ export class EnhancedSSHTunnelManager extends EventEmitter implements ISSHTunnel
           maxAttempts: 5,
         });
         response.suggestion = suggestion.assignedPort;
-      } catch {
-        // No suggestion available
+      } catch (err) {
+        this.logger.debug('Could not suggest alternative port', {
+          port,
+          error: (err as Error).message,
+        });
       }
     }
 

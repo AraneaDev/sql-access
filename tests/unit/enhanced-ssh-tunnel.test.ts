@@ -1727,3 +1727,23 @@ describe('Port Management Integration', () => {
     });
   });
 });
+
+describe('checkPortAvailability - error logging', () => {
+  it('logs debug message when port suggestion throws', async () => {
+    const manager = new EnhancedSSHTunnelManager();
+    const internals = manager as unknown as Record<string, unknown>;
+    const logger = internals.logger as { debug: jest.Mock };
+    const debugSpy = jest.spyOn(logger, 'debug');
+
+    const pm = internals.portManager as Record<string, jest.Mock>;
+    pm.isPortAvailable = jest.fn().mockResolvedValue({ isAvailable: false, reason: 'in use' });
+    pm.findAvailablePort = jest.fn().mockRejectedValue(new Error('no ports'));
+
+    await manager.checkPortAvailability(12345);
+
+    expect(debugSpy).toHaveBeenCalledWith(
+      expect.stringContaining('suggest'),
+      expect.objectContaining({ error: 'no ports' })
+    );
+  });
+});
