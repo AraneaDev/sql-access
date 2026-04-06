@@ -678,7 +678,11 @@ describe('ConnectionManager', () => {
       // With exponential backoff: 1000ms + 2000ms = 3000ms minimum.
       // Threshold lowered to 500ms to avoid flakiness in slow CI environments
       // where real-timer scheduling can be delayed; the retry count (3) is the
-      // authoritative correctness check.
+      // authoritative correctness check. Fake timers were not viable here because
+      // ConnectionManager's retry logic uses real setTimeout internally and the
+      // mock adapter's Promise rejection does not yield control in a way that
+      // jest.advanceTimersByTime() can drive reliably without restructuring
+      // production code.
       expect(elapsed).toBeGreaterThanOrEqual(500);
       expect(attempts).toBe(3);
     }, 15000);
