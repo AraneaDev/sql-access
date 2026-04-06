@@ -803,7 +803,19 @@ export class ConnectionManager extends EventEmitter {
     // 3. Execute the query
     const startTime = Date.now();
     try {
-      const result = await this._executeQueryInternal(dbName, query, params);
+      const queryTimeout = this.getDatabaseConfig(dbName)?.query_timeout ?? 30000;
+      let timeoutHandle: ReturnType<typeof setTimeout>;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new Error(`Query timed out after ${queryTimeout}ms`)),
+          queryTimeout
+        );
+        timeoutHandle.unref();
+      });
+      const result = await Promise.race([
+        this._executeQueryInternal(dbName, query, params),
+        timeoutPromise,
+      ]).finally(() => clearTimeout(timeoutHandle));
       const durationMs = Date.now() - startTime;
 
       // 4. On success

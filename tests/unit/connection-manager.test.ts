@@ -1601,4 +1601,45 @@ describe('ConnectionManager', () => {
       await cmWithCache.closeAll();
     });
   });
+
+  describe('Query Timeout Enforcement', () => {
+    test('should reject a query that exceeds query_timeout', async () => {
+      const config: DatabaseConfig = {
+        ...TestConfigFixtures.validPostgresConfig,
+        query_timeout: 100, // 100ms timeout
+      };
+      connectionManager.registerDatabase('timeout_db', config);
+
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(config);
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+      await connectionManager.getConnection('timeout_db');
+
+      // Mock _executeQueryInternal to take longer than timeout
+      jest.spyOn(connectionManager as any, '_executeQueryInternal').mockImplementation(
+        () => new Promise((resolve) => setTimeout(resolve, 500))
+      );
+
+      await expect(
+        connectionManager.executeQuery('timeout_db', 'SELECT SLEEP(10)')
+      ).rejects.toThrow('Query timed out after 100ms');
+    }, 10000);
+
+    test('should return normally when query completes before timeout', async () => {
+      const config: DatabaseConfig = {
+        ...TestConfigFixtures.validPostgresConfig,
+        query_timeout: 5000, // 5s timeout
+      };
+      connectionManager.registerDatabase('fast_db', config);
+
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(config);
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+      await connectionManager.getConnection('fast_db');
+
+      const mockResult = { rows: [{ id: 1 }], fields: ['id'], rowCount: 1 };
+      jest.spyOn(connectionManager as any, '_executeQueryInternal').mockResolvedValue(mockResult);
+
+      const result = await connectionManager.executeQuery('fast_db', 'SELECT 1');
+      expect(result).toEqual(mockResult);
+    });
+  });
 });

@@ -526,7 +526,15 @@ export class SQLMCPServer extends EventEmitter {
 
     this.securityManager.initialize(this.config);
     await this.schemaManager.initialize();
-    this.connectionManager.initialize(this.config.databases);
+    // Propagate extension-level query_timeout to each database config
+    const globalTimeout = this.config.extension?.query_timeout ?? 30000;
+    const databases = { ...this.config.databases };
+    for (const dbName of Object.keys(databases)) {
+      if (databases[dbName].query_timeout === undefined) {
+        databases[dbName] = { ...databases[dbName], query_timeout: globalTimeout };
+      }
+    }
+    this.connectionManager.initialize(databases);
     this.sshTunnelManager.initialize();
 
     this.logger.info('All managers initialized successfully');

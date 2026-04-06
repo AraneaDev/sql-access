@@ -73,6 +73,9 @@ export interface DatabaseConfig {
   // Caching and Auditing
   cache_ttl_seconds?: number;
   audit_log?: boolean;
+
+  // Query execution
+  query_timeout?: number; // Per-query timeout in ms (default: 30000)
 }
 
 export type DatabaseConnection =
