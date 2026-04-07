@@ -62,7 +62,10 @@ export function validateDatabaseConfig(config: DatabaseConfig): ValidationResult
     if (!config.database) errors.push({ field: 'database', message: 'database is required' });
   }
   if (t === 'sqlite') {
-    if (!(config as unknown as Record<string, unknown>).filename && !(config as unknown as Record<string, unknown>).file)
+    if (
+      !(config as unknown as Record<string, unknown>).filename &&
+      !(config as unknown as Record<string, unknown>).file
+    )
       errors.push({ field: 'filename', message: 'filename is required for sqlite' });
   }
   if (config.host) {

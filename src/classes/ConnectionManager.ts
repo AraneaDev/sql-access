@@ -20,8 +20,7 @@ import type { EnhancedSSHTunnelManager } from './EnhancedSSHTunnelManager.js';
 import { getLogger } from '../utils/logger.js';
 import type { MetricsManager } from './MetricsManager.js';
 import type { QueryCache } from './QueryCache.js';
-import type {
-  CircuitBreakerState} from '../utils/circuit-breaker.js';
+import type { CircuitBreakerState } from '../utils/circuit-breaker.js';
 import {
   initialCircuitState,
   shouldReject,
@@ -844,7 +843,9 @@ export class ConnectionManager extends EventEmitter {
       // Fire-and-forget audit log
       const dbConfig = this.getDatabaseConfig(dbName);
       if (dbConfig?.audit_log) {
-        writeAuditLog(dbName, query, durationMs, 'success').catch(/* audit is best-effort */ () => undefined);
+        writeAuditLog(dbName, query, durationMs, 'success').catch(
+          /* audit is best-effort */ () => undefined
+        );
       }
 
       return result;
@@ -874,7 +875,9 @@ export class ConnectionManager extends EventEmitter {
       // Fire-and-forget audit log
       const dbConfig = this.getDatabaseConfig(dbName);
       if (dbConfig?.audit_log) {
-        writeAuditLog(dbName, query, durationMs, `error:${category}`).catch(/* audit is best-effort */ () => undefined);
+        writeAuditLog(dbName, query, durationMs, `error:${category}`).catch(
+          /* audit is best-effort */ () => undefined
+        );
       }
 
       throw error;

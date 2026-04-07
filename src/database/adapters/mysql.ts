@@ -50,11 +50,7 @@ export class MySQLAdapter extends DatabaseAdapter {
       if (this.config.ssl !== undefined) {
         const sslEnabled = this.parseConfigValue(this.config.ssl ?? false, 'boolean', false);
         if (sslEnabled) {
-          const sslVerify = this.parseConfigValue(
-            this.config.ssl_verify ?? true,
-            'boolean',
-            true
-          );
+          const sslVerify = this.parseConfigValue(this.config.ssl_verify ?? true, 'boolean', true);
           poolConfig.ssl = { rejectUnauthorized: sslVerify };
         }
       }

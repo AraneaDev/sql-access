@@ -1615,9 +1615,9 @@ describe('ConnectionManager', () => {
       await connectionManager.getConnection('timeout_db');
 
       // Mock _executeQueryInternal to take longer than timeout
-      jest.spyOn(connectionManager as any, '_executeQueryInternal').mockImplementation(
-        () => new Promise((resolve) => setTimeout(resolve, 500))
-      );
+      jest
+        .spyOn(connectionManager as any, '_executeQueryInternal')
+        .mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 500)));
 
       await expect(
         connectionManager.executeQuery('timeout_db', 'SELECT SLEEP(10)')

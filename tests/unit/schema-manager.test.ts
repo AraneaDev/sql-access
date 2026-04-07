@@ -168,7 +168,10 @@ describe('SchemaManager', () => {
 
       await schemaManager.initialize();
 
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', { recursive: true, mode: 0o700 });
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith('./test-schemas', {
+        recursive: true,
+        mode: 0o700,
+      });
     });
 
     it('should initialize successfully with existing schema directory', async () => {
