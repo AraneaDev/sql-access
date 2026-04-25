@@ -265,6 +265,8 @@ describe('schema-handlers', () => {
       const ctx = createMockContext({
         testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
       });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({
         summary: { table_count: 5, total_columns: 20 },
@@ -282,6 +284,7 @@ describe('schema-handlers', () => {
       });
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
       (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
 
       await handleTestConnection(ctx, { database: 'testdb' });
@@ -293,6 +296,8 @@ describe('schema-handlers', () => {
       const ctx = createMockContext({
         testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
       (ctx.sshTunnelManager.hasTunnel as jest.Mock).mockReturnValue(true);
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
@@ -306,6 +311,8 @@ describe('schema-handlers', () => {
       const ctx = createMockContext({
         testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
       });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue({
         summary: { table_count: 10, total_columns: 50 },
@@ -316,23 +323,53 @@ describe('schema-handlers', () => {
       expect(result.content[0].text).toContain('Schema captured: 10 tables');
     });
 
-    it('should return error response on connection failure', async () => {
+    it('should report failure when getConnection fails', async () => {
       const ctx = createMockContext({
         testdb: { type: 'mysql', host: 'localhost', select_only: true } as DatabaseConfig,
       });
-      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
       (ctx.connectionManager.getConnection as jest.Mock).mockRejectedValue(
         new Error('Connection refused')
       );
 
-      // The error from getConnection is caught internally, but getSchema may still work
-      // Actually the schema capture error is caught, then getSchema is called
+      const result = await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Connection test failed');
+      expect(result.content[0].text).toContain('Connection refused');
+    });
+
+    it('should report failure when executeQuery health check fails', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockRejectedValue(
+        new Error('Connection lost')
+      );
+
+      const result = await handleTestConnection(ctx, { database: 'testdb' });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain('Connection test failed');
+      expect(result.content[0].text).toContain('Connection lost');
+    });
+
+    it('should succeed even when schema capture fails', async () => {
+      const ctx = createMockContext({
+        testdb: { type: 'mysql', host: 'localhost', select_only: false } as DatabaseConfig,
+      });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
+      (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(false);
+      (ctx.schemaManager.captureSchema as jest.Mock).mockRejectedValue(
+        new Error('Schema capture error')
+      );
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
 
       const result = await handleTestConnection(ctx, { database: 'testdb' });
 
-      // The handler catches schema capture errors with a warning, still succeeds
       expect(result.content[0].text).toContain('Connection successful');
+      expect(result.isError).toBeUndefined();
     });
 
     it('should throw ConfigurationError for nonexistent database', async () => {
@@ -353,6 +390,8 @@ describe('schema-handlers', () => {
           select_only: true,
         } as DatabaseConfig,
       });
+      (ctx.connectionManager.getConnection as jest.Mock).mockResolvedValue({ isConnected: true });
+      (ctx.connectionManager.executeQuery as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
       (ctx.schemaManager.hasSchema as jest.Mock).mockReturnValue(true);
       (ctx.schemaManager.getSchema as jest.Mock).mockReturnValue(null);
 

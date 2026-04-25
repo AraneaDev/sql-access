@@ -134,13 +134,16 @@ export async function handleTestConnection(
       ctx.logger.info(`SSH tunnel will be managed by ConnectionManager for '${database}'`);
     }
 
-    // Capture schema if not cached
+    // Test the connection — errors must propagate so we report actual status
+    await ctx.connectionManager.getConnection(database);
+
+    // Verify the connection works with a simple query
+    await ctx.connectionManager.executeQuery(database, 'SELECT 1');
+
+    // Capture schema if not cached (schema failure is non-fatal)
     if (!ctx.schemaManager.hasSchema(database)) {
       try {
-        const connection = await ctx.connectionManager.getConnection(database);
-        if (connection) {
-          await ctx.schemaManager.captureSchema(database, dbConfig);
-        }
+        await ctx.schemaManager.captureSchema(database, dbConfig);
       } catch (error) {
         ctx.logger.warning('Failed to capture schema', { database, error: getErrorMessage(error) });
       }
@@ -148,15 +151,11 @@ export async function handleTestConnection(
 
     const schema = ctx.schemaManager.getSchema(database);
 
-    let responseText = '';
-    const success = true;
-    if (success) {
-      responseText = ` Connection successful to ${database}\n`;
-      if (ctx.sshTunnelManager.hasTunnel(database)) responseText += ` SSH tunnel established\n`;
-      if (dbConfig.select_only) responseText += ` SELECT-only mode active\n`;
-      if (schema) {
-        responseText += ` Schema captured: ${schema.summary.table_count} tables, ${schema.summary.total_columns} columns\n`;
-      }
+    let responseText = ` Connection successful to ${database}\n`;
+    if (ctx.sshTunnelManager.hasTunnel(database)) responseText += ` SSH tunnel established\n`;
+    if (dbConfig.select_only) responseText += ` SELECT-only mode active\n`;
+    if (schema) {
+      responseText += ` Schema captured: ${schema.summary.table_count} tables, ${schema.summary.total_columns} columns\n`;
     }
 
     return createToolResponse(responseText);
