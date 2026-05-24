@@ -16,7 +16,7 @@ import type {
   ISSHTunnelManager,
   SSHEventPayload,
 } from '../types/index.js';
-import { ConnectionError } from '../types/index.js';
+import { ConnectionError } from '../utils/error-handler.js';
 import { validateSSHConfig } from '../types/index.js';
 import { getLogger } from '../utils/logger.js';
 import { ConfigurationError } from '../utils/error-handler.js';
@@ -29,13 +29,10 @@ import { PortManager, type PortAssignmentResult } from '../utils/port-manager.js
 async function checkKeyFilePermissions(keyPath: string): Promise<void> {
   const s = await stat(keyPath);
   const mode = s.mode & 0o777;
-  if (mode & 0o004) {
+  if (mode & 0o077) {
     throw new ConfigurationError(
-      `SSH private key '${keyPath}' is world-readable (mode ${mode.toString(8)}). Fix with: chmod 600 <keyfile>`
+      `SSH private key '${keyPath}' has group or other permissions (mode ${mode.toString(8)}). Fix with: chmod 600 <keyfile>`
     );
-  }
-  if (mode & 0o044) {
-    getLogger().warning(`SSH private key '${keyPath}' has loose permissions (recommend chmod 600)`);
   }
 }
 

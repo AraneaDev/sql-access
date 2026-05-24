@@ -20,8 +20,8 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { SERVER_VERSION } from './types/index.js';
 
-const _currentFile = fileURLToPath(import.meta.url);
-const _currentDir = path.dirname(_currentFile);
+const currentFile = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFile);
 
 interface CliOptions {
   configPath?: string;
@@ -116,7 +116,7 @@ For more information, visit: https://github.com/your-org/claude-sql-mcp-server
 
 function showVersion(): void {
   try {
-    const packagePath = path.join(_currentDir, '..', 'package.json');
+    const packagePath = path.join(currentDir, '..', 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
     // eslint-disable-next-line no-console
     console.log(`Claude SQL MCP Server v${packageJson.version}`);

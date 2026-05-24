@@ -6,7 +6,7 @@ This document provides comprehensive documentation for all MCP tools exposed by 
 
 - **Implemented**: Core query execution, SSH tunneling, SELECT-only security, batch operations, database listing, schema management, connection testing
 - **Implemented**: Dynamic database configuration management via MCP tools
-- **Basic Implementation**: Performance analysis (basic recommendations only)
+- [WIP] **Basic Implementation**: Performance analysis (basic recommendations only)
 - **Planned**: Advanced performance analysis with detailed index recommendations, configuration templates, enhanced schema relationship mapping
 
 ## Available Tools

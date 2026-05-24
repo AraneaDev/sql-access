@@ -2,7 +2,6 @@
  * Configuration-related types and validation
  */
 
-// import type { DatabaseType } from './database.js';
 import type {
   SecurityConfig,
   ExtensionConfig,

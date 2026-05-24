@@ -381,14 +381,14 @@ describe('error-handler', () => {
     it('should remove password from message', () => {
       const err = new Error('connection failed password=secret123 next');
       const sanitized = sanitizeError(err);
-      expect(sanitized).toContain('password=***');
+      expect(sanitized).toContain('password=[REDACTED]');
       expect(sanitized).not.toContain('secret123');
     });
 
     it('should remove pwd from message', () => {
       const err = new Error('failed pwd=mypass next');
       const sanitized = sanitizeError(err);
-      expect(sanitized).toContain('pwd=***');
+      expect(sanitized).toContain('pwd=[REDACTED]');
       expect(sanitized).not.toContain('mypass');
     });
 

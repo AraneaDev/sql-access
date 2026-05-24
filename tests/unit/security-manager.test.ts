@@ -230,8 +230,6 @@ describe('SecurityManager', () => {
 
     test('should identify query type correctly', async () => {
       // Note: QueryComplexityAnalysis doesn't include query_type
-      // const selectAnalysis = await securityManager.analyzeQuery(SampleQueries.basicQueries.simple);
-      // expect(selectAnalysis.query_type).toBe('SELECT');
     });
 
     test('should count joins correctly', async () => {

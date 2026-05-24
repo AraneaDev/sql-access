@@ -19,6 +19,7 @@ import type {
   ParsedServerConfig,
 } from '../types/index.js';
 import { getLogger } from '../utils/logger.js';
+import { sanitizeMessage } from '../utils/error-handler.js';
 
 // ============================================================================
 // SQL Security Manager Implementation
@@ -698,16 +699,8 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
    * Sanitize error messages to prevent information disclosure
    */
   sanitizeErrorMessage(errorMessage: string): string {
-    // Remove potentially sensitive information from error messages
-    return errorMessage
-      .replace(/password[=:]\s*[^\s;,)]+/gi, 'password=[REDACTED]')
-      .replace(/pwd[=:]\s*[^\s;,)]+/gi, 'pwd=[REDACTED]')
-      .replace(/token[=:]\s*[^\s;,)]+/gi, 'token=[REDACTED]')
-      .replace(/key[=:]\s*[^\s;,)]+/gi, 'key=[REDACTED]')
-      .replace(/secret[=:]\s*[^\s;,)]+/gi, 'secret=[REDACTED]')
-      .replace(/\b\d{4}-\d{4}-\d{4}-\d{4}\b/g, 'XXXX-XXXX-XXXX-XXXX') // Credit card numbers
-      .replace(/\b\d{3}-\d{2}-\d{4}\b/g, 'XXX-XX-XXXX') // SSN format
-      .substring(0, 500); // Limit message length
+    // Delegate to centralized sanitizer from error-handler
+    return sanitizeMessage(errorMessage);
   }
 
   // ============================================================================
@@ -978,7 +971,6 @@ export class SecurityManager extends EventEmitter implements ISecurityManager {
 
   private checkDangerousPatterns(query: string): string[] {
     const dangerous: string[] = [];
-    // Remove unused upperQuery variable - use query directly in patterns
 
     // Enhanced dangerous function patterns
     const dangerousFunctions = [

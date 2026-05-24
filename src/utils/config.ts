@@ -86,6 +86,16 @@ export function validateDatabaseConfig(config: DatabaseConfig): ValidationResult
     errors.push({ field: 'database', message: 'database name contains invalid characters' });
   }
 
+  // Reject newlines in all string values to prevent INI injection
+  for (const [key, value] of Object.entries(config)) {
+    if (typeof value === 'string' && /[\r\n]/.test(value)) {
+      errors.push({
+        field: key,
+        message: `${key} must not contain newlines to prevent INI injection`,
+      });
+    }
+  }
+
   return { valid: errors.length === 0, errors };
 }
 

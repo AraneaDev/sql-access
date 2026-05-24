@@ -535,24 +535,40 @@ export function sanitizeError(error: unknown): string {
   }
 
   if (error instanceof Error) {
-    // Remove sensitive information from error messages
-    let message = error.message;
-
-    // Remove potential password leaks
-    message = message.replace(/password[=:]\s*[^\s,;]+/gi, 'password=***');
-    message = message.replace(/pwd[=:]\s*[^\s,;]+/gi, 'pwd=***');
-
-    // Remove potential connection strings
-    message = message.replace(/[a-zA-Z0-9]+:\/\/[^\s]+/g, '<connection_string>');
-
-    // Remove file paths that might contain sensitive info
-    message = message.replace(/[C-Z]:\\[^\s,;]+/gi, '<file_path>');
-    message = message.replace(/\/[^\s,;]+/g, '<file_path>');
-
-    return message;
+    return sanitizeMessage(error.message);
   }
 
   return 'Unknown error occurred';
+}
+
+/**
+ * Sanitize a raw error message string by removing sensitive information.
+ * Shared by both sanitizeError and SecurityManager.sanitizeErrorMessage.
+ */
+export function sanitizeMessage(message: string): string {
+  // Remove potential sensitive data leaks
+  message = message.replace(
+    /(password|pwd|token|key|secret|api_key)[=:]\s*[^\s,;]+/gi,
+    '$1=[REDACTED]'
+  );
+
+  // Remove potential connection strings
+  message = message.replace(/[a-zA-Z0-9]+:\/\/[^\s]+/g, '<connection_string>');
+
+  // Remove file paths that might contain sensitive info
+  message = message.replace(/[C-Z]:\\[^\s,;]+/gi, '<file_path>');
+  message = message.replace(/\/[^\s,;]+/g, '<file_path>');
+
+  // Mask credit card numbers
+  message = message.replace(/\b\d{4}-\d{4}-\d{4}-\d{4}\b/g, 'XXXX-XXXX-XXXX-XXXX');
+
+  // Mask SSN format
+  message = message.replace(/\b\d{3}-\d{2}-\d{4}\b/g, 'XXX-XX-XXXX');
+
+  // Limit message length to prevent information leakage
+  message = message.substring(0, 500);
+
+  return message;
 }
 
 /**

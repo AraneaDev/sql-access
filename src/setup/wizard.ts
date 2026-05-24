@@ -17,9 +17,6 @@ import type {
 } from '../types/config.js';
 import { DEFAULT_DATABASE_PORTS } from '../types/config.js';
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-
 export interface SetupWizardOptions {
   configPath?: string;
   skipTests?: boolean;
