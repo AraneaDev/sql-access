@@ -557,7 +557,7 @@ export function sanitizeMessage(message: string): string {
 
   // Remove file paths that might contain sensitive info
   message = message.replace(/[C-Z]:\\[^\s,;]+/gi, '<file_path>');
-  message = message.replace(/\/[^\s,;]+/g, '<file_path>');
+  message = message.replace(/(?<![a-zA-Z0-9._-])(?:\/[a-zA-Z0-9._-]+){2,}/g, '<file_path>');
 
   // Mask credit card numbers
   message = message.replace(/\b\d{4}-\d{4}-\d{4}-\d{4}\b/g, 'XXXX-XXXX-XXXX-XXXX');

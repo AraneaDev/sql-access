@@ -411,6 +411,26 @@ describe('error-handler', () => {
       expect(sanitized).toContain('<file_path>');
     });
 
+    it('should NOT sanitize mathematical division like 1/0 or a/b', () => {
+      const err1 = new Error('division by zero: 1/0');
+      expect(sanitizeError(err1)).toContain('1/0');
+      expect(sanitizeError(err1)).not.toContain('<file_path>');
+
+      const err2 = new Error('syntax error at a/b');
+      expect(sanitizeError(err2)).toContain('a/b');
+      expect(sanitizeError(err2)).not.toContain('<file_path>');
+    });
+
+    it('should sanitize absolute paths even when wrapped in quotes or parentheses', () => {
+      const err1 = new Error("failed loading '/root/sql-ts/keys/db_key'");
+      expect(sanitizeError(err1)).toContain('<file_path>');
+      expect(sanitizeError(err1)).not.toContain('/root/sql-ts');
+
+      const err2 = new Error('error (in /tmp/test-config.ini) occurred');
+      expect(sanitizeError(err2)).toContain('<file_path>');
+      expect(sanitizeError(err2)).not.toContain('/tmp/test-config');
+    });
+
     it('should return Unknown error for non-Error', () => {
       expect(sanitizeError('string')).toBe('Unknown error occurred');
       expect(sanitizeError(42)).toBe('Unknown error occurred');
