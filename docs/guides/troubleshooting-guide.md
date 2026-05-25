@@ -645,8 +645,8 @@ When reporting issues, include:
 - **System logs**: `/var/log/` (Linux) or Console app (macOS)
 
 ### Community Support
-- **GitHub Issues**: [Report bugs and issues](https://github.com/your-org/claude-sql-ts/issues)
-- **GitHub Discussions**: [Ask questions and get help](https://github.com/your-org/claude-sql-ts/discussions)
+- **GitHub Issues**: [Report bugs and issues](https://github.com/AraneaDev/mcp-sql-access-server/issues)
+- **GitHub Discussions**: [Ask questions and get help](https://github.com/AraneaDev/mcp-sql-access-server/discussions)
 - **Documentation**: [Browse all documentation](../README.md)
 
 ---

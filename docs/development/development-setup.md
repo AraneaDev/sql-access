@@ -18,8 +18,8 @@ This guide provides a comprehensive development environment setup for contributi
 
 ```bash
 # Clone the repository
-https://github.com/AraneaDev/sql-access.git
-cd sql-access
+git clone https://github.com/AraneaDev/mcp-sql-access-server.git
+cd mcp-sql-access-server
 
 # Install dependencies
 npm install

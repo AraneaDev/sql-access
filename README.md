@@ -1,9 +1,9 @@
 # MCP SQL Access Server v2.5.1
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Test Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen)](https://github.com/your-org/sql-ts)
+[![Test Coverage](https://img.shields.io/badge/Coverage-88%25-brightgreen)](https://github.com/AraneaDev/mcp-sql-access-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/Tests-1181%20passing-success)](https://github.com/your-org/sql-ts)
+[![Tests](https://img.shields.io/badge/Tests-1181%20passing-success)](https://github.com/AraneaDev/mcp-sql-access-server)
 [![ESLint](https://img.shields.io/badge/ESLint-0%20warnings-brightgreen?logo=eslint)](https://eslint.org/)
 [![JSDoc](https://img.shields.io/badge/JSDoc-enforced-blue)](https://jsdoc.app/)
 [![Strict TypeScript](https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript)](https://www.typescriptlang.org/)
@@ -40,8 +40,8 @@
 
 ### 1. Install
 ```bash
-git clone https://github.com/AraneaDev/sql-access.git
-cd sql-access
+git clone https://github.com/AraneaDev/mcp-sql-access-server.git
+cd mcp-sql-access-server
 npm install
 npm run build
 npm link
@@ -283,8 +283,8 @@ The following CLI commands are available after installation:
 
 ### Development Setup
 ```bash
-git clone https://github.com/AraneaDev/sql-access.git
-cd sql-access
+git clone https://github.com/AraneaDev/mcp-sql-access-server.git
+cd mcp-sql-access-server
 npm install
 npm run dev
 npm test

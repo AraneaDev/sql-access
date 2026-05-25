@@ -110,7 +110,7 @@ EXAMPLES:
  # Setup without connection tests
  node dist/setup.js --skip-tests
 
-For more information, visit: https://github.com/your-org/claude-sql-mcp-server
+For more information, visit: https://github.com/AraneaDev/mcp-sql-access-server
 `);
 }
 

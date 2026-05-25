@@ -111,7 +111,7 @@ After getting basic setup working:
 
 - **Documentation**: [docs/README.md](../../docs/README.md)
 - **Troubleshooting**: [docs/guides/troubleshooting-guide.md](../../docs/guides/troubleshooting-guide.md)
-- **Issues**: [GitHub Issues](https://github.com/your-repo/sql-mcp-server/issues)
+- **Issues**: [GitHub Issues](https://github.com/AraneaDev/mcp-sql-access-server/issues)
 
 ## File Descriptions
 

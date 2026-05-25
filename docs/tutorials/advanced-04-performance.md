@@ -1113,4 +1113,4 @@ After mastering performance optimization:
 
 ---
 
-*This tutorial completes the SQL MCP Server Advanced Configuration Series. For questions or feedback, please refer to our [community discussions](https://github.com/your-org/sql-mcp-server/discussions).*
+*This tutorial completes the SQL MCP Server Advanced Configuration Series. For questions or feedback, please refer to our [community discussions](https://github.com/AraneaDev/mcp-sql-access-server/discussions).*

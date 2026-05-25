@@ -886,4 +886,4 @@ After mastering SSH tunnel configuration:
 
 ---
 
-*This tutorial is part of the SQL MCP Server Advanced Configuration Series. For questions or feedback, please refer to our [community discussions](https://github.com/your-org/sql-mcp-server/discussions).*
+*This tutorial is part of the SQL MCP Server Advanced Configuration Series. For questions or feedback, please refer to our [community discussions](https://github.com/AraneaDev/mcp-sql-access-server/discussions).*

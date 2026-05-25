@@ -84,8 +84,8 @@ For development or customization:
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/sql-mcp-server.git
-cd sql-mcp-server
+git clone https://github.com/AraneaDev/mcp-sql-access-server.git
+cd mcp-sql-access-server
 
 # Install dependencies
 npm install
