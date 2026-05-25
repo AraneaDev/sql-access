@@ -179,11 +179,8 @@ query_timeout=30000
 | `query_timeout` | `30000` | Query timeout (ms) | 1000-600000 |
 
 #### Performance Settings
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `connection_pool_size` | `5` | Connections per database |
-| `schema_cache_ttl` | `3600` | Schema cache lifetime (seconds) |
-| `log_level` | `INFO` | Logging verbosity |
+Performance features such as **Connection Pooling** (10 connections for PostgreSQL and pooled drivers) and **Schema Caching** (persistent in `./schemas/` on-demand) are managed internally by the server. 
+Logging verbosity can be set via command-line arguments or environment variables (`LOG_LEVEL`).
 
 ---
 

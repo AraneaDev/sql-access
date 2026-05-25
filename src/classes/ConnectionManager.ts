@@ -757,12 +757,50 @@ export class ConnectionManager extends EventEmitter {
    */
   private classifyErrorCategory(err: unknown): string {
     if (err instanceof CircuitOpenError) return 'CONNECTION';
-    const name = (err as Error)?.name ?? '';
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errorObj = err as any;
+    const name = errorObj?.name ?? '';
     if (name.includes('SSH') || name === 'SSHTunnelError') return 'SSH';
     if (name === 'ConnectionError') return 'CONNECTION';
     if (name === 'SecurityViolationError') return 'SECURITY';
     if (name === 'QueryExecutionError') return 'QUERY';
     if (name === 'TimeoutError') return 'TIMEOUT';
+
+    // Robust inspection of codes and messages for query-time network/connection/SSH failures
+    const code = String(errorObj?.code || errorObj?.originalError?.code || '').toUpperCase();
+    if (
+      code === 'ECONNREFUSED' ||
+      code === 'ENOTFOUND' ||
+      code === 'EPIPE' ||
+      code === 'ECONNRESET' ||
+      code === 'ETIMEDOUT' ||
+      code === 'ESOCKETTIMEDOUT' ||
+      code === 'PROTOCOL_CONNECTION_LOST'
+    ) {
+      return code.includes('SSH') ? 'SSH' : 'CONNECTION';
+    }
+
+    const message = errorObj?.message ?? '';
+    const lowerMessage = message.toLowerCase();
+    if (
+      lowerMessage.includes('econnrefused') ||
+      lowerMessage.includes('enotfound') ||
+      lowerMessage.includes('epipe') ||
+      lowerMessage.includes('etimedout') ||
+      lowerMessage.includes('econnreset') ||
+      lowerMessage.includes('connection closed') ||
+      lowerMessage.includes('connection lost') ||
+      lowerMessage.includes('socket') ||
+      lowerMessage.includes('terminated') ||
+      lowerMessage.includes('handshake')
+    ) {
+      if (lowerMessage.includes('ssh') || lowerMessage.includes('tunnel')) {
+        return 'SSH';
+      }
+      return 'CONNECTION';
+    }
+
     return 'QUERY';
   }
 
@@ -840,6 +878,11 @@ export class ConnectionManager extends EventEmitter {
         this.queryCache.set(dbName, query, params, result, ttl);
       }
 
+      // Invalidate cache for mutation queries
+      if (this.queryCache?.isMutation(query)) {
+        this.queryCache.invalidate(dbName);
+      }
+
       // Fire-and-forget audit log
       const dbConfig = this.getDatabaseConfig(dbName);
       if (dbConfig?.audit_log) {
@@ -857,6 +900,13 @@ export class ConnectionManager extends EventEmitter {
 
       // Only advance circuit breaker for CONNECTION/SSH errors
       if (category === 'CONNECTION' || category === 'SSH') {
+        // Evict/close broken connection
+        await this.closeConnection(dbName).catch((evictError) => {
+          this.logger.error(`Failed to evict dead connection for database '${dbName}'`, {
+            error: evictError.message,
+          });
+        });
+
         const currentCircuit = this.getCircuit(dbName);
         const prevStatus = currentCircuit.status;
         const newCircuit = recordFailure(currentCircuit, Date.now());

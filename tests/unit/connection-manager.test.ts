@@ -1541,6 +1541,42 @@ describe('ConnectionManager', () => {
         expect(err.message).toContain('Syntax error');
       }
     });
+
+    test('query connection drop (ECONNRESET) advances circuit breaker and evicts connection', async () => {
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest
+        .spyOn(mockAdapter, 'executeQuery')
+        .mockRejectedValue(
+          new Error('PostgreSQL adapter error: Failed to execute query - read ECONNRESET')
+        );
+      jest.spyOn(connectionManager as any, 'createAdapter').mockReturnValue(mockAdapter);
+      connectionManager.on('error', () => {});
+
+      connectionManager.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await connectionManager.getConnection('test_db');
+
+      expect(connectionManager.isConnected('test_db')).toBe(true);
+
+      // Fire 1 query — should throw and evict connection from maps
+      await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow(
+        'ECONNRESET'
+      );
+
+      // The connection should have been evicted from maps immediately
+      expect(connectionManager.isConnected('test_db')).toBe(false);
+
+      // Fire 4 more query failures to trip circuit
+      for (let i = 0; i < 4; i++) {
+        await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow();
+      }
+
+      // 6th call should throw CircuitOpenError
+      await expect(connectionManager.executeQuery('test_db', 'SELECT 1')).rejects.toThrow(
+        /unavailable.*retry in \d+s/
+      );
+    });
   });
 
   // ============================================================================
@@ -1597,6 +1633,40 @@ describe('ConnectionManager', () => {
 
       // Both calls should have hit the DB
       expect(execSpy).toHaveBeenCalledTimes(2);
+
+      await cmWithCache.closeAll();
+    });
+
+    test('mutations invalidate cached SELECT results', async () => {
+      const { QueryCache } = await import('../../src/classes/QueryCache.js');
+      const cache = new QueryCache();
+      const cmWithCache = new ConnectionManager(mockSSHTunnelManager, undefined, cache);
+
+      const mockAdapter = MockDatabaseFactory.createPostgresAdapter(
+        TestConfigFixtures.validPostgresConfig
+      );
+      jest.spyOn(cmWithCache as any, 'createAdapter').mockReturnValue(mockAdapter);
+
+      cmWithCache.registerDatabase('test_db', TestConfigFixtures.validPostgresConfig);
+      await cmWithCache.getConnection('test_db');
+
+      const execSpy = jest.spyOn(mockAdapter, 'executeQuery');
+
+      // 1. SELECT query hits DB and caches result
+      await cmWithCache.executeQuery('test_db', 'SELECT * FROM users');
+      expect(execSpy).toHaveBeenCalledTimes(1);
+
+      // 2. Second SELECT comes from cache
+      await cmWithCache.executeQuery('test_db', 'SELECT * FROM users');
+      expect(execSpy).toHaveBeenCalledTimes(1);
+
+      // 3. Mutation query (UPDATE) invalidates cache
+      await cmWithCache.executeQuery('test_db', "UPDATE users SET name = 'Bob' WHERE id = 1");
+      expect(execSpy).toHaveBeenCalledTimes(2);
+
+      // 4. Subsequent SELECT query misses cache and hits DB
+      await cmWithCache.executeQuery('test_db', 'SELECT * FROM users');
+      expect(execSpy).toHaveBeenCalledTimes(3);
 
       await cmWithCache.closeAll();
     });

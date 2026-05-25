@@ -267,75 +267,42 @@ ssh_private_key=/secure/keys/sql-mcp-key
 
 ## Advanced Tunnel Configurations
 
-### 1. Dynamic Port Allocation
+#### 1. Dynamic Port Allocation
 
 **Automatic port assignment**:
 ```ini
-# Let system choose available ports
+# Let system choose available local port automatically
 [database.dynamic_tunnel]
 type=postgresql
-host=localhost
-port=0 # System will assign available port
+host=db.internal.com       # Database host relative to bastion bastion
+port=5432                  # Database port on remote network
 database=production
-# ... other settings
+username=app_user
+password=secure_password
 
 ssh_host=bastion.company.com
 ssh_username=tunnel_user
 ssh_private_key=/keys/tunnel.key
-ssh_local_port=0 # Auto-assign local port
-ssh_remote_host=db.internal.com
-ssh_remote_port=5432
+local_port=0               # Auto-assign available local port (or omit)
 ```
 
-### 2. Connection Pooling with Tunnels
+### 2. Static Port Configuration
 
-**Optimized tunnel configuration for connection pools**:
+**Bind tunnel to a specific local port**:
 ```ini
-[database.pooled_connection]
+[database.static_tunnel]
 type=postgresql
-host=localhost
-port=15432
+host=db.internal.com
+port=5432
 database=production
-# ... database settings
+username=app_user
+password=secure_password
 
-# SSH tunnel optimized for connection pooling
 ssh_host=bastion.company.com
-ssh_username=pool_tunnel
-ssh_private_key=/keys/pool.key
-ssh_compression=true # Enable compression
-ssh_keep_alive=60 # Keep connection alive
-ssh_keep_alive_count_max=3 # Max keep-alive failures
-ssh_tcp_keep_alive=true # TCP level keep-alive
-
-# Connection pool settings
-[extension]
-connection_pool_size=5 # Reuse tunnel connections
-ssh_tunnel_pool_size=2 # SSH tunnel connection pool
-```
-
-### 3. High Availability Tunnel Setup
-
-**Multiple bastion hosts for redundancy**:
-```ini
-# Primary tunnel path
-[database.ha_production]
-type=postgresql
-host=localhost
-port=15432
-database=production
-# ... database settings
-
-# Primary SSH tunnel
-ssh_host=bastion1.company.com
-ssh_username=tunnel_service
+ssh_username=tunnel_user
 ssh_private_key=/keys/tunnel.key
-ssh_remote_host=db.internal.com
-ssh_remote_port=5432
-
-# Fallback configuration (handled by connection logic)
-ssh_fallback_host=bastion2.company.com
-ssh_fallback_username=tunnel_service
-ssh_fallback_private_key=/keys/tunnel.key
+local_port=15432           # Manually bind to local port 15432
+ssh_local_host=127.0.0.1   # Local bind address (default: 127.0.0.1)
 ```
 
 ## Security Hardening

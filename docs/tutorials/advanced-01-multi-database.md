@@ -100,7 +100,6 @@ max_query_length=15000
 max_rows=2000
 max_batch_size=8
 query_timeout=45000
-connection_pool_size=3 # Per database
 ```
 
 ### 2. Environment-Based Configuration
@@ -212,7 +211,6 @@ max_query_length=8000
 max_rows=1000
 max_batch_size=5
 query_timeout=30000
-connection_pool_size=2
 ```
 
 ## Advanced Query Strategies
@@ -344,21 +342,13 @@ VALUES (12345, 15, 2450.75, 163.38, datetime('now'));
 
 ## Performance Optimization
 
-### 1. Connection Pool Sizing
+### 1. Connection Pooling
 
-**Calculate optimal pool sizes**:
-```ini
-[extension]
-# Formula: (Number of CPU cores) * 2 + Number of databases
-connection_pool_size=4 # For 8-core system with 4 databases
-
-# Per-database overrides for different workloads
-[database.high_volume_orders]
-connection_pool_size=6 # Higher for heavy-use database
-
-[database.archive_data]
-connection_pool_size=1 # Lower for rarely-used database
-```
+The SQL MCP Server manages connection pooling internally to optimize database resource utilization and ensure rapid response times:
+- **PostgreSQL**: Utilizes `pg.Pool` with an automatic pool size of 10 concurrent connections.
+- **MySQL**: Managed via `mysql2.createPool` for efficient connection reuse.
+- **SQLite**: Single file access handles concurrency natively.
+- **Cleanup**: Active connections are safely returned to the pool, and pools are destroyed within a 10-second timeout during server shutdown.
 
 ### 2. Query Routing Optimization
 
@@ -552,7 +542,7 @@ SELECT 1 as test FROM cache.metadata LIMIT 1; -- SQLite
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
 | Connection timeout | Slow queries, timeouts | Adjust `timeout` settings per database |
-| Pool exhaustion | "No connections available" | Increase `connection_pool_size` |
+| Pool exhaustion | "No connections available" | Optimize query execution times or reduce concurrent batch queries |
 | SSL certificate errors | SSL handshake failures | Check certificate paths and validity |
 | Cross-database confusion | Wrong results | Verify database names in queries |
 

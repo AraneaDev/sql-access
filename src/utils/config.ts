@@ -3,8 +3,8 @@
  * Handles loading and validating database configuration from config.ini
  */
 
-import { readFileSync, existsSync, writeFileSync, statSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, existsSync, writeFileSync, statSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import { parse as parseIni } from 'ini';
 
 import type {
@@ -620,7 +620,22 @@ export function saveConfigFile(config: ParsedServerConfig, configPath?: string):
           key !== 'redaction' &&
           key !== 'mcp_configurable'
         ) {
-          iniString += `${key}=${value}\n`;
+          if (key === 'ssh_private_key' && String(value).includes('-----BEGIN')) {
+            try {
+              const configDir = dirname(path);
+              const keysDir = join(configDir, 'keys');
+              if (!existsSync(keysDir)) {
+                mkdirSync(keysDir, { recursive: true });
+              }
+              const keyPath = join(keysDir, `${name}_ssh_key`);
+              writeFileSync(keyPath, String(value), { mode: 0o600 });
+              iniString += `${key}=${keyPath}\n`;
+            } catch {
+              iniString += `${key}=${value}\n`;
+            }
+          } else {
+            iniString += `${key}=${value}\n`;
+          }
         }
       }
 

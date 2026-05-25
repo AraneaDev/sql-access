@@ -21,10 +21,12 @@ jest.mock('fs', () => ({
   writeFileSync: jest.fn(),
   existsSync: jest.fn(),
   statSync: jest.fn(),
+  mkdirSync: jest.fn(),
 }));
 
 jest.mock('path', () => ({
   join: jest.fn((...args: string[]) => args.join('/')),
+  dirname: jest.fn((p) => p.substring(0, p.lastIndexOf('/')) || '/'),
 }));
 
 jest.mock('ini', () => ({
@@ -35,8 +37,8 @@ jest.mock('../../../src/utils/error-handler.js', () => ({
   getErrorMessage: (err: unknown) => (err instanceof Error ? err.message : 'Unknown error'),
 }));
 
-import { readFileSync, existsSync, writeFileSync, statSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, existsSync, writeFileSync, statSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 import { parse as parseIni } from 'ini';
 
 const mockFs = {
@@ -44,9 +46,11 @@ const mockFs = {
   existsSync: existsSync as jest.MockedFunction<typeof existsSync>,
   writeFileSync: writeFileSync as jest.MockedFunction<typeof writeFileSync>,
   statSync: statSync as jest.MockedFunction<typeof statSync>,
+  mkdirSync: mkdirSync as jest.MockedFunction<typeof mkdirSync>,
 };
 const mockParseIni = parseIni as jest.MockedFunction<typeof parseIni>;
 const mockJoin = join as jest.MockedFunction<typeof join>;
+const mockDirname = dirname as jest.MockedFunction<typeof dirname>;
 
 describe('config', () => {
   beforeEach(() => {
@@ -1034,6 +1038,54 @@ describe('config', () => {
 
       const written = (mockFs.writeFileSync as jest.Mock).mock.calls[0][1] as string;
       expect(written).not.toContain('password=');
+    });
+
+    it('should extract multiline ssh_private_key to a separate secure file and store path', () => {
+      const privateKeyContent =
+        '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA...\n-----END RSA PRIVATE KEY-----';
+      const config: ParsedServerConfig = {
+        databases: {
+          mydb: {
+            type: 'postgresql',
+            host: 'localhost',
+            username: 'root',
+            select_only: true,
+            ssh_host: 'bastion.com',
+            ssh_username: 'sshuser',
+            ssh_private_key: privateKeyContent,
+          } as DatabaseConfig,
+        },
+        security: {
+          max_joins: 10,
+          max_subqueries: 5,
+          max_unions: 3,
+          max_group_bys: 5,
+          max_complexity_score: 100,
+          max_query_length: 10000,
+        },
+        extension: { max_rows: 1000, max_batch_size: 10, query_timeout: 30000 },
+      };
+
+      saveConfigFile(config, '/test/config.ini');
+
+      // writeFileSync should have been called twice:
+      // 1. to write the key to '/test/keys/mydb_ssh_key'
+      // 2. to write the INI file to '/test/config.ini'
+      expect(mockFs.writeFileSync).toHaveBeenCalledTimes(2);
+
+      // Verify key extraction file call
+      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
+        '/test/keys/mydb_ssh_key',
+        privateKeyContent,
+        { mode: 0o600 }
+      );
+
+      // Verify INI content uses the key file path
+      const written = (mockFs.writeFileSync as jest.Mock).mock.calls.find(
+        (call) => call[0] === '/test/config.ini'
+      )[1] as string;
+      expect(written).toContain('ssh_private_key=/test/keys/mydb_ssh_key');
+      expect(written).not.toContain(privateKeyContent);
     });
   });
 });

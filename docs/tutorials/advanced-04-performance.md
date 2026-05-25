@@ -76,65 +76,21 @@ max_temporary_tables=5
 query_complexity_scoring=true
 ```
 
-### 2. Multi-Level Caching System
+### 2. Query Caching System
 
-**Advanced Caching Configuration**:
-```ini
-# Multi-tier caching configuration
-[cache]
-# Level 1: In-memory cache
-l1_enabled=true
-l1_max_size=256MB
-l1_ttl=300 # 5 minutes
+The SQL MCP Server includes a high-performance in-memory TTL-LRU query cache for SELECT queries:
+- **Per-Database Partitioning**: Caches are partitioned per database to prevent query collision.
+- **LRU Eviction**: Limits cache entries (default: 100 entries per database) using Least Recently Used replacement.
+- **Automatic Invalidation**: Automatically clears the cached partition for a database when a mutation query (INSERT, UPDATE, DELETE, etc.) is executed in a batch query.
+- **Default TTL**: Cached results are valid for 60 seconds by default.
 
-# Level 2: Redis cache
-l2_enabled=true
-l2_host=redis-cluster.company.com
-l2_port=6379
-l2_max_memory=2GB
-l2_ttl=1800 # 30 minutes
+### 3. Connection Pooling
 
-# Level 3: Persistent cache
-l3_enabled=true
-l3_path=/var/cache/sql-mcp
-l3_max_size=10GB
-l3_ttl=86400 # 24 hours
-
-# Cache strategies
-invalidation_strategy=smart
-cache_warming=true
-preload_common_queries=true
-```
-
-### 3. Connection Pool Optimization
-
-**Advanced Connection Pool Settings**:
-```ini
-# Dynamic connection pooling
-[connection_pools]
-dynamic_sizing=true
-min_pool_size=2
-max_pool_size=20
-target_utilization=0.7
-
-# Pool per database with optimization
-[database.high_performance]
-type=postgresql
-host=perf-db.company.com
-port=5432
-database=performance_db
-username=perf_user
-password=perf_password
-
-# Optimized pool settings
-connection_pool_size=12
-max_idle_connections=4
-idle_timeout=300000
-connection_timeout=10000
-validation_query=SELECT 1
-test_on_borrow=true
-test_while_idle=true
-```
+Connection pooling is automatically managed for high-performance and connection reuse:
+- **PostgreSQL**: Managed via `pg.Pool` with an automatic pool size of 10 concurrent connections.
+- **MySQL**: Managed via `mysql2.createPool` for efficient connection reuse.
+- **SQLite**: Single file access handles concurrency natively.
+- **Cleanup**: Active connections are safely returned to the pool, and pools are destroyed within a 10-second timeout during server shutdown.
 
 ## Database-Specific Performance Optimizations
 

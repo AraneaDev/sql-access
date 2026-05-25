@@ -513,6 +513,66 @@ Get the current configuration of a database. Passwords and SSH credentials are a
 
 ---
 
+### `sql_get_metrics`
+Get in-memory performance metrics for configured databases. Returns query latency (min/max/avg/p95), error counts by category, circuit breaker state, cache hit rate, and pool utilization.
+
+#### Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `database` | `string` | No | Optional database name. Omit to get metrics for all databases. |
+
+#### Features
+- **Query Latency Tracking**: Tracks min, max, average, and p95 query execution latencies
+- **Error Tracking by Category**: Tracks query, connection, timeout, and security errors
+- **Circuit Breaker State**: Reports current state (CLOSED, OPEN, HALF_OPEN)
+- **Cache Efficiency**: Reports cache hit and miss statistics
+- **Real-time Performance Monitoring**: Instant in-memory stats snapshot as formatted JSON
+
+#### Example Usage
+```json
+{
+  "tool": "sql_get_metrics",
+  "arguments": {
+    "database": "production"
+  }
+}
+```
+
+#### Response Format
+```json
+{
+  "database": "production",
+  "uptime": 123456,
+  "queries": {
+    "total": 156,
+    "success": 154,
+    "failure": 2
+  },
+  "latency": {
+    "min": 2,
+    "max": 245,
+    "avg": 15,
+    "p95": 45
+  },
+  "errors": {
+    "query": 1,
+    "connection": 1,
+    "timeout": 0,
+    "security": 0
+  },
+  "circuit": {
+    "events": []
+  },
+  "cache": {
+    "hits": 42,
+    "misses": 114,
+    "hitRate": 0.269
+  }
+}
+```
+
+---
+
 ### `sql_set_mcp_configurable`
 Lock a database from MCP configuration changes. This is a one-way operation -- once locked, only manual editing of config.ini can re-enable MCP configuration access.
 
@@ -780,6 +840,16 @@ Troubleshooting:
 ```json
 {
  "tool": "sql_get_config",
+ "arguments": {
+ "database": "production"
+ }
+}
+```
+
+### View Performance Metrics
+```json
+{
+ "tool": "sql_get_metrics",
  "arguments": {
  "database": "production"
  }
