@@ -196,8 +196,8 @@ export function parseDatabaseConfig(name: string, config: Record<string, string>
 
   const dbConfig: DatabaseConfig = {
     type: config.type.toLowerCase() as DatabaseTypeString,
-    select_only: config.select_only === 'true',
-    mcp_configurable: config.mcp_configurable === 'true',
+    select_only: parseBool(config.select_only),
+    mcp_configurable: parseBool(config.mcp_configurable),
   };
 
   // Handle SQLite specific configuration
@@ -221,7 +221,7 @@ export function parseDatabaseConfig(name: string, config: Record<string, string>
   }
 
   // Parse redaction configuration if present
-  if (config.redaction_enabled === 'true') {
+  if (parseBool(config.redaction_enabled)) {
     dbConfig.redaction = parseRedactionConfig(name, config);
   }
 
@@ -258,8 +258,8 @@ function validateNetworkedDatabase(
   dbConfig.database = config.database;
   dbConfig.username = config.username;
   dbConfig.password = config.password;
-  dbConfig.ssl = config.ssl === 'true';
-  dbConfig.ssl_verify = config.ssl_verify === 'true';
+  dbConfig.ssl = parseBool(config.ssl);
+  dbConfig.ssl_verify = parseBool(config.ssl_verify);
 
   // Validate timeout
   const timeout = parseInt(config.timeout);
@@ -337,9 +337,9 @@ function parseRedactionConfig(
   const redactionConfig: DatabaseRedactionConfig = {
     enabled: true,
     rules: [],
-    log_redacted_access: config.redaction_log_access === 'true',
-    audit_redacted_queries: config.redaction_audit_queries === 'true',
-    case_sensitive_matching: config.redaction_case_sensitive === 'true',
+    log_redacted_access: parseBool(config.redaction_log_access),
+    audit_redacted_queries: parseBool(config.redaction_audit_queries),
+    case_sensitive_matching: parseBool(config.redaction_case_sensitive),
   };
 
   // Parse redaction rules from configuration
@@ -693,4 +693,14 @@ export function saveConfigFile(config: ParsedServerConfig, configPath?: string):
   }
 
   writeFileSync(path, iniString, 'utf-8');
+}
+
+/**
+ * Helper to parse boolean values robustly
+ */
+function parseBool(val: unknown): boolean {
+  if (val === undefined || val === null) return false;
+  if (typeof val === 'boolean') return val;
+  const str = String(val).toLowerCase();
+  return str === 'true' || str === '1';
 }

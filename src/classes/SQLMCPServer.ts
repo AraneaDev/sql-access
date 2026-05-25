@@ -5,28 +5,27 @@
  */
 
 import { EventEmitter } from 'events';
-import { readFileSync, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { join, dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const _currentFile = fileURLToPath(import.meta.url);
 const _currentDir = dirname(_currentFile);
 const PROJECT_ROOT = resolve(_currentDir, '..', '..');
-import { parse as parseIni } from 'ini';
+import { loadConfiguration } from '../utils/config.js';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import type {
   DatabaseConfig,
-  DatabaseTypeString,
   ParsedServerConfig,
   TestConnectionResult,
   MCPRequest,
   MCPResponse,
 } from '../types/index.js';
 
-import { SERVER_VERSION, SERVER_NAME, DEFAULT_DATABASE_PORTS } from '../types/index.js';
+import { SERVER_VERSION, SERVER_NAME } from '../types/index.js';
 
 import { MetricsManager } from './MetricsManager.js';
 import { QueryCache } from './QueryCache.js';
@@ -412,9 +411,7 @@ export class SQLMCPServer extends EventEmitter {
     }
 
     try {
-      const configContent = readFileSync(finalConfigPath, 'utf-8');
-      const rawConfig = parseIni(configContent);
-      this.config = this.parseConfig(rawConfig);
+      this.config = loadConfiguration(finalConfigPath);
 
       this.logger.info(
         `Configuration loaded: ${Object.keys(this.config.databases).length} databases configured`
@@ -430,93 +427,6 @@ export class SQLMCPServer extends EventEmitter {
       this.logger.error('Failed to load configuration', { error, configPath: finalConfigPath });
       throw new Error(`Failed to load config.ini: ${getErrorMessage(error)}`);
     }
-  }
-
-  private parseConfig(rawConfig: Record<string, unknown>): ParsedServerConfig {
-    const databases: Record<string, DatabaseConfig> = {};
-
-    if (rawConfig.database && typeof rawConfig.database === 'object') {
-      for (const [name, config] of Object.entries(rawConfig.database as Record<string, unknown>)) {
-        databases[name] = this.parseDatabaseConfig(name, config as Record<string, unknown>);
-      }
-    }
-
-    for (const [key, value] of Object.entries(rawConfig)) {
-      if (key.startsWith('database.')) {
-        const dbName = key.replace('database.', '');
-        if (!databases[dbName]) {
-          databases[dbName] = this.parseDatabaseConfig(dbName, value as Record<string, unknown>);
-        }
-      }
-    }
-
-    return {
-      databases,
-      security: rawConfig.security
-        ? (() => {
-            const sec = rawConfig.security as Record<string, string>;
-            return {
-              max_joins: parseInt(sec.max_joins) || 10,
-              max_subqueries: parseInt(sec.max_subqueries) || 5,
-              max_unions: parseInt(sec.max_unions) || 3,
-              max_group_bys: parseInt(sec.max_group_bys) || 5,
-              max_complexity_score: parseInt(sec.max_complexity_score) || 100,
-              max_query_length: parseInt(sec.max_query_length) || 10000,
-            };
-          })()
-        : undefined,
-      extension: rawConfig.extension
-        ? (() => {
-            const ext = rawConfig.extension as Record<string, string>;
-            return {
-              max_rows: parseInt(ext.max_rows) || 1000,
-              max_batch_size: parseInt(ext.max_batch_size) || 10,
-              query_timeout: parseInt(ext.query_timeout) || 30000,
-            };
-          })()
-        : undefined,
-    };
-  }
-
-  private parseDatabaseConfig(name: string, config: Record<string, unknown>): DatabaseConfig {
-    if (!config.type) {
-      throw new Error(`Database ${name} missing required 'type' field`);
-    }
-
-    const type = config.type as string;
-    const dbConfig: DatabaseConfig = {
-      type: type as DatabaseConfig['type'],
-      select_only: config.select_only === 'true' || config.select_only === true,
-    };
-
-    if (type !== 'sqlite') {
-      if (!config.host) throw new Error(`Database ${name} missing required 'host' field`);
-      if (!config.username) throw new Error(`Database ${name} missing required 'username' field`);
-
-      dbConfig.host = config.host as string;
-      dbConfig.port =
-        parseInt(config.port as string) ||
-        (DEFAULT_DATABASE_PORTS[type as DatabaseTypeString] ?? 0);
-      dbConfig.database = config.database as string;
-      dbConfig.username = config.username as string;
-      dbConfig.password = config.password as string;
-      dbConfig.ssl = config.ssl === 'true' || config.ssl === true;
-      dbConfig.timeout = parseInt(config.timeout as string) || 30000;
-    } else {
-      if (!config.file) throw new Error(`SQLite database ${name} missing required 'file' field`);
-      dbConfig.file = config.file as string;
-    }
-
-    if (config.ssh_host) {
-      dbConfig.ssh_host = config.ssh_host as string;
-      dbConfig.ssh_port = parseInt(config.ssh_port as string) || 22;
-      dbConfig.ssh_username = config.ssh_username as string;
-      dbConfig.ssh_password = config.ssh_password as string;
-      dbConfig.ssh_private_key = config.ssh_private_key as string;
-      dbConfig.ssh_passphrase = config.ssh_passphrase as string;
-    }
-
-    return dbConfig;
   }
 
   private async initializeManagers(): Promise<void> {

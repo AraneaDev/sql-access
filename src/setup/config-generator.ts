@@ -5,6 +5,7 @@ import type {
   ExtensionConfig,
   SecurityConfig,
   GeneratedConfigFile,
+  FieldRedactionRule,
 } from '../types/config.js';
 
 /**
@@ -24,8 +25,55 @@ export class ConfigGenerator {
         const dbConfig = value as DatabaseConfig;
 
         for (const [prop, val] of Object.entries(dbConfig)) {
-          if (val !== undefined && val !== null) {
+          if (
+            val !== undefined &&
+            val !== null &&
+            prop !== 'redaction' &&
+            prop !== 'mcp_configurable'
+          ) {
             configString += `${prop}=${this.formatConfigValue(val)}\n`;
+          }
+        }
+
+        // Write mcp_configurable flag explicitly
+        if (dbConfig.mcp_configurable !== undefined) {
+          configString += `mcp_configurable=${this.formatConfigValue(dbConfig.mcp_configurable)}\n`;
+        }
+
+        // Handle redaction configuration separately
+        if (dbConfig.redaction?.enabled) {
+          configString += 'redaction_enabled=true\n';
+
+          if (dbConfig.redaction.rules.length > 0) {
+            const rulesString = dbConfig.redaction.rules
+              .map((rule: FieldRedactionRule) => {
+                let ruleStr = `${rule.field_pattern}:${rule.redaction_type}`;
+                if (
+                  rule.replacement_text &&
+                  (rule.redaction_type === 'replace' || rule.redaction_type === 'custom')
+                ) {
+                  ruleStr += `:${rule.replacement_text}`;
+                }
+                return ruleStr;
+              })
+              .join(',');
+            configString += `redaction_rules=${rulesString}\n`;
+          }
+
+          if (dbConfig.redaction.default_redaction?.replacement_text) {
+            configString += `redaction_replacement_text=${dbConfig.redaction.default_redaction.replacement_text}\n`;
+          }
+
+          if (dbConfig.redaction.log_redacted_access) {
+            configString += 'redaction_log_access=true\n';
+          }
+
+          if (dbConfig.redaction.audit_redacted_queries) {
+            configString += 'redaction_audit_queries=true\n';
+          }
+
+          if (dbConfig.redaction.case_sensitive_matching) {
+            configString += 'redaction_case_sensitive=true\n';
           }
         }
         configString += '\n';
